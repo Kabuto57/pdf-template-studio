@@ -7,7 +7,10 @@ import {
 export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check";
 export interface Field { id: string; label: string; kind: Kind; options?: string[]; half?: boolean }
 export interface Section { title: string; fields: Field[] }
-export interface Template { title: string; note: string; sections: Section[] }
+export interface Template {
+  title: string; note: string; sections: Section[];
+  base?: string; // an uploaded PDF (base64) whose own fields are filled, instead of drawing a new layout
+}
 export type Value = string | string[] | boolean;
 export type Values = Record<string, Value>;
 
@@ -16,8 +19,7 @@ export const KINDS: Record<Kind, string> = {
 };
 export const hasOptions = (k: Kind) => k === "radio" || k === "checks";
 
-const RED = rgb(0xe3 / 255, 0x1b / 255, 0x23 / 255), INK = rgb(0.067, 0.067, 0.067);
-const GREY = rgb(0.4, 0.4, 0.4), RULE = rgb(0.8, 0.8, 0.8), WHITE = rgb(1, 1, 1);
+const INK = rgb(0, 0, 0), GREY = rgb(0.35, 0.35, 0.35), RULE = rgb(0.75, 0.75, 0.75), WHITE = rgb(1, 1, 1);
 const W = 595.28, H = 841.89, M = 42, GAP = 16, BOTTOM = 56;
 const KEY = PDFName.of("FormTemplate"); // the template rides inside the PDF, so extraction knows the sections
 
@@ -42,24 +44,23 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
 
 /** Makes the blank (or, with values, the filled) form. */
 export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8Array> {
+  if (t.base) return fillBase(t, values);
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const form = doc.getForm();
   doc.setTitle(safe(t.title));
   doc.setCreator("PDF Template Studio");
-  doc.catalog.set(KEY, PDFHexString.fromText(JSON.stringify(t)));
-  const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }, label: string) =>
-    f.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(label));
+  stamp(doc, t);
 
   let page: PDFPage = doc.addPage([W, H]), top = 0;
   const newPage = () => { page = doc.addPage([W, H]); top = H - M; };
-  page.drawRectangle({ x: 0, y: H - 8, width: W, height: 8, color: RED });
-  page.drawText(safe(t.title), { x: M, y: H - 58, size: 20, font: bold, color: INK });
-  top = H - 72;
-  for (const line of wrap(t.note, font, 9, W - 2 * M)) { page.drawText(line, { x: M, y: top - 9, size: 9, font, color: GREY }); top -= 12; }
+  page.drawText(safe(t.title.toUpperCase()), { x: M, y: H - 62, size: 16, font: bold, color: INK });
+  page.drawLine({ start: { x: M, y: H - 72 }, end: { x: W - M, y: H - 72 }, thickness: 1.5, color: INK });
+  top = H - 80;
+  for (const line of wrap(t.note, font, 8.5, W - 2 * M)) { page.drawText(line, { x: M, y: top - 9, size: 8.5, font, color: INK }); top -= 11.5; }
   top -= 10;
 
-  const opts = { borderColor: GREY, borderWidth: 0.75, backgroundColor: WHITE };
+  const opts = { borderColor: INK, borderWidth: 0.75, backgroundColor: WHITE };
   // Lays out a field at (x, top) in width w; draws it only when `draw`. Returns the height used.
   function place(f: Field, x: number, w: number, draw: boolean): number {
     const v = values[f.id];
@@ -74,7 +75,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
       }
       return Math.max(12, lines.length * 11);
     }
-    if (draw) page.drawText(safe(f.label), { x, y: top - 8, size: 8, font: bold, color: GREY });
+    if (draw) page.drawText(safe(f.label), { x, y: top - 8, size: 8, font, color: INK });
     let y = top - 13;
     if (hasOptions(f.kind)) {
       const list = f.options ?? [];
@@ -124,10 +125,9 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     }
     const height = (r: Field[]) => Math.max(...r.map(f => place(f, M, f.half ? col : W - 2 * M, false)));
     if (top - 34 - (rows[0] ? height(rows[0]) : 0) < BOTTOM) newPage();
-    page.drawText(String(si + 1), { x: M, y: top - 14, size: 11, font: bold, color: RED });
-    page.drawText(safe(s.title), { x: M + 16, y: top - 14, size: 11, font: bold, color: INK });
-    page.drawLine({ start: { x: M, y: top - 20 }, end: { x: W - M, y: top - 20 }, thickness: 1, color: RED });
-    top -= 30;
+    page.drawRectangle({ x: M, y: top - 18, width: W - 2 * M, height: 16, color: INK });
+    page.drawText(safe(`${si + 1}.  ${s.title.toUpperCase()}`), { x: M + 6, y: top - 13.5, size: 9, font: bold, color: WHITE });
+    top -= 28;
     for (const r of rows) {
       const h = height(r);
       if (top - h < BOTTOM) newPage();
@@ -148,6 +148,92 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   return doc.save();
 }
 
+const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }, label: string) =>
+  f.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(label));
+/** Stores the template (minus any uploaded PDF) inside the PDF, so extraction knows the questions and sections. */
+const stamp = (doc: PDFDocument, t: Template) => doc.catalog.set(KEY, PDFHexString.fromText(JSON.stringify({ ...t, base: undefined, uploaded: !!t.base })));
+
+export const toB64 = (b: Uint8Array) => { let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
+const fromB64 = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+/** Fills the fields of an uploaded PDF, keeping its own layout. */
+async function fillBase(t: Template, values: Values): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(fromB64(t.base!), { ignoreEncryption: true });
+  const form = doc.getForm();
+  for (const f of t.sections.flatMap(s => s.fields)) {
+    const field = form.getFieldMaybe(f.id), v = values[f.id];
+    if (!field) continue;
+    tip(field, f.label);
+    if (field instanceof PDFTextField) field.setText(typeof v === "string" && v ? safe(v) : undefined);
+    else if (field instanceof PDFCheckBox) { if (v === true) field.check(); else field.uncheck(); }
+    else if (field instanceof PDFRadioGroup) { if (typeof v === "string" && field.getOptions().includes(v)) field.select(v); else field.clear(); }
+    else if (field instanceof PDFDropdown || field instanceof PDFOptionList) { if (typeof v === "string" && v) field.select(v); else field.clear(); }
+  }
+  stamp(doc, t);
+  form.updateFieldAppearances(await doc.embedFont(StandardFonts.Helvetica));
+  return doc.save();
+}
+
+const words = (name: string) => { const s = name.split(".").pop()!.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
+
+export interface Imported { template: Template; values: Values; found: "fields" | "blanks" | "none" }
+
+/**
+ * Turns an existing PDF into a template. A fillable PDF keeps its fields; a printed-style PDF gets a
+ * field added over each blank (____ or ☐) found by `findBlanks`. Answers already in it become `values`.
+ */
+export async function importPdf(bytes: Uint8Array, name: string,
+  findBlanks: () => Promise<{ page: number; label: string; kind: "text" | "check"; x: number; y: number; w: number; h: number }[]>): Promise<Imported> {
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const title = doc.getTitle()?.trim() || words(name.replace(/\.pdf$/i, ""));
+  const embedded = text(doc.catalog.lookup(KEY));
+  const form = doc.getForm();
+  let found: Imported["found"] = "fields";
+  if (!form.getFields().length) {
+    const blanks = await findBlanks();
+    found = blanks.length ? "blanks" : "none";
+    const font = await doc.embedFont(StandardFonts.Helvetica), pages = doc.getPages(), used = new Set<string>();
+    for (const b of blanks) {
+      let id = slug(b.label), n = 2;
+      while (used.has(id)) id = `${slug(b.label)}_${n++}`;
+      used.add(id);
+      const box = { x: b.x, y: b.y, width: b.w, height: b.h, backgroundColor: undefined, borderWidth: 0 };
+      const f = b.kind === "check" ? form.createCheckBox(id) : form.createTextField(id);
+      if (f instanceof PDFTextField) { f.addToPage(pages[b.page - 1], { ...box, font }); f.setFontSize(0); } else f.addToPage(pages[b.page - 1], box);
+      tip(f, b.label);
+    }
+  }
+  const { data } = await extractFields(doc);
+  const pageOf = new Map(doc.getPages().map((p, i) => [p.ref.toString(), i + 1]));
+  const sections = new Map<number, Field[]>();
+  const placed = form.getFields().map(f => {
+    const w = f.acroField.getWidgets()[0], r = w?.getRectangle() ?? { x: 0, y: 0 };
+    return { f, page: pageOf.get(w?.P()?.toString() ?? "") ?? 1, x: r.x, y: r.y };
+  }).sort((a, b) => a.page - b.page || b.y - a.y || a.x - b.x);
+  for (const { f, page } of placed) {
+    const id = f.getName();
+    const field: Field =
+      f instanceof PDFCheckBox ? { id, label: "", kind: "check" } :
+      f instanceof PDFRadioGroup ? { id, label: "", kind: "radio", options: f.getOptions() } :
+      f instanceof PDFDropdown || f instanceof PDFOptionList ? { id, label: "", kind: "radio", options: f.getOptions() } :
+      { id, label: "", kind: f instanceof PDFTextField && f.isMultiline() ? "long" : "text" };
+    field.label = text(f.acroField.dict.lookup(PDFName.of("TU"))) ?? words(id);
+    sections.set(page, [...sections.get(page) ?? [], field]);
+    // Clear answers so the template starts blank; they come back as `values`.
+    if (f instanceof PDFTextField) f.setText(undefined); else if (f instanceof PDFCheckBox) f.uncheck();
+    else if (f instanceof PDFRadioGroup || f instanceof PDFDropdown || f instanceof PDFOptionList) f.clear();
+  }
+  let template: Template = { title, note: "", sections: [...sections].map(([p, fields]) => ({ title: `Page ${p}`, fields })) };
+  try {
+    const e = embedded ? JSON.parse(embedded) as Template & { uploaded?: boolean } : undefined;
+    // Made here: reopen the drawn layout. Uploaded before: keep its edited questions and sections.
+    if (e && !e.uploaded) return { template: { title: e.title, note: e.note, sections: e.sections }, values: data, found };
+    if (e) template = { title: e.title, note: e.note, sections: e.sections };
+  } catch { /* use what was found */ }
+  template.base = toB64(await doc.save());
+  return { template, values: data, found };
+}
+
 export interface Row { section: string; id: string; label: string; value: Value }
 export interface Extracted { template?: Template; rows: Row[]; data: Values }
 
@@ -155,7 +241,10 @@ const text = (o: unknown) => (o instanceof PDFHexString || o instanceof PDFStrin
 
 /** Reads every answer from a filled PDF form, with the question it belongs to. */
 export async function extractPdf(bytes: Uint8Array | ArrayBuffer): Promise<Extracted> {
-  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  return extractFields(await PDFDocument.load(bytes, { ignoreEncryption: true }));
+}
+
+async function extractFields(doc: PDFDocument): Promise<Extracted> {
   const raw = new Map<string, Value>(), tips = new Map<string, string>();
   for (const f of doc.getForm().getFields()) {
     const name = f.getName();

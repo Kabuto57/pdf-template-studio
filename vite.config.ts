@@ -16,5 +16,5 @@ export default defineConfig({
   base: "./",
   plugins: [csp()],
   build: { target: "es2022" },
-  test: { include: ["tests/**/*.test.ts"] },
+  test: { include: ["tests/**/*.test.ts"], alias: [{ find: /^pdfjs-dist$/, replacement: "pdfjs-dist/legacy/build/pdf.mjs" }] },
 });

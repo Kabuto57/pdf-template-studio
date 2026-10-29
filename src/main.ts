@@ -1,7 +1,10 @@
 import "./styles.css";
-import { KINDS, buildPdf, extractPdf, hasOptions, slug } from "./pdf";
+import { KINDS, buildPdf, extractPdf, hasOptions, importPdf, slug } from "./pdf";
 import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, SAMPLE } from "./sample";
+import type { Line } from "./text";
+
+const text = () => import("./text"); // pdf.js is big: load it only when a PDF without fields needs reading
 
 type View = "design" | "fill" | "extract";
 const STORE = "pdf-template-studio";
@@ -59,6 +62,10 @@ function move<T>(list: T[], i: number, by: number) {
 }
 
 function fieldCard(list: Field[], f: Field, i: number): HTMLElement {
+  if (t.base) return h("div", { className: "card" },
+    h("input", { className: "label wide", value: f.label, "aria-label": "Question",
+      oninput: (e: Event) => { f.label = (e.target as HTMLInputElement).value; refresh(); } }),
+    h("div", { className: "row small" }, h("span", {}, KINDS[f.kind], f.options ? `: ${f.options.join(", ")}` : ""), h("code", { className: "key-ro" }, f.id)));
   const key = h("input", { className: "key", value: f.id, "aria-label": "JSON key", spellcheck: false,
     oninput: (e: Event) => { auto.delete(f); f.id = slug((e.target as HTMLInputElement).value); refresh(); },
     onchange: () => { f.id = unique(f.id, f); key.value = f.id; } });
@@ -95,28 +102,35 @@ function fieldCard(list: Field[], f: Field, i: number): HTMLElement {
 
 function renderDesign() {
   const panel = $("#panel");
+  const base = !!t.base;
   panel.replaceChildren(
-    h("p", { className: "lead" }, "Build the form: sections, then questions. Each answer gets a key, so you can pull it back out later."),
+    h("div", { className: "upload" },
+      h("label", { className: "btn primary", for: "templateIn" }, "Upload your PDF template…"),
+      h("span", {}, "Use a form you already have. Its fields are kept; on a printed-style form, fields are added over the blanks (____ and ☐)."),
+    ),
+    h("p", { className: "lead" }, base
+      ? "Fields come from your PDF. Rename the questions so the answers are easy to read; the keys come from the PDF."
+      : "Or build a form here: sections, then questions. Each answer gets a key, so you can pull it back out later."),
     h("label", { className: "lbl" }, "Form title", h("input", { value: t.title, oninput: (e: Event) => { t.title = (e.target as HTMLInputElement).value; refresh(); } })),
-    h("label", { className: "lbl" }, "Instructions under the title", h("textarea", { rows: 2, value: t.note, oninput: (e: Event) => { t.note = (e.target as HTMLTextAreaElement).value; refresh(); } })),
+    base ? "" : h("label", { className: "lbl" }, "Instructions under the title", h("textarea", { rows: 2, value: t.note, oninput: (e: Event) => { t.note = (e.target as HTMLTextAreaElement).value; refresh(); } })),
     ...t.sections.map((s, si) => h("section", { className: "sec" },
       h("div", { className: "sec-head" },
         h("span", { className: "num" }, String(si + 1)),
         h("input", { value: s.title, "aria-label": "Section title", oninput: (e: Event) => { s.title = (e.target as HTMLInputElement).value; refresh(); } }),
-        h("span", { className: "tools" },
+        !base && h("span", { className: "tools" },
           h("button", { type: "button", title: "Move section up", "aria-label": "Move section up", onclick: () => { move(t.sections, si, -1); renderDesign(); refresh(); } }, "↑"),
           h("button", { type: "button", title: "Move section down", "aria-label": "Move section down", onclick: () => { move(t.sections, si, 1); renderDesign(); refresh(); } }, "↓"),
           h("button", { type: "button", title: "Delete section", "aria-label": "Delete section", onclick: () => { t.sections.splice(si, 1); renderDesign(); refresh(); } }, "✕"),
         ),
       ),
       ...s.fields.map((f, i) => fieldCard(s.fields, f, i)),
-      h("button", { type: "button", className: "add", onclick: () => {
+      !base && h("button", { type: "button", className: "add", onclick: () => {
         const f: Field = { id: unique("question"), label: "New question", kind: "text", half: true };
         auto.add(f); s.fields.push(f); renderDesign(); refresh();
         ($("#panel").querySelectorAll<HTMLInputElement>(".sec")[si].querySelectorAll<HTMLInputElement>(".label")[s.fields.length - 1]).select();
       } }, "+ Add question"),
     )),
-    h("button", { type: "button", className: "add big", onclick: () => { t.sections.push({ title: "New section", fields: [] }); renderDesign(); refresh(); } }, "+ Add section"),
+    base ? "" : h("button", { type: "button", className: "add big", onclick: () => { t.sections.push({ title: "New section", fields: [] }); renderDesign(); refresh(); } }, "+ Add section"),
   );
 }
 
@@ -146,7 +160,7 @@ function renderFill() {
   $("#panel").replaceChildren(
     h("p", { className: "lead" }, "Fill in the form as an applicant would. The preview is the real PDF. You can also download the blank PDF and fill it in Acrobat or Preview."),
     h("div", { className: "btns" },
-      h("button", { type: "button", onclick: () => { values = Object.fromEntries(Object.entries(SAMPLE).filter(([k]) => t.sections.some(s => s.fields.some(f => f.id === k)))); renderFill(); refresh(true); } }, "Fill with sample"),
+      Object.keys(SAMPLE).some(k => t.sections.some(s => s.fields.some(f => f.id === k))) && h("button", { type: "button", onclick: () => { values = Object.fromEntries(Object.entries(SAMPLE).filter(([k]) => t.sections.some(s => s.fields.some(f => f.id === k)))); renderFill(); refresh(true); } }, "Fill with sample"),
       h("button", { type: "button", onclick: () => { values = {}; renderFill(); refresh(true); } }, "Clear"),
     ),
     ...t.sections.map((s, si) => h("fieldset", { className: "sec" },
@@ -162,14 +176,14 @@ function renderFill() {
 // ---- 3. Extract ----
 const show = (v: Value) => v === true ? "Yes" : v === false ? "No" : Array.isArray(v) ? v.join(", ") : v;
 
-function renderExtract(result?: Extracted, name?: string) {
+function renderExtract(result?: Extracted, name?: string, lines?: Line[]) {
   const open = h("input", { type: "file", accept: "application/pdf,.pdf", id: "pdfIn", className: "sr", onchange: async (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) read(new Uint8Array(await file.arrayBuffer()), file.name);
   } });
   const panel = $("#panel");
   panel.replaceChildren(
-    h("p", { className: "lead" }, "Open a filled PDF to pull every answer out, matched to its question."),
+    h("p", { className: "lead" }, "Open any filled PDF, including your old ones, to pull every answer out, matched to its question."),
     h("div", { className: "btns" },
       h("label", { className: "btn primary", for: "pdfIn" }, "Open filled PDF…"), open,
       filled && h("button", { type: "button", onclick: () => read(filled!, "the form you just saved") }, "Use the form I just saved"),
@@ -177,12 +191,17 @@ function renderExtract(result?: Extracted, name?: string) {
     h("div", { className: "drop", id: "drop" }, "or drop a PDF here"),
   );
   if (!result) return;
+  if (lines && !lines.length) {
+    panel.append(h("p", { className: "error", role: "alert" }, `${name} has no form fields and no text. It looks like a scan, which would need OCR to read.`));
+    return;
+  }
   const json = JSON.stringify(result.data, null, 2);
   const bySection = new Map<string, Extracted["rows"]>();
   for (const r of result.rows) bySection.set(r.section, [...bySection.get(r.section) ?? [], r]);
   panel.append(
     h("p", { className: "note" }, `${result.rows.length} answers from ${name}. `,
-      result.template ? "Questions matched using the template inside the PDF." : "No template inside this PDF, so the field tooltips are used as questions."),
+      lines ? "This PDF has no form fields, so answers were read from its text (\u201cLabel: value\u201d and ticked boxes). Check them against the PDF."
+        : result.template ? "Questions matched using the template inside the PDF." : "Read from the PDF's form fields; their names or tooltips are used as questions."),
     ...[...bySection].map(([sec, rows]) => h("table", { className: "result" },
       sec && h("caption", {}, sec),
       h("tbody", {}, ...rows.map(r => h("tr", {}, h("th", { scope: "row" }, r.label), h("td", { className: show(r.value) ? "" : "empty" }, show(r.value) || "(blank)")))))),
@@ -191,13 +210,26 @@ function renderExtract(result?: Extracted, name?: string) {
       h("button", { type: "button", onclick: (e: Event) => { navigator.clipboard.writeText(json); (e.target as HTMLElement).textContent = "Copied"; } }, "Copy JSON"),
     ),
     h("pre", { className: "json" }, json),
+    lines ? h("details", {}, h("summary", {}, "All text in the PDF"),
+      h("pre", { className: "json" }, lines.map(l => l.segs.map(g => g.text).join("    ")).join("\n"))) : "",
   );
 }
 
 async function read(bytes: Uint8Array, name: string) {
   try {
-    const r = await extractPdf(bytes);
-    renderExtract(r, name);
+    let r = await extractPdf(bytes), lines: Line[] | undefined;
+    if (!r.rows.length) {
+      const { readText, pairs } = await text();
+      lines = await readText(bytes);
+      const seen = new Map<string, number>();
+      r = { rows: pairs(lines).map(p => {
+        const base = slug(p.label), n = (seen.get(base) ?? 0) + 1;
+        seen.set(base, n);
+        return { section: `Page ${p.page}`, id: n > 1 ? `${base}_${n}` : base, label: p.label, value: p.value };
+      }), data: {} };
+      for (const row of r.rows) r.data[row.id] = row.value;
+    }
+    renderExtract(r, name, lines);
     if (url) URL.revokeObjectURL(url);
     url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
     $<HTMLIFrameElement>("#preview").src = url + "#toolbar=0&navpanes=0&view=FitH";
@@ -235,12 +267,23 @@ $("#templateSel").onchange = async e => {
 $<HTMLInputElement>("#templateIn").onchange = async e => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
-  const r = await extractPdf(await file.arrayBuffer()).catch(() => undefined);
-  if (!r?.template) return alertBox("That PDF was not made here, so it has no template to edit. Use Extract to read its answers.");
-  t = r.template; values = r.data; go("design");
+  (e.target as HTMLInputElement).value = "";
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  try {
+    const r = await importPdf(bytes, file.name, async () => { const m = await text(); return m.blanks(await m.readText(bytes)); });
+    t = r.template; values = r.values; go("design");
+    const n = t.sections.reduce((a, s) => a + s.fields.length, 0);
+    if (r.found === "none") alertBox(`${file.name} has no form fields and no blanks (____ or ☐) to fill. Use Extract to read its text instead.`);
+    else infoBox(r.found === "blanks"
+      ? `${file.name} had no form fields, so ${n} were added over its blanks. Check the questions below, then Fill.`
+      : `Read ${n} fields from ${file.name}. Any answers already in it are in Fill.`);
+  } catch (err) {
+    alertBox(`Could not read ${file.name}: ${(err as Error).message}`);
+  }
 };
 const confirmReplace = () => window.confirm("Replace the current form? Your changes to it will be lost.");
 const alertBox = (msg: string) => $("#panel").prepend(h("p", { className: "error", role: "alert" }, msg));
+const infoBox = (msg: string) => $("#panel").prepend(h("p", { className: "info", role: "status" }, msg));
 
 // Drag a PDF anywhere onto Extract.
 addEventListener("dragover", e => e.preventDefault());
