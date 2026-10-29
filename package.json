@@ -1,0 +1,21 @@
+{
+  "name": "pdf-template-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Design a fillable PDF form, fill it, and extract its answers as JSON. Runs entirely in the browser.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^4.1.11"
+  }
+}

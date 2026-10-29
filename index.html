@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Template Studio</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Design a fillable PDF form, fill it, and pull the answers back out as JSON. Your files never leave your browser.">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="mark" aria-hidden="true"></span>PDF Template Studio</div>
+    <nav class="steps" aria-label="Steps">
+      <button type="button" data-view="design" aria-selected="true"><span class="n">1</span>Design</button>
+      <button type="button" data-view="fill" aria-selected="false"><span class="n">2</span>Fill</button>
+      <button type="button" data-view="extract" aria-selected="false"><span class="n">3</span>Extract</button>
+    </nav>
+    <div class="actions">
+      <select id="templateSel" aria-label="Form">
+        <option value="">Forms…</option>
+        <option value="guarantee">Banker's guarantee (sample)</option>
+        <option value="blank">Blank form</option>
+        <option value="open">Open a PDF made here…</option>
+      </select>
+      <input type="file" id="templateIn" accept="application/pdf,.pdf" class="sr" tabindex="-1" aria-hidden="true">
+      <button type="button" id="blankBtn">Download blank PDF</button>
+      <button type="button" id="saveBtn" class="primary">Save filled PDF</button>
+    </div>
+  </header>
+  <main class="main">
+    <div class="panel" id="panel"></div>
+    <iframe id="preview" title="PDF preview"></iframe>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
