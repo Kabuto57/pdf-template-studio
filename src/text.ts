@@ -3,6 +3,8 @@
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { slug } from "./pdf";
+import type { Field, Template, Values } from "./pdf";
 
 if (typeof window !== "undefined") GlobalWorkerOptions.workerSrc = workerUrl; // tests (Node) use the legacy build's own worker
 
@@ -104,4 +106,112 @@ export function blanks(lines: Line[]): Blank[] {
     }
   }));
   return out;
+}
+
+// ---- XFA "smart forms" (Adobe LiveCycle). pdf.js lays them out as an HTML-like tree, values included.
+interface XNode { name: string; attributes?: Record<string, any>; children?: XNode[]; value?: string }
+export interface XfaField {
+  path: string[]; // subforms from the root, e.g. ["form1", "BG", "applicantAndBeneficiary", "subApplicantInfo"]
+  name: string; ui: "text" | "long" | "check" | "radio" | "select"; caption: string; options: string[]; value: string | boolean;
+}
+export interface Xfa { fields: XfaField[]; titles: Record<string, string> }
+
+/** Reads an XFA form's fields (with any answers), or undefined if the PDF is not XFA. Handles owner-password encryption. */
+export async function readXfa(bytes: Uint8Array): Promise<Xfa | undefined> {
+  const doc = await getDocument({ data: bytes.slice(), enableXfa: true, isEvalSupported: false }).promise;
+  try {
+    return doc.isPureXfa && doc.allXfaHtml ? xfaFields(doc.allXfaHtml as unknown as XNode) : undefined;
+  } finally { await doc.destroy(); }
+}
+
+const cls = (n: XNode): string[] => n.attributes?.class ?? [];
+const words = (n: XNode): string => [n.value ?? "", ...(n.children ?? []).map(words)].join(" ").replace(/\s+/g, " ").trim();
+const find = (n: XNode, ok: (m: XNode) => boolean): XNode | undefined => ok(n) ? n : (n.children ?? []).reduce<XNode | undefined>((f, k) => f ?? find(k, ok), undefined);
+const isCaption = (m: XNode) => cls(m).includes("xfaCaption") || cls(m).includes("xfaCaptionForCheckButton");
+const isUi = (m: XNode) => ["input", "textarea", "select", "button"].includes(m.name);
+
+export function xfaFields(root: XNode): Xfa {
+  const fields: XfaField[] = [], titles: Record<string, string> = {};
+  const walk = (n: XNode, path: string[]) => {
+    const c = cls(n), name: string | undefined = n.attributes?.xfaName;
+    if (c.includes("xfaExclgroup")) {
+      const opts: { caption: string; on: boolean }[] = [];
+      const each = (m: XNode) => {
+        if (!cls(m).includes("xfaField")) return (m.children ?? []).forEach(each);
+        const input = find(m, isUi), cap = find(m, isCaption);
+        if (input?.name === "input") opts.push({ caption: (cap && words(cap)) || input.attributes?.xfaOn || "", on: !!input.attributes?.checked });
+      };
+      each(n);
+      fields.push({ path, name: name ?? "choice", ui: "radio", caption: "", options: opts.map(o => o.caption), value: opts.find(o => o.on)?.caption ?? "" });
+      return;
+    }
+    if (c.includes("xfaField")) {
+      const ui = find(n, isUi), cap = find(n, isCaption), caption = cap ? words(cap) : "";
+      if (!ui || !name || c.includes("xfaReadOnly") || cls(ui).includes("xfaReadOnly")) return; // read-only = printed text, not a question
+      const a = ui.attributes ?? {};
+      if (ui.name === "button") { const m = /\(([A-Z]+)\)\s*$/.exec(caption); if (m) titles[m[1]] = caption; return; }
+      if (ui.name === "textarea") fields.push({ path, name, ui: "long", caption, options: [], value: a.textContent ?? "" });
+      else if (ui.name === "select") {
+        const opts = (ui.children ?? []).filter(o => !o.attributes?.hidden);
+        fields.push({ path, name, ui: "select", caption, options: opts.map(o => (o.value ?? "").trim()).filter(Boolean),
+          value: (opts.find(o => o.attributes?.selected)?.value ?? "").trim() });
+      } else if (a.type === "checkbox") fields.push({ path, name, ui: "check", caption, options: [], value: !!a.checked });
+      else if (a.type === "text") fields.push({ path, name, ui: "text", caption, options: [], value: a.value ?? "" });
+      return;
+    }
+    const next = c.includes("xfaSubform") && name ? [...path, name] : path;
+    (n.children ?? []).forEach(k => walk(k, next));
+  };
+  walk(root, []);
+  return { fields, titles };
+}
+
+/** "txtApplicantName" -> "Applicant name", "subApplicantInfo" -> "Applicant info". */
+export const humanize = (s: string) => {
+  const w = s.replace(/^(txt|drp|chk|rad|subfrm|sub|btn|ddl|cbo|num|dt|frm)(?=[A-Z0-9])/, "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").replace(/([a-zA-Z])(\d)/g, "$1 $2")
+    .split(/[\s_]+/).filter(Boolean).map((x, i) => /^[A-Z0-9]{2,}$/.test(x) ? x : i ? x.toLowerCase() : x[0].toUpperCase() + x.slice(1).toLowerCase());
+  return w.join(" ") || s;
+};
+
+/** An XFA field's section, its own question, and the group it sits in (used to tell repeats apart). */
+export function xfaLabel(f: XfaField): { section: string; own: string; group: string } {
+  const own = (f.caption && f.caption.length <= 80 ? f.caption : humanize(f.name)).replace(/[\s:]+$/, "");
+  return { section: humanize(f.path[2] ?? f.path[1] ?? "Form"), own: own || humanize(f.name), group: humanize(f.path[3] ?? "") };
+}
+
+/** The forms inside an XFA bundle (top-level subforms with questions), with their titles. */
+export function xfaForms(x: Xfa): { code: string; title: string; count: number; answered: number }[] {
+  const by = new Map<string, XfaField[]>();
+  for (const f of x.fields) if (f.path[1]) by.set(f.path[1], [...by.get(f.path[1]) ?? [], f]);
+  return [...by].map(([code, fs]) => ({
+    code, title: x.titles[code] ?? humanize(code), count: fs.length,
+    answered: fs.filter(f => f.value !== "" && f.value !== false).length,
+  }));
+}
+
+/** One form of an XFA bundle as a template (keys from the questions), plus its current answers. */
+export function xfaTemplate(x: Xfa, code: string): { template: Template; values: Values; keys: Map<XfaField, string> } {
+  const sections = new Map<string, Field[]>(), values: Values = {}, keys = new Map<XfaField, string>(), used = new Set<string>();
+  const mine = x.fields.filter(f => f.path[1] === code), seen = new Map<string, number>();
+  for (const f of mine) { const o = xfaLabel(f).own.toLowerCase(); seen.set(o, (seen.get(o) ?? 0) + 1); }
+  for (const f of mine) {
+    const { section, own, group } = xfaLabel(f);
+    // Repeated questions ("Tel no" for applicant and beneficiary) get their group in front.
+    const label = seen.get(own.toLowerCase())! > 1 && group ? `${group}: ${own}` : f.ui === "check" && f.caption ? f.caption : own;
+    let id = slug(label).slice(0, 40), n = 2;
+    while (used.has(id)) id = `${slug(label).slice(0, 40)}_${n++}`;
+    used.add(id); keys.set(f, id);
+    // A drop-down filled by the form's script at run time has no options in the file: make it a text box.
+    const kind = f.ui === "text" && /date/i.test(f.name) ? "date" : f.ui === "select" && !f.options.length ? "text" : f.ui;
+    sections.set(section, [...sections.get(section) ?? [], {
+      id, label, kind, ...(kind === "radio" || kind === "select" ? { options: f.options } : {}),
+      ...(kind === "text" || kind === "date" || kind === "select" ? { half: true } : {}),
+    }]);
+    values[id] = f.value;
+  }
+  return {
+    template: { title: x.titles[code] ?? humanize(code), note: "", sections: [...sections].map(([title, fields]) => ({ title, fields })) },
+    values, keys,
+  };
 }

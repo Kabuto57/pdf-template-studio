@@ -2,7 +2,7 @@ import "./styles.css";
 import { KINDS, buildPdf, extractPdf, hasOptions, importPdf, slug } from "./pdf";
 import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, SAMPLE } from "./sample";
-import type { Line } from "./text";
+import type { Line, Xfa } from "./text";
 
 const text = () => import("./text"); // pdf.js is big: load it only when a PDF without fields needs reading
 
@@ -146,6 +146,8 @@ function input(f: Field): HTMLElement {
     case "long": return h("textarea", { id: f.id, rows: 3, value: (v as string) ?? "", oninput: (e: Event) => set(val(e)) });
     case "date": return h("input", { id: f.id, type: "date", value: toIso((v as string) ?? ""), oninput: (e: Event) => set(fromIso(val(e))) });
     case "check": return h("input", { id: f.id, type: "checkbox", checked: v === true, onchange: (e: Event) => set((e.target as HTMLInputElement).checked) });
+    case "select": return h("select", { id: f.id, onchange: (e: Event) => set((e.target as HTMLSelectElement).value) },
+      h("option", { value: "" }, "Choose…"), ...(f.options ?? []).map(o => h("option", { value: o, selected: v === o }, o)));
     case "radio": case "checks": return h("div", { className: "choices", role: f.kind === "radio" ? "radiogroup" : "group", "aria-label": f.label },
       ...(f.options ?? []).map(o => h("label", {},
         h("input", { type: f.kind === "radio" ? "radio" : "checkbox", name: f.id, value: o,
@@ -176,7 +178,7 @@ function renderFill() {
 // ---- 3. Extract ----
 const show = (v: Value) => v === true ? "Yes" : v === false ? "No" : Array.isArray(v) ? v.join(", ") : v;
 
-function renderExtract(result?: Extracted, name?: string, lines?: Line[]) {
+function renderExtract(result?: Extracted, name?: string, lines?: Line[], note?: string) {
   const open = h("input", { type: "file", accept: "application/pdf,.pdf", id: "pdfIn", className: "sr", onchange: async (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) read(new Uint8Array(await file.arrayBuffer()), file.name);
@@ -199,8 +201,8 @@ function renderExtract(result?: Extracted, name?: string, lines?: Line[]) {
   const bySection = new Map<string, Extracted["rows"]>();
   for (const r of result.rows) bySection.set(r.section, [...bySection.get(r.section) ?? [], r]);
   panel.append(
-    h("p", { className: "note" }, `${result.rows.length} answers from ${name}. `,
-      lines ? "This PDF has no form fields, so answers were read from its text (\u201cLabel: value\u201d and ticked boxes). Check them against the PDF."
+    h("p", { className: "note" }, `${result.rows.filter(r => show(r.value)).length} of ${result.rows.length} questions answered in ${name}. `,
+      note ? note : lines ? "This PDF has no form fields, so answers were read from its text (\u201cLabel: value\u201d and ticked boxes). Check them against the PDF."
         : result.template ? "Questions matched using the template inside the PDF." : "Read from the PDF's form fields; their names or tooltips are used as questions."),
     ...[...bySection].map(([sec, rows]) => h("table", { className: "result" },
       sec && h("caption", {}, sec),
@@ -217,8 +219,10 @@ function renderExtract(result?: Extracted, name?: string, lines?: Line[]) {
 
 async function read(bytes: Uint8Array, name: string) {
   try {
-    let r = await extractPdf(bytes), lines: Line[] | undefined;
-    if (!r.rows.length) {
+    let r = await extractPdf(bytes).catch(() => undefined), lines: Line[] | undefined;
+    const xfa = r?.rows.length ? undefined : await (await text()).readXfa(bytes);
+    if (xfa) return showXfa(xfa, name, bytes);
+    if (!r?.rows.length) {
       const { readText, pairs } = await text();
       lines = await readText(bytes);
       const seen = new Map<string, number>();
@@ -229,14 +233,18 @@ async function read(bytes: Uint8Array, name: string) {
       }), data: {} };
       for (const row of r.rows) r.data[row.id] = row.value;
     }
-    renderExtract(r, name, lines);
-    if (url) URL.revokeObjectURL(url);
-    url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
-    $<HTMLIFrameElement>("#preview").src = url + "#toolbar=0&navpanes=0&view=FitH";
+    renderExtract(r!, name, lines);
+    showPdf(bytes);
   } catch (err) {
     renderExtract();
     $("#panel").append(h("p", { className: "error", role: "alert" }, `Could not read ${name}: ${(err as Error).message}`));
   }
+}
+
+function showPdf(bytes: Uint8Array) {
+  if (url) URL.revokeObjectURL(url);
+  url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
+  $<HTMLIFrameElement>("#preview").src = url + "#toolbar=0&navpanes=0&view=FitH";
 }
 
 // ---- Shell ----
@@ -270,6 +278,8 @@ $<HTMLInputElement>("#templateIn").onchange = async e => {
   (e.target as HTMLInputElement).value = "";
   const bytes = new Uint8Array(await file.arrayBuffer());
   try {
+    const m = await text(), xfa = await m.readXfa(bytes).catch(() => undefined);
+    if (xfa) return pickXfaForm(xfa, file.name);
     const r = await importPdf(bytes, file.name, async () => { const m = await text(); return m.blanks(await m.readText(bytes)); });
     t = r.template; values = r.values; go("design");
     const n = t.sections.reduce((a, s) => a + s.fields.length, 0);
@@ -281,6 +291,34 @@ $<HTMLInputElement>("#templateIn").onchange = async e => {
     alertBox(`Could not read ${file.name}: ${(err as Error).message}`);
   }
 };
+/** Extract from an XFA bundle: one form at a time, the most filled-in first. */
+async function showXfa(xfa: Xfa, name: string, bytes: Uint8Array, code?: string) {
+  const m = await text(), forms = m.xfaForms(xfa).filter(f => f.count > 1).sort((a, b) => b.answered - a.answered);
+  const pick = forms.find(f => f.code === code) ?? forms[0];
+  const { template, values: v } = m.xfaTemplate(xfa, pick.code);
+  const rows = template.sections.flatMap(s => s.fields.map(q => ({ section: s.title, id: q.id, label: q.label, value: v[q.id] })));
+  renderExtract({ template, rows, data: v }, name, undefined,
+    `Adobe smart form (XFA) with ${forms.length} forms. Showing ${pick.title}. Answers include any defaults built into the form.`);
+  $("#panel").querySelector(".note")!.after(h("label", { className: "lbl" }, "Form in this file",
+    h("select", { onchange: (e: Event) => showXfa(xfa, name, bytes, (e.target as HTMLSelectElement).value) },
+      ...forms.map(f => h("option", { value: f.code, selected: f === pick }, `${f.title} (${f.answered} of ${f.count} filled)`)))));
+  showPdf(bytes);
+}
+
+/** An XFA bundle holds many forms: let the person pick which one to rebuild here. */
+async function pickXfaForm(xfa: Xfa, name: string) {
+  const m = await text();
+  go("design");
+  $("#panel").replaceChildren(
+    h("p", { className: "info", role: "status" }, `${name} is an Adobe smart form (XFA) with ${m.xfaForms(xfa).length} forms. Pick one to rebuild as a plain fillable PDF. Its questions, choices and drop-downs are kept; the layout is redrawn.`),
+    h("div", { className: "picks" }, ...m.xfaForms(xfa).filter(f => f.count > 1).map(f => h("button", { type: "button", className: "pick", onclick: () => {
+      const { template, values: v } = m.xfaTemplate(xfa, f.code);
+      t = template; values = v; go("design");
+      infoBox(`Rebuilt ${f.title}: ${f.count} questions. Rename questions or drop the ones you don't need, then Fill.`);
+    } }, h("strong", {}, f.title), h("span", {}, `${f.count} questions${f.answered ? `, ${f.answered} answered` : ""}`)))),
+  );
+}
+
 const confirmReplace = () => window.confirm("Replace the current form? Your changes to it will be lost.");
 const alertBox = (msg: string) => $("#panel").prepend(h("p", { className: "error", role: "alert" }, msg));
 const infoBox = (msg: string) => $("#panel").prepend(h("p", { className: "info", role: "status" }, msg));

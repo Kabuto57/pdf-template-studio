@@ -26,6 +26,7 @@ npm run build   # static site in dist/
 - Every answer is a real PDF form field (AcroForm) named by its key, so the value is read from the field, not guessed from the page text.
 - Each field's tooltip holds its question, and the whole template is stored inside the PDF, so extraction also restores sections and multi-tick answers.
 - A PDF form made elsewhere still works: its field names and tooltips are used.
+- **Adobe smart forms (XFA, e.g. LiveCycle Designer bundles)**, including owner-password-encrypted ones, are read with pdf.js: every field with its subform path, type, choices and current value. Upload one in Design to rebuild any form in the bundle as a plain fillable PDF; open a filled one in Extract to get its answers form by form. Defaults built into the form count as answers. Drop-downs filled by the form's own script have no options in the file, so they become text boxes.
 - A PDF with no fields at all (an old form, or a flattened one) is read as text with [pdf.js](https://mozilla.github.io/pdf.js/): `Label: value` lines, a label then a value on the same line, and ticked boxes (`[x]`, `☒`). This is a layout heuristic, so check the result; labels printed *above* their values and table cells are not paired.
 
 The same fields can be read server-side (e.g. a Dify Code node) with `pypdf`: `PdfReader(f).get_fields()`.

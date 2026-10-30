@@ -4,7 +4,7 @@ import {
   PDFRadioGroup, PDFString, PDFTextField, StandardFonts, rgb,
 } from "pdf-lib";
 
-export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check";
+export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check" | "select";
 export interface Field { id: string; label: string; kind: Kind; options?: string[]; half?: boolean }
 export interface Section { title: string; fields: Field[] }
 export interface Template {
@@ -15,9 +15,9 @@ export type Value = string | string[] | boolean;
 export type Values = Record<string, Value>;
 
 export const KINDS: Record<Kind, string> = {
-  text: "Text", long: "Paragraph", date: "Date", radio: "Pick one", checks: "Tick any", check: "Tick box",
+  text: "Text", long: "Paragraph", date: "Date", radio: "Pick one", checks: "Tick any", check: "Tick box", select: "Drop-down",
 };
-export const hasOptions = (k: Kind) => k === "radio" || k === "checks";
+export const hasOptions = (k: Kind) => k === "radio" || k === "checks" || k === "select";
 
 const INK = rgb(0, 0, 0), GREY = rgb(0.35, 0.35, 0.35), RULE = rgb(0.75, 0.75, 0.75), WHITE = rgb(1, 1, 1);
 const W = 595.28, H = 841.89, M = 42, GAP = 16, BOTTOM = 56;
@@ -77,6 +77,17 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     }
     if (draw) page.drawText(safe(f.label), { x, y: top - 8, size: 8, font, color: INK });
     let y = top - 13;
+    if (f.kind === "select") {
+      if (draw) {
+        const dd = form.createDropdown(f.id);
+        dd.addOptions((f.options ?? []).map(safe));
+        tip(dd, f.label);
+        if (typeof v === "string" && f.options?.includes(v)) dd.select(safe(v));
+        dd.addToPage(page, { x, y: y - 20, width: w, height: 20, font, ...opts });
+        dd.setFontSize(10);
+      }
+      return 33;
+    }
     if (hasOptions(f.kind)) {
       const list = f.options ?? [];
       const group = f.kind === "radio" && draw ? form.createRadioGroup(f.id) : undefined;
@@ -203,7 +214,7 @@ export async function importPdf(bytes: Uint8Array, name: string,
       tip(f, b.label);
     }
   }
-  const { data } = await extractFields(doc);
+  const data = (await extractFields(doc)).data as Values;
   const pageOf = new Map(doc.getPages().map((p, i) => [p.ref.toString(), i + 1]));
   const sections = new Map<number, Field[]>();
   const placed = form.getFields().map(f => {
@@ -215,7 +226,7 @@ export async function importPdf(bytes: Uint8Array, name: string,
     const field: Field =
       f instanceof PDFCheckBox ? { id, label: "", kind: "check" } :
       f instanceof PDFRadioGroup ? { id, label: "", kind: "radio", options: f.getOptions() } :
-      f instanceof PDFDropdown || f instanceof PDFOptionList ? { id, label: "", kind: "radio", options: f.getOptions() } :
+      f instanceof PDFDropdown || f instanceof PDFOptionList ? { id, label: "", kind: "select", options: f.getOptions() } :
       { id, label: "", kind: f instanceof PDFTextField && f.isMultiline() ? "long" : "text" };
     field.label = text(f.acroField.dict.lookup(PDFName.of("TU"))) ?? words(id);
     sections.set(page, [...sections.get(page) ?? [], field]);
@@ -235,7 +246,7 @@ export async function importPdf(bytes: Uint8Array, name: string,
 }
 
 export interface Row { section: string; id: string; label: string; value: Value }
-export interface Extracted { template?: Template; rows: Row[]; data: Values }
+export interface Extracted { template?: Template; rows: Row[]; data: Record<string, unknown> }
 
 const text = (o: unknown) => (o instanceof PDFHexString || o instanceof PDFString ? o.decodeText() : undefined);
 
