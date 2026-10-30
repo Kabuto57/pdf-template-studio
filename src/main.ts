@@ -2,6 +2,7 @@ import "./styles.css";
 import { KINDS, buildPdf, extractPdf, hasOptions, importPdf, slug } from "./pdf";
 import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, SAMPLE } from "./sample";
+import BANK from "./bank-forms.json";
 import type { Line, Xfa } from "./text";
 
 const text = () => import("./text"); // pdf.js is big: load it only when a PDF without fields needs reading
@@ -11,12 +12,16 @@ const STORE = "pdf-template-studio";
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
 
-let t: Template = clone(GUARANTEE);
-let values: Values = {};
+const BANK_FORMS = BANK as { code: string; template: Template; defaults: Values }[];
+const bankForm = (code: string) => BANK_FORMS.find(f => f.code === code)!;
+let t: Template = clone(bankForm("BG").template);
+let values: Values = clone(bankForm("BG").defaults);
 let view: View = "design";
 let filled: Uint8Array | undefined; // the last "Save filled PDF", so Extract can use it straight away
 const auto = new WeakSet<Field>(); // fields whose key still follows their label
+let pristine = ""; // the form as opened, to tell whether switching forms would lose edits
 try { const s = localStorage.getItem(STORE); if (s) t = JSON.parse(s); } catch { /* storage blocked: start from the sample */ }
+pristine = JSON.stringify(t);
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, unknown> = {}, ...kids: (Node | string | false | undefined)[]) {
   const el = document.createElement(tag);
@@ -250,12 +255,13 @@ function showPdf(bytes: Uint8Array) {
 // ---- Shell ----
 function go(v: View) {
   view = v;
-  document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
   ({ design: renderDesign, fill: renderFill, extract: () => renderExtract() })[v]();
   $("#panel").scrollTop = 0;
   refresh(true);
 }
 
+$("#bankForms").append(...BANK_FORMS.map(f => h("option", { value: `bank:${f.code}` }, f.template.title)));
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.onclick = () => go(b.dataset.view as View));
 $("#blankBtn").onclick = async () => download(await buildPdf(t) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
@@ -266,11 +272,13 @@ $("#templateSel").onchange = async e => {
   const v = (e.target as HTMLSelectElement).value;
   (e.target as HTMLSelectElement).value = "";
   if (v === "open") return $("#templateIn").click();
-  if (v && !confirmReplace()) return;
+  if (v && JSON.stringify(t) !== pristine && !confirmReplace()) return; // only ask when there are edits to lose
+  values = {};
   if (v === "guarantee") t = clone(GUARANTEE);
   if (v === "blank") t = { title: "Untitled form", note: "", sections: [{ title: "Details", fields: [] }] };
-  values = {};
+  if (v.startsWith("bank:")) { const f = bankForm(v.slice(5)); t = clone(f.template); values = clone(f.defaults); }
   go("design");
+  pristine = JSON.stringify(t);
 };
 $<HTMLInputElement>("#templateIn").onchange = async e => {
   const file = (e.target as HTMLInputElement).files?.[0];

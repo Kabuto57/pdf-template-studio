@@ -147,8 +147,10 @@ export function xfaFields(root: XNode): Xfa {
     }
     if (c.includes("xfaField")) {
       const ui = find(n, isUi), cap = find(n, isCaption), caption = cap ? words(cap) : "";
-      if (!ui || !name || c.includes("xfaReadOnly") || cls(ui).includes("xfaReadOnly")) return; // read-only = printed text, not a question
+      if (!ui || !name) return;
       const a = ui.attributes ?? {};
+      // Read-only with text in it = a printed label (e.g. a table heading). Read-only and empty = unlocked by the form's script later.
+      if ((c.includes("xfaReadOnly") || cls(ui).includes("xfaReadOnly")) && (a.value || a.textContent)) return;
       if (ui.name === "button") { const m = /\(([A-Z]+)\)\s*$/.exec(caption); if (m) titles[m[1]] = caption; return; }
       if (ui.name === "textarea") fields.push({ path, name, ui: "long", caption, options: [], value: a.textContent ?? "" });
       else if (ui.name === "select") {
@@ -176,7 +178,10 @@ export const humanize = (s: string) => {
 
 /** An XFA field's section, its own question, and the group it sits in (used to tell repeats apart). */
 export function xfaLabel(f: XfaField): { section: string; own: string; group: string } {
-  const own = (f.caption && f.caption.length <= 80 ? f.caption : humanize(f.name)).replace(/[\s:]+$/, "");
+  const raw = f.caption && f.caption.length <= 80 ? f.caption : humanize(f.name);
+  const star = /\*\s*$/.test(raw); // required, in the form's own notation
+  let own = raw.replace(/[\s:*]+$/, "") + (star ? " *" : "");
+  if (/^radio button list$/i.test(own)) own = humanize(f.path.at(-1) ?? f.name); // a generic name: use its subform's
   return { section: humanize(f.path[2] ?? f.path[1] ?? "Form"), own: own || humanize(f.name), group: humanize(f.path[3] ?? "") };
 }
 

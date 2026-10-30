@@ -17,10 +17,13 @@
     </nav>
     <div class="actions">
       <select id="templateSel" aria-label="Form">
-        <option value="">Forms…</option>
-        <option value="guarantee">Banker's guarantee (sample)</option>
-        <option value="blank">Blank form</option>
-        <option value="open">Upload a PDF template…</option>
+        <option value="">Open a form…</option>
+        <optgroup label="Bank trade forms" id="bankForms"></optgroup>
+        <optgroup label="Other">
+          <option value="guarantee">Simple banker's guarantee (sample)</option>
+          <option value="blank">Blank form</option>
+          <option value="open">Upload a PDF template…</option>
+        </optgroup>
       </select>
       <input type="file" id="templateIn" accept="application/pdf,.pdf" class="sr" tabindex="-1">
       <button type="button" id="blankBtn">Download blank PDF</button>

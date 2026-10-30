@@ -1,0 +1,4606 @@
+[
+ {
+  "code": "LC",
+  "template": {
+   "title": "Irrevocable Documentary Credit (LC)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "LC",
+     "fields": [
+      {
+       "id": "mode_of_advising",
+       "label": "Mode of advising",
+       "kind": "radio",
+       "options": [
+        "Full Swift",
+        "Registered Airmail",
+        "Airmail with Brief Swift",
+        "Courier Service",
+        "Courier Service with Brief Swift"
+       ]
+      },
+      {
+       "id": "applicant_name",
+       "label": "Applicant Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address",
+       "label": "Applicant Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_2",
+       "label": "Applicant: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_3",
+       "label": "Applicant: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "name",
+       "label": "Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tel_no",
+       "label": "Tel No *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_fax_no",
+       "label": "Applicant: Fax No",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "dc_no",
+       "label": "DC No",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "bank_code",
+       "label": "Bank Code",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_bank_use_name",
+       "label": "For bank use: Name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_bank_use_address",
+       "label": "For bank use: Address",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_bank_use_address_2",
+       "label": "For bank use: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_bank_use_address_3",
+       "label": "For bank use: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "3party_beneficiary_name",
+       "label": "3party beneficiary: Name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "3party_beneficiary_address",
+       "label": "3party beneficiary: Address",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "3party_beneficiary_address_2",
+       "label": "3party beneficiary: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "3party_beneficiary_address_3",
+       "label": "3party beneficiary: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_s_name",
+       "label": "Beneficiary's Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_s_address",
+       "label": "Beneficiary's Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_2",
+       "label": "Beneficiary: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_3",
+       "label": "Beneficiary: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contact_person",
+       "label": "Contact Person",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tel_no_2",
+       "label": "Tel No",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_fax_no",
+       "label": "Beneficiary: Fax No",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency",
+       "label": "Currency *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "gst",
+       "label": "GST",
+       "kind": "radio",
+       "options": [
+        "inclusive of GST",
+        "No GST"
+       ]
+      },
+      {
+       "id": "tolerance_on_credit_amount_and_goods_qua",
+       "label": "Tolerance on credit amount & goods quantity:",
+       "kind": "check"
+      },
+      {
+       "id": "plus_value",
+       "label": "Plus value",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "minus_value",
+       "label": "Minus value",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "price_basis",
+       "label": "Price basis",
+       "kind": "radio",
+       "options": [
+        "FOB",
+        "CFR",
+        "CIF",
+        "Local Delivery",
+        "FCA",
+        "CIP",
+        "CPT",
+        "Others"
+       ]
+      },
+      {
+       "id": "others",
+       "label": "Others",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "partial_shipment",
+       "label": "Partial shipment",
+       "kind": "radio",
+       "options": [
+        "allowed",
+        "not allowed"
+       ]
+      },
+      {
+       "id": "transhipment",
+       "label": "Transhipment",
+       "kind": "radio",
+       "options": [
+        "allowed",
+        "not allowed"
+       ]
+      },
+      {
+       "id": "port_of_loading",
+       "label": "Port of loading",
+       "kind": "select",
+       "options": [
+        "<Select value for Shipment From>",
+        "Port of Loading / Airport of Departure",
+        "Dispatch from",
+        "Place of Taking in charge",
+        "Place of Receipt"
+       ],
+       "half": true
+      },
+      {
+       "id": "port_of_discharge",
+       "label": "Port of discharge",
+       "kind": "select",
+       "options": [
+        "<Select value for Shipment To>",
+        "Port of Discharge / Airport of Destination",
+        "For Transportation to",
+        "Place of Final Destination",
+        "Place of Delivery"
+       ],
+       "half": true
+      },
+      {
+       "id": "shipment_date_date",
+       "label": "Shipment date: Date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "date_of_expiry_date",
+       "label": "Date of expiry: Date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "period",
+       "label": "Period",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "cr_no",
+       "label": "Cr no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "issu_by",
+       "label": "Issu by",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drafts_btb",
+       "label": "Drafts: BTB",
+       "kind": "check"
+      },
+      {
+       "id": "drafts_for_100_invoice_value_at",
+       "label": "Drafts for 100% invoice value at",
+       "kind": "check"
+      },
+      {
+       "id": "drafts",
+       "label": "Drafts",
+       "kind": "radio",
+       "options": [
+        "Sight or",
+        "Term:",
+        "Date"
+       ]
+      },
+      {
+       "id": "term",
+       "label": "Term",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "days_after",
+       "label": "days after",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drafts_date",
+       "label": "Drafts: Date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "full_set_of_clean_on_board_marine_bills_",
+       "label": "Full set of Clean on Board marine bills of lading made out to:",
+       "kind": "check"
+      },
+      {
+       "id": "full_set",
+       "label": "Full set",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "consignee",
+       "label": "Consignee",
+       "kind": "radio",
+       "options": [
+        "order of the Bank or",
+        "order blank endorsed, marked Freight",
+        "3"
+       ]
+      },
+      {
+       "id": "freight",
+       "label": "Freight",
+       "kind": "radio",
+       "options": [
+        "Prepaid or",
+        "Collect"
+       ]
+      },
+      {
+       "id": "drafts_notify_party",
+       "label": "Drafts: Notify party",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "original_air_waybill_consigned_to_the_ba",
+       "label": "Original Air Waybill consigned to the Bank marked Freight",
+       "kind": "check"
+      },
+      {
+       "id": "original_air_waybill",
+       "label": "Original air waybill",
+       "kind": "radio",
+       "options": [
+        "Prepaid or",
+        "Collect"
+       ]
+      },
+      {
+       "id": "original_air_waybill_notify_party",
+       "label": "Original air waybill: Notify party",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "delivery_order_in",
+       "label": "Delivery order in",
+       "kind": "check"
+      },
+      {
+       "id": "originals",
+       "label": "originals",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "transport_documents_by_do_copies",
+       "label": "Transport documents by DO: copies",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "countersigned_by",
+       "label": "Countersigned by",
+       "kind": "select",
+       "options": [
+        "One",
+        "Two"
+       ],
+       "half": true
+      },
+      {
+       "id": "whose_signature",
+       "label": "Whose signature",
+       "kind": "select",
+       "options": [
+        "need",
+        "need not"
+       ],
+       "half": true
+      },
+      {
+       "id": "marine_air_insurance_policy_or_certifica",
+       "label": "Marine/Air Insurance Policy or Certificate in duplicate showing beneficiary as assured, blank endorsed for 110% of invoice value with claims payable",
+       "kind": "check"
+      },
+      {
+       "id": "beneficiary_s_certificate_stating_1_set_",
+       "label": "Beneficiary's certificate stating 1 set of non-negotiable documents have been",
+       "kind": "check"
+      },
+      {
+       "id": "days_after_shipment",
+       "label": "days after shipment.",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "LC foot",
+     "fields": [
+      {
+       "id": "signed_commercial_invoice_in",
+       "label": "Signed commercial invoice in:",
+       "kind": "check"
+      },
+      {
+       "id": "invoice_originals_and",
+       "label": "Invoice: originals and",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "invoice_copies",
+       "label": "Invoice: copies",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "packing_list_in",
+       "label": "Packing list in:",
+       "kind": "check"
+      },
+      {
+       "id": "invoice_originals_and_2",
+       "label": "Invoice: originals and",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "invoice_copies_2",
+       "label": "Invoice: copies",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "weight_note_in",
+       "label": "Weight Note in:",
+       "kind": "check"
+      },
+      {
+       "id": "invoice_originals_and_3",
+       "label": "Invoice: originals and",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "invoice_copies_3",
+       "label": "Invoice: copies",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "certificate_of_origin_in",
+       "label": "Certificate of Origin in:",
+       "kind": "check"
+      },
+      {
+       "id": "invoice_originals_and_4",
+       "label": "Invoice: originals and",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "copies",
+       "label": "copies,",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "showing_country_of_origin_as",
+       "label": "showing country of origin as",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "other_documents",
+       "label": "Other documents:",
+       "kind": "check"
+      },
+      {
+       "id": "other_doc",
+       "label": "Other doc",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "other_doc_1",
+       "label": "Other doc 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "goods_description",
+       "label": "Goods description",
+       "kind": "long"
+      },
+      {
+       "id": "additional_cond",
+       "label": "Additional cond",
+       "kind": "long"
+      },
+      {
+       "id": "all_bank_charges_are_for_account_of",
+       "label": "All Bank Charges are for account of: *",
+       "kind": "check"
+      },
+      {
+       "id": "charge_account",
+       "label": "Charge account",
+       "kind": "radio",
+       "options": [
+        "Beneficiary, except charges at DC Issuing Bank's counter",
+        "Applicant (including all charges incurred inside and outside of"
+       ]
+      },
+      {
+       "id": "confirmation_required",
+       "label": "Confirmation required",
+       "kind": "check"
+      },
+      {
+       "id": "confirmation",
+       "label": "Confirmation",
+       "kind": "radio",
+       "options": [
+        "Applicant",
+        "Beneficiary"
+       ]
+      },
+      {
+       "id": "please_provide_us_with_post_shipment_fin",
+       "label": "Please provide us with post-shipment financing under Documentary Credit:",
+       "kind": "check"
+      },
+      {
+       "id": "trust_receipts",
+       "label": "Trust receipts",
+       "kind": "radio",
+       "options": [
+        "SGD financing, or",
+        "Foreign Currency Financing in",
+        "Apply Forward Contract No:"
+       ]
+      },
+      {
+       "id": "forgeign",
+       "label": "Forgeign",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "details_apply_forward",
+       "label": "Details: Apply forward",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "details_apply_forward_2",
+       "label": "Details: Apply forward",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "details_btb",
+       "label": "Details: BTB",
+       "kind": "check"
+      },
+      {
+       "id": "with_you",
+       "label": "with you.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "authorised_person_s_and_company_stamp",
+       "label": "Authorised Person(s) & Company Stamp",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {
+   "mode_of_advising": "Full Swift",
+   "period": "21",
+   "all_bank_charges_are_for_account_of": true,
+   "please_provide_us_with_post_shipment_fin": true
+  }
+ },
+ {
+  "code": "LC_Amendment",
+  "template": {
+   "title": "Amendment to Documentary Credit (LC Amendment)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "Detail",
+     "fields": [
+      {
+       "id": "number",
+       "label": "Number *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "number_amend_no",
+       "label": "Number: Amend no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_s_name",
+       "label": "Applicant's Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_s_address",
+       "label": "Applicant's Address",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_2",
+       "label": "Applicant: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_3",
+       "label": "Applicant: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contact_person",
+       "label": "Contact Person *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tel_no",
+       "label": "Tel No *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "fax_no",
+       "label": "Fax No *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_s_name",
+       "label": "Beneficiary's Name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_s_address",
+       "label": "Beneficiary's Address",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_2",
+       "label": "Beneficiary: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_3",
+       "label": "Beneficiary: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "mode_of_advising",
+       "label": "Mode of advising",
+       "kind": "radio",
+       "options": [
+        "SWIFT",
+        "Registered Airmail",
+        "Courier",
+        "Collection at Counter"
+       ]
+      },
+      {
+       "id": "currency_2",
+       "label": "Currency 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount_2",
+       "label": "Amount 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount_of_the_dc",
+       "label": "Amount of the DC",
+       "kind": "check"
+      },
+      {
+       "id": "amount",
+       "label": "Amount",
+       "kind": "radio",
+       "options": [
+        "increased by",
+        "decreased by"
+       ]
+      },
+      {
+       "id": "date_of_expiry_date",
+       "label": "Date of expiry: Date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "the_expiry_date_of_the_dc_is_extended_to",
+       "label": "The expiry date of the DC is extended to",
+       "kind": "check"
+      },
+      {
+       "id": "shipment_date_date",
+       "label": "Shipment date: Date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "the_latest_shipment_date_is_extended_to",
+       "label": "The latest shipment date is extended to",
+       "kind": "check"
+      },
+      {
+       "id": "partial_shipment",
+       "label": "Partial shipment",
+       "kind": "radio",
+       "options": [
+        "allowed",
+        "not allowed"
+       ]
+      },
+      {
+       "id": "transhipment",
+       "label": "Transhipment",
+       "kind": "radio",
+       "options": [
+        "allowed",
+        "not allowed"
+       ]
+      },
+      {
+       "id": "partial_shipment_is",
+       "label": "Partial Shipment is",
+       "kind": "check"
+      },
+      {
+       "id": "transhipment_is",
+       "label": "Transhipment is",
+       "kind": "check"
+      },
+      {
+       "id": "presentation_period_is_amended_to",
+       "label": "Presentation period is amended to",
+       "kind": "check"
+      },
+      {
+       "id": "partialshipment_amend_no",
+       "label": "Partialshipment: Amend no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Foot",
+     "fields": [
+      {
+       "id": "goods_description",
+       "label": "Goods description",
+       "kind": "long"
+      },
+      {
+       "id": "amendment_charges",
+       "label": "Amendment charges",
+       "kind": "radio",
+       "options": [
+        "Beneficiary",
+        "Applicant"
+       ]
+      },
+      {
+       "id": "and_to_be_debited_to_our_account_no",
+       "label": "and to be debited to our account no.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "authorised_person_s_and_company_s_stamp",
+       "label": "Authorised Person(s) & Company's Stamp",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {
+   "mode_of_advising": "SWIFT",
+   "amendment_charges": "Applicant"
+  }
+ },
+ {
+  "code": "EBLC",
+  "template": {
+   "title": "Handling / Financing of Documents under Export Documentary Credit (EBLC)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "EBLC",
+     "fields": [
+      {
+       "id": "beneficiary_name",
+       "label": "Beneficiary Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address",
+       "label": "Beneficiary Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "txtbeneficiary_address_2",
+       "label": "Txtbeneficiary address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "txtbeneficiary_address_3",
+       "label": "Txtbeneficiary address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "credit_no",
+       "label": "Credit no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "issuing_bank_name",
+       "label": "Issuing Bank Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "issuing_bank_name_1",
+       "label": "Issuing bank name 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency",
+       "label": "Currency *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "dated",
+       "label": "Dated",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "name",
+       "label": "Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tel_no",
+       "label": "Tel No *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "fax_no",
+       "label": "Fax No *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "we_reject_amendment_no",
+       "label": "We REJECT Amendment No:",
+       "kind": "check"
+      },
+      {
+       "id": "reject",
+       "label": "Reject",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "draft_inv_no",
+       "label": "Draft inv no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "vessel_name",
+       "label": "Vessel name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "imo_no",
+       "label": "IMO no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tenor",
+       "label": "Tenor",
+       "kind": "radio",
+       "options": [
+        "Sight",
+        "Term",
+        "Date"
+       ]
+      },
+      {
+       "id": "term",
+       "label": "Term",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "days",
+       "label": "days",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tenor_date",
+       "label": "Tenor date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "port_disch",
+       "label": "Port disch",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "port_load",
+       "label": "Port load",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "goods_desc",
+       "label": "Goods desc",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "dep_dated",
+       "label": "Dep dated",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "cr_no",
+       "label": "CR no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_1",
+       "label": "Table 1: Input 1",
+       "kind": "long"
+      },
+      {
+       "id": "table_1_input_2",
+       "label": "Table 1: Input 2",
+       "kind": "long"
+      },
+      {
+       "id": "table_1_input_3",
+       "label": "Table 1: Input 3",
+       "kind": "long"
+      },
+      {
+       "id": "table_1_input_4",
+       "label": "Table 1: Input 4",
+       "kind": "long"
+      },
+      {
+       "id": "table_1_input_5",
+       "label": "Table 1: Input 5",
+       "kind": "long"
+      },
+      {
+       "id": "table_1_drafts",
+       "label": "Table 1: Drafts",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_invoice",
+       "label": "Table 1: Invoice",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_packing_list",
+       "label": "Table 1: Packing list",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_weight_note",
+       "label": "Table 1: Weight note",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_certof_origin",
+       "label": "Table 1: Certof origin",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "inspolicy",
+       "label": "Inspolicy",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_bl",
+       "label": "Table 1: BL",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_airway_bills",
+       "label": "Table 1: Airway bills",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_ben_cert",
+       "label": "Table 1: Ben cert",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_1_2",
+       "label": "Table 1: Input 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_2_2",
+       "label": "Table 1: Input 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_3_2",
+       "label": "Table 1: Input 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_4_2",
+       "label": "Table 1: Input 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_5_2",
+       "label": "Table 1: Input 5",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_drafts_2",
+       "label": "Table 1: Drafts",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_invoice_2",
+       "label": "Table 1: Invoice",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_packing_list_2",
+       "label": "Table 1: Packing list",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_weight_note_2",
+       "label": "Table 1: Weight note",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_certof_origin_2",
+       "label": "Table 1: Certof origin",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "ins_policy",
+       "label": "Ins policy",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_bl_2",
+       "label": "Table 1: BL",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_airway_bills_2",
+       "label": "Table 1: Airway bills",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_ben_cert_2",
+       "label": "Table 1: Ben cert",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_1_3",
+       "label": "Table 1: Input 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_2_3",
+       "label": "Table 1: Input 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_3_3",
+       "label": "Table 1: Input 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_4_3",
+       "label": "Table 1: Input 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_1_input_5_3",
+       "label": "Table 1: Input 5",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "bank",
+       "label": "Bank",
+       "kind": "select",
+       "options": [
+        "attached",
+        "with Bank",
+        "with other bank"
+       ],
+       "half": true
+      },
+      {
+       "id": "bank_2",
+       "label": "Bank",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "checking_of_documents",
+       "label": "Checking of documents",
+       "kind": "radio",
+       "options": [
+        "Do not check the Documents and send the unchecked Documents to the Issuing Bank",
+        "Check the Documents and send them to the Issuing Bank per Documentary Credit terms"
+       ]
+      },
+      {
+       "id": "financing",
+       "label": "Financing",
+       "kind": "radio",
+       "options": [
+        "We do not need financing. Please PAY US upon receipt of funds.",
+        "We request your financing, discounting and/or negotiation in respect of the Documents under the Documentary Credit, in such currency acceptable to you (the"
+       ]
+      },
+      {
+       "id": "financing_rate",
+       "label": "Financing Rate",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "subfrmfinancing_request_1",
+       "label": "Subfrmfinancing: Request 1",
+       "kind": "radio",
+       "options": [
+        "With Full Recourse",
+        "With No Recourse (#)"
+       ]
+      },
+      {
+       "id": "subfrmfinancing_request_2",
+       "label": "Subfrmfinancing: Request 2",
+       "kind": "radio",
+       "options": [
+        "After the Documents have been accepted by the issuing bank or confirming bank (if any)",
+        "Prior to acceptance of the Documents by the Issuing"
+       ]
+      },
+      {
+       "id": "financing_currency",
+       "label": "Financing Currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "subfrmfinancing_request_1_2",
+       "label": "Subfrmfinancing: Request 1",
+       "kind": "radio",
+       "options": [
+        "Bank manages foreign exchange rate, currency convertibility and/or transferability risks",
+        "Bank enters Hedging Transaction with us",
+        "Without a Hedging Transaction with a Haircut Percentage of"
+       ]
+      },
+      {
+       "id": "rate",
+       "label": "Rate",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "subfrmfinancing_request_2_2",
+       "label": "Subfrmfinancing: Request 2",
+       "kind": "radio",
+       "options": [
+        "Deliverable forward foreign exchange transaction",
+        "Non-deliverable forward foreign exchange transaction",
+        "Currency option transaction"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "EBLC 2",
+     "fields": [
+      {
+       "id": "proceed_options",
+       "label": "Proceed options",
+       "kind": "radio",
+       "options": [
+        "after deducting the Financing Interest due to you /",
+        "without deducting the"
+       ]
+      },
+      {
+       "id": "credit_the_funds_to_our_account_no",
+       "label": "Credit the funds to our account no:",
+       "kind": "check"
+      },
+      {
+       "id": "credit_fund",
+       "label": "Credit fund",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "remit_the_funds_to",
+       "label": "Remit the funds to:",
+       "kind": "check"
+      },
+      {
+       "id": "remit_the_funds",
+       "label": "Remit the funds",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "use_the_funds_to_repay",
+       "label": "Use the funds to repay:",
+       "kind": "check"
+      },
+      {
+       "id": "use_the_funds",
+       "label": "Use the funds",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "use_fx_contract_ref",
+       "label": "Use FX contract Ref:",
+       "kind": "check"
+      },
+      {
+       "id": "use_fx",
+       "label": "Use FX",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "others_1",
+       "label": "Others 1",
+       "kind": "long"
+      },
+      {
+       "id": "authorised_person_s_and_company_stamp",
+       "label": "Authorised Person(s) & Company Stamp",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {
+   "tenor": "Sight",
+   "bank": "attached",
+   "checking_of_documents": "Do not check the Documents and send the unchecked Documents to the Issuing Bank",
+   "financing": "We do not need financing. Please PAY US upon receipt of funds.",
+   "proceed_options": "after deducting the Financing Interest due to you /"
+  }
+ },
+ {
+  "code": "OBC",
+  "template": {
+   "title": "Application for Export Documentary Collection (OBC)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "OBC",
+     "fields": [
+      {
+       "id": "drawer_name",
+       "label": "Drawer: Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drawer_address",
+       "label": "Drawer: Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drawer_address_2",
+       "label": "Drawer: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drawer_address_3",
+       "label": "Drawer: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contact_person",
+       "label": "Contact Person *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tel",
+       "label": "Tel *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency",
+       "label": "Currency *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drawee_bank_name",
+       "label": "Drawee bank: Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drawee_bank_address",
+       "label": "Drawee bank: Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drawee_bank_address_2",
+       "label": "Drawee bank: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drawee_bank_address_3",
+       "label": "Drawee bank: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "drawee",
+       "label": "Drawee",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "payment",
+       "label": "Payment",
+       "kind": "check"
+      },
+      {
+       "id": "acceptance",
+       "label": "Acceptance",
+       "kind": "check"
+      },
+      {
+       "id": "invoice_invoice",
+       "label": "Invoice: Invoice",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tenor",
+       "label": "Tenor",
+       "kind": "radio",
+       "options": [
+        "Sight",
+        "Term"
+       ]
+      },
+      {
+       "id": "term",
+       "label": "Term",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "days",
+       "label": "days",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "vessel_no",
+       "label": "Vessel no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "cr_no",
+       "label": "CR no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "goods_desc",
+       "label": "Goods desc",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "dep_dated",
+       "label": "Dep dated",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "port_disch",
+       "label": "Port disch",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "port_load",
+       "label": "Port load",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_input_1",
+       "label": "Table: Input 1",
+       "kind": "long"
+      },
+      {
+       "id": "table_input_2",
+       "label": "Table: Input 2",
+       "kind": "long"
+      },
+      {
+       "id": "table_input_3",
+       "label": "Table: Input 3",
+       "kind": "long"
+      },
+      {
+       "id": "in_input_4",
+       "label": "In input 4",
+       "kind": "long"
+      },
+      {
+       "id": "table_drafts",
+       "label": "Table: Drafts",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_invoice",
+       "label": "Table: Invoice",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_packing_list",
+       "label": "Table: Packing list",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_certof_origin",
+       "label": "Table: Certof origin",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_insurance_policy",
+       "label": "Table: Insurance policy",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_bl_originals",
+       "label": "Table: BL originals",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_blnn",
+       "label": "Table: BLNN",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_weight_note",
+       "label": "Table: Weight note",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_airway_bills",
+       "label": "Table: Airway bills",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_ben_cert",
+       "label": "Table: Ben cert",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_input_2_2",
+       "label": "Table: Input 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_input_3_2",
+       "label": "Table: Input 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_input_4",
+       "label": "Table: Input 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "input_5",
+       "label": "Input 5",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_drafts_2",
+       "label": "Table: Drafts",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_invoice_2",
+       "label": "Table: Invoice",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_packing_list_2",
+       "label": "Table: Packing list",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_certof_origin_2",
+       "label": "Table: Certof origin",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_insurance_policy_2",
+       "label": "Table: Insurance policy",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_bl_originals_2",
+       "label": "Table: BL originals",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_blnn_2",
+       "label": "Table: BLNN",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_weight_note_2",
+       "label": "Table: Weight note",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_airway_bills_2",
+       "label": "Table: Airway bills",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_ben_cert_2",
+       "label": "Table: Ben cert",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_input_1_2",
+       "label": "Table: Input 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_input_2_3",
+       "label": "Table: Input 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_input_3_3",
+       "label": "Table: Input 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "table_input_4_2",
+       "label": "Table: Input 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "collect_your_charges_from_drawee",
+       "label": "Collect your charges from Drawee.",
+       "kind": "check"
+      },
+      {
+       "id": "collect_interest_from_drawee_at",
+       "label": "Collect interest from Drawee at",
+       "kind": "check"
+      },
+      {
+       "id": "p_a_from",
+       "label": "% p.a. from",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "interest_start_date_to",
+       "label": "( interest start date) to",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to",
+       "label": "To",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "do_not_waive_interest_and_or_collection_",
+       "label": "Do not waive interest and / or collection charges if refused",
+       "kind": "check"
+      },
+      {
+       "id": "advise_non_acceptance_non_payment_by_tel",
+       "label": "Advise non-acceptance / non-payment by telex / SWIFT.",
+       "kind": "check"
+      },
+      {
+       "id": "protest_non_acceptance_non_payment",
+       "label": "Protest non-acceptance / non-payment.",
+       "kind": "check"
+      },
+      {
+       "id": "documents_to_be_sent_to_drawee_s_banker_",
+       "label": "Documents to be sent to drawee's banker by courier service in one(1)",
+       "kind": "check"
+      },
+      {
+       "id": "please_finance_us_for",
+       "label": "Please finance us for",
+       "kind": "check"
+      },
+      {
+       "id": "of_the_collection_amount",
+       "label": "% of the collection amount",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "please_forward_documents_to_drawee_s_ban",
+       "label": "Please forward documents to drawee's bank regardless of whether",
+       "kind": "check"
+      },
+      {
+       "id": "please_hold_documents_until_financing_of",
+       "label": "Please hold documents until financing of the collection has been",
+       "kind": "check"
+      },
+      {
+       "id": "please_credit_financing_payment_proceeds",
+       "label": "Please credit financing / payment proceeds to our account",
+       "kind": "check"
+      },
+      {
+       "id": "with_you",
+       "label": "with you",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "please_use_fx_contract_ref",
+       "label": "Please use FX Contract Ref. :",
+       "kind": "check"
+      },
+      {
+       "id": "ref",
+       "label": "Ref",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "other_special_instructions_other_special",
+       "label": "Other special instructions: Other Special Instructions",
+       "kind": "check"
+      },
+      {
+       "id": "other_special_instructions_other_special_2",
+       "label": "Other special instructions: Other special instructions",
+       "kind": "long"
+      },
+      {
+       "id": "authorised_person_s_and_company_stamp",
+       "label": "Authorised Person(s) & Company Stamp",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {
+   "tenor": "Sight",
+   "goods_desc": "AS PER INVOICE",
+   "documents_to_be_sent_to_drawee_s_banker_": true
+  }
+ },
+ {
+  "code": "DBRP",
+  "template": {
+   "title": "Import Financing",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "APF",
+     "fields": [
+      {
+       "id": "applicant_name",
+       "label": "Applicant: Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address",
+       "label": "Applicant: Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_2",
+       "label": "Applicant: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_3",
+       "label": "Applicant: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_name_2",
+       "label": "Applicant: Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contact_number",
+       "label": "Contact Number *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "fax_number",
+       "label": "Fax Number",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "brp",
+       "label": "BRP",
+       "kind": "radio",
+       "options": [
+        "Post-shipment Financing on open account basis/ Purchase Invoice Financing",
+        "Pre-shipment Financing against purchase order/ import contract or pro-forma invoice from seller/ supplier",
+        "Freight Loan Financing"
+       ]
+      },
+      {
+       "id": "3party_beneficiary_name",
+       "label": "3party beneficiary: Name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "3party_beneficiary_address",
+       "label": "3party beneficiary: Address",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "3party_beneficiary_address_2",
+       "label": "3party beneficiary: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "3party_beneficiary_address_3",
+       "label": "3party beneficiary: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sup_details_name",
+       "label": "Sup details: Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "city_country",
+       "label": "City/Country",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sup_details_address",
+       "label": "Sup details: Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sup_details_address_2",
+       "label": "Sup details: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sup_details_address_3",
+       "label": "Sup details: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency",
+       "label": "Currency *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "financing_currency",
+       "label": "Financing Currency *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "financing_period_days",
+       "label": "Financing Period (days) *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "financing_amount",
+       "label": "Financing: Amount",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency_2",
+       "label": "Currency 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "obc_date",
+       "label": "OBC date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "field",
+       "label": "-",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contract_no",
+       "label": "Contract no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency_3",
+       "label": "Currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contract_amount",
+       "label": "Contract: Amount",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "descrip",
+       "label": "Descrip",
+       "kind": "radio",
+       "options": [
+        "Purchase of Services",
+        "Purchase of Goods"
+       ]
+      },
+      {
+       "id": "services",
+       "label": "Services",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "goods",
+       "label": "Goods",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "doc",
+       "label": "Doc",
+       "kind": "radio",
+       "options": [
+        "Summary Listing of Invoices",
+        "Invoice(s) and/or Evidence of Shipment/Delivery"
+       ]
+      },
+      {
+       "id": "remit",
+       "label": "Remit",
+       "kind": "radio",
+       "options": [
+        "2",
+        "1"
+       ]
+      },
+      {
+       "id": "instructions",
+       "label": "Instructions",
+       "kind": "radio",
+       "options": [
+        "SFT",
+        "CSH"
+       ]
+      },
+      {
+       "id": "sup_yn",
+       "label": "Sup YN",
+       "kind": "radio",
+       "options": [
+        "Yes",
+        "No"
+       ]
+      },
+      {
+       "id": "name_of_beneficiary",
+       "label": "Name of Beneficiary *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "name_2",
+       "label": "Name 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "instructions_address",
+       "label": "Instructions: Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "instructions_address_2",
+       "label": "Instructions: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "country",
+       "label": "Country *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "postal_code",
+       "label": "Postal Code",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "town",
+       "label": "Town *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "account_number",
+       "label": "Account Number",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "reference_number",
+       "label": "Reference Number *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "instructions_name",
+       "label": "Instructions: Name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "instructions_address_3",
+       "label": "Instructions: Address",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "instructions_address_2_2",
+       "label": "Instructions: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "city_country_2",
+       "label": "City / Country",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "swift_code",
+       "label": "Swift code",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "name_of_correspondent_bank",
+       "label": "Name of Correspondent Bank",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "instructions_address_4",
+       "label": "Instructions: Address",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "cor_swift_code",
+       "label": "Cor swift code",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "charges",
+       "label": "Charges",
+       "kind": "radio",
+       "options": [
+        "SHA (We pay Bank charges, supplier pays their bank’s charges)",
+        "OUR (We pay all charges)",
+        "BEN (Supplier pays all charges)"
+       ]
+      },
+      {
+       "id": "to_credit_our_account_number",
+       "label": "To credit our account number",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "others_1",
+       "label": "Others 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "others_2",
+       "label": "Others 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "debit",
+       "label": "Debit",
+       "kind": "radio",
+       "options": [
+        "All charges",
+        "Foreign currency charges"
+       ]
+      },
+      {
+       "id": "a_currency",
+       "label": "A currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "a_account",
+       "label": "A account",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "f_currency",
+       "label": "F currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "f_account",
+       "label": "F account",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "l_account",
+       "label": "L account",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "re_currency",
+       "label": "Re currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "re_account",
+       "label": "Re account",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "authorised_person_s_and_company_stamp",
+       "label": "Authorised Person(s) & Company Stamp",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {
+   "descrip": "Purchase of Goods",
+   "charges": "SHA (We pay Bank charges, supplier pays their bank’s charges)"
+  }
+ },
+ {
+  "code": "BEOBC",
+  "template": {
+   "title": "Bill of Exchange: Export Documentary Collection",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "First",
+     "fields": [
+      {
+       "id": "no",
+       "label": "No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "singapore",
+       "label": "Singapore,",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "exchange",
+       "label": "Exchange",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "at",
+       "label": "At",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "the_sum_of",
+       "label": "the sum of",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_2",
+       "label": "Sum 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_3",
+       "label": "Sum 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_received",
+       "label": "value received",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_2",
+       "label": "Value 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_3",
+       "label": "Value 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to",
+       "label": "To",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_2",
+       "label": "To 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_3",
+       "label": "To 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_4",
+       "label": "To 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_2",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_1",
+       "label": "For 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_2",
+       "label": "For 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for",
+       "label": "For",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Second",
+     "fields": [
+      {
+       "id": "no_2",
+       "label": "No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "singapore_2",
+       "label": "Singapore,",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "exchange_2",
+       "label": "Exchange",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "at_2",
+       "label": "At",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "the_sum_of_2",
+       "label": "the sum of",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_2_2",
+       "label": "Sum 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_3_2",
+       "label": "Sum 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_2_2",
+       "label": "Value 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_3_2",
+       "label": "Value 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_5",
+       "label": "To",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_2_2",
+       "label": "To 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_3_2",
+       "label": "To 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_4_2",
+       "label": "To 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_1",
+       "label": "Signature 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_1_2",
+       "label": "For 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_2_2",
+       "label": "For 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_2_2",
+       "label": "Signature 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_3",
+       "label": "For",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {
+   "value_received": "As per invoice"
+  }
+ },
+ {
+  "code": "BEEBLC",
+  "template": {
+   "title": "Bill of Exchange: Export Documentary Credit",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "First",
+     "fields": [
+      {
+       "id": "no",
+       "label": "No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "singapore",
+       "label": "Singapore,",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "exchange",
+       "label": "Exchange",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "at",
+       "label": "At",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "the_sum_of",
+       "label": "the sum of",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_2",
+       "label": "Sum 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_3",
+       "label": "Sum 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to",
+       "label": "To",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_2",
+       "label": "To 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_3",
+       "label": "To 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_1",
+       "label": "Signature 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "documentary_credit_no",
+       "label": "Documentary Credit No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_2",
+       "label": "Signature 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_4",
+       "label": "To 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_1",
+       "label": "For 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_2",
+       "label": "Value 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_3",
+       "label": "Value 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "dated",
+       "label": "dated",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "for_2",
+       "label": "For 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for",
+       "label": "For",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_received_drawn_under",
+       "label": "value received \"Drawn under",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Second",
+     "fields": [
+      {
+       "id": "no_2",
+       "label": "No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "date",
+       "label": "Date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "exchange_2",
+       "label": "Exchange",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "at_2",
+       "label": "At",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "the_sum_of_2",
+       "label": "the sum of",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_2_2",
+       "label": "Sum 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_3_2",
+       "label": "Sum 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_5",
+       "label": "To",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_2_2",
+       "label": "To 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_3_2",
+       "label": "To 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_1_2",
+       "label": "Signature 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_2_2",
+       "label": "Signature 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_received_drawn_under_2",
+       "label": "value received \"Drawn under",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_2_2",
+       "label": "Value 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_3_2",
+       "label": "Value 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "dated_2",
+       "label": "dated",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "documentary_credit_no_2",
+       "label": "Documentary Credit No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_4_2",
+       "label": "To 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_1_2",
+       "label": "For 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_2_2",
+       "label": "For 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_3",
+       "label": "For",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {}
+ },
+ {
+  "code": "BEGeneric",
+  "template": {
+   "title": "Bill of Exchange (Generic, free format)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "First",
+     "fields": [
+      {
+       "id": "no",
+       "label": "No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "singapore",
+       "label": "Singapore,",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "exchange",
+       "label": "Exchange",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "at",
+       "label": "At",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "the_sum_of",
+       "label": "the sum of",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_2",
+       "label": "Sum 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_3",
+       "label": "Sum 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_received_drawn_under",
+       "label": "value received \"Drawn under",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_2",
+       "label": "Value 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_3",
+       "label": "Value 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "documentary_credit_no",
+       "label": "Documentary Credit No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to",
+       "label": "To",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_2",
+       "label": "To 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_3",
+       "label": "To 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_1",
+       "label": "Signature 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_2",
+       "label": "Signature 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "dated",
+       "label": "dated",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "to_4",
+       "label": "To 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_1",
+       "label": "For 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_2",
+       "label": "For 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for",
+       "label": "For",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Second",
+     "fields": [
+      {
+       "id": "no_2",
+       "label": "No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "singapore_2",
+       "label": "Singapore,",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "exchange_2",
+       "label": "Exchange",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "at_2",
+       "label": "At",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "the_sum_of_2",
+       "label": "the sum of",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_2_2",
+       "label": "Sum 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "sum_3_2",
+       "label": "Sum 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_received_drawn_under_2",
+       "label": "value received \"Drawn under",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_2_2",
+       "label": "Value 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "value_3_2",
+       "label": "Value 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_5",
+       "label": "To",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_2_2",
+       "label": "To 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_3_2",
+       "label": "To 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "signature_3",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "dated_2",
+       "label": "dated",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "documentary_credit_no_2",
+       "label": "Documentary Credit No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "to_4_2",
+       "label": "To 4",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_1_2",
+       "label": "For 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_2_2",
+       "label": "For 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "for_3",
+       "label": "For",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {}
+ },
+ {
+  "code": "SBLC",
+  "template": {
+   "title": "Irrevocable Standby Letter of Credit Application (SBLC)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "Form details",
+     "fields": [
+      {
+       "id": "date",
+       "label": "Date",
+       "kind": "date",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Total page no",
+     "fields": [
+      {
+       "id": "page_no",
+       "label": "Page no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Applicant and beneficiary",
+     "fields": [
+      {
+       "id": "bank_cif_no",
+       "label": "Bank CIF no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_name",
+       "label": "Applicant name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_1",
+       "label": "Applicant address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_2",
+       "label": "Applicant address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_3",
+       "label": "Applicant address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_info_contact_name",
+       "label": "Applicant info: Contact name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_info_tel_no",
+       "label": "Applicant info: Tel no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_info_fax_no",
+       "label": "Applicant info: Fax no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "registration_no",
+       "label": "Registration no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_name",
+       "label": "Beneficiary name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_1",
+       "label": "Beneficiary address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_2",
+       "label": "Beneficiary address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_country",
+       "label": "Beneficiary country",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_info_contact_name",
+       "label": "Beneficiary info: Contact name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_info_tel_no",
+       "label": "Beneficiary info: Tel no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_info_fax_no",
+       "label": "Beneficiary info: Fax no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Third party and advising bank",
+     "fields": [
+      {
+       "id": "third_party_address_1",
+       "label": "Third party address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "third_party_address_2",
+       "label": "Third party address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "third_party_address_3",
+       "label": "Third party address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "third_party_name",
+       "label": "Third party name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "advising_bank_name",
+       "label": "Advising bank name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "advising_bank_address_1",
+       "label": "Advising bank address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "advising_bank_address_2",
+       "label": "Advising bank address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "advising_bank_address_3",
+       "label": "Advising bank address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "swift_address",
+       "label": "SWIFT address",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Amount and period",
+     "fields": [
+      {
+       "id": "currency",
+       "label": "Currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "effective_date",
+       "label": "Effective date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "expiry_date",
+       "label": "Expiry date",
+       "kind": "date",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Partial and charges",
+     "fields": [
+      {
+       "id": "partial",
+       "label": "Partial",
+       "kind": "radio",
+       "options": [
+        "Allowed",
+        "Not Allowed"
+       ]
+      },
+      {
+       "id": "charges",
+       "label": "Charges",
+       "kind": "radio",
+       "options": [
+        "Applicant",
+        "Beneficiary"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Sblc format",
+     "fields": [
+      {
+       "id": "sblc_format",
+       "label": "SBLC format",
+       "kind": "long"
+      }
+     ]
+    },
+    {
+     "title": "Special instructions",
+     "fields": [
+      {
+       "id": "special_instructions",
+       "label": "Special instructions",
+       "kind": "long"
+      }
+     ]
+    },
+    {
+     "title": "This application",
+     "fields": [
+      {
+       "id": "application",
+       "label": "Application",
+       "kind": "radio",
+       "options": [
+        "The Uniform Customs and Practice for Documentary Credits, ICC Publication No. 600 unless there is instruction to us to apply any other revision of UCP such as UCP 500. We reserve the right not to accept any instructions from you to issue a SBLC which is subject to any revision of UCP other than UCP 600.",
+        "International Standby Practice (ISP) 98"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "All fees",
+     "fields": [
+      {
+       "id": "sblc_ac_no_acc_no",
+       "label": "SBLC ac no: Acc no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "header_acc_no",
+       "label": "Header: Acc no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Signature",
+     "fields": [
+      {
+       "id": "signature",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {}
+ },
+ {
+  "code": "SBLCA",
+  "template": {
+   "title": "Standby Letter of Credit Amendment (SBLC Amendment)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "Form details",
+     "fields": [
+      {
+       "id": "date",
+       "label": "Date",
+       "kind": "date",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Bank and ref no",
+     "fields": [
+      {
+       "id": "bank_cif_no",
+       "label": "Bank CIF no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "ref_no",
+       "label": "Ref no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Applicant and beneficiary",
+     "fields": [
+      {
+       "id": "applicant_name",
+       "label": "Applicant name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_1",
+       "label": "Applicant address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_2",
+       "label": "Applicant address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_3",
+       "label": "Applicant address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_info_contact_name",
+       "label": "Applicant info: Contact name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_info_tel_no",
+       "label": "Applicant info: Tel no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "fax_no",
+       "label": "Fax no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_name",
+       "label": "Beneficiary name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_1",
+       "label": "Beneficiary address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_2",
+       "label": "Beneficiary address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_country",
+       "label": "Beneficiary country",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Amendments",
+     "fields": [
+      {
+       "id": "the_amount_by",
+       "label": "the amount by",
+       "kind": "check"
+      },
+      {
+       "id": "amend_amount",
+       "label": "Amend amount",
+       "kind": "select",
+       "options": [
+        "Increase",
+        "Decrease"
+       ],
+       "half": true
+      },
+      {
+       "id": "currency",
+       "label": "Currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount_2",
+       "label": "Amount 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency_2",
+       "label": "Currency 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amend_the_expiry_date_to",
+       "label": "Amend the expiry date to",
+       "kind": "check"
+      },
+      {
+       "id": "expiry_date",
+       "label": "Expiry date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "amend_the_sblc_text_as_provided_below",
+       "label": "Amend the SBLC text as provided below",
+       "kind": "check"
+      },
+      {
+       "id": "amend",
+       "label": "Amend",
+       "kind": "long"
+      }
+     ]
+    },
+    {
+     "title": "Delivery instructions",
+     "fields": [
+      {
+       "id": "delivery",
+       "label": "Delivery",
+       "kind": "radio",
+       "options": [
+        "Please contact Mr/Mrs.",
+        "Please send the amendment directly to the beneficiary, attn.:",
+        "Free Text"
+       ]
+      },
+      {
+       "id": "contact_name",
+       "label": "Contact name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "passport_ic",
+       "label": "Passport IC",
+       "kind": "select",
+       "options": [
+        "Passport No.",
+        "IC No.",
+        "Others"
+       ],
+       "half": true
+      },
+      {
+       "id": "passport_ic_no",
+       "label": "Passport IC no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tel_no",
+       "label": "Tel no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "attn",
+       "label": "Attn",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "free_text",
+       "label": "Free text",
+       "kind": "long"
+      }
+     ]
+    },
+    {
+     "title": "We",
+     "fields": [
+      {
+       "id": "charges",
+       "label": "Charges",
+       "kind": "radio",
+       "options": [
+        "Applicant",
+        "Beneficiary"
+       ]
+      },
+      {
+       "id": "acc_no",
+       "label": "Acc no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Signature",
+     "fields": [
+      {
+       "id": "signature",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {}
+ },
+ {
+  "code": "BGA",
+  "template": {
+   "title": "Banker's Guarantee Amendment (BG Amendment)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "Form details",
+     "fields": [
+      {
+       "id": "date",
+       "label": "Date",
+       "kind": "date",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Bank and ref no",
+     "fields": [
+      {
+       "id": "bank_cif_no",
+       "label": "Bank CIF no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "ref_no",
+       "label": "Ref no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Applicant and beneficiary",
+     "fields": [
+      {
+       "id": "applicant_name",
+       "label": "Applicant name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_1",
+       "label": "Applicant address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_2",
+       "label": "Applicant address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_3",
+       "label": "Applicant address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_name",
+       "label": "Beneficiary name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_1",
+       "label": "Beneficiary address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_2",
+       "label": "Beneficiary address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_country",
+       "label": "Beneficiary country",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Amendments",
+     "fields": [
+      {
+       "id": "the_amount_by",
+       "label": "the amount by",
+       "kind": "check"
+      },
+      {
+       "id": "amend_amount",
+       "label": "Amend amount",
+       "kind": "select",
+       "options": [
+        "Increase",
+        "Decrease"
+       ],
+       "half": true
+      },
+      {
+       "id": "currency",
+       "label": "Currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount_2",
+       "label": "Amount 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency_2",
+       "label": "Currency 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amend_the_expiry_date_to",
+       "label": "Amend the expiry date to",
+       "kind": "check"
+      },
+      {
+       "id": "expiry_date",
+       "label": "Expiry date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "amend_the_claim_expiry_date_to",
+       "label": "Amend the claim expiry date to",
+       "kind": "check"
+      },
+      {
+       "id": "claim_expiry_date",
+       "label": "Claim expiry date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "amend_the_claim_expiry_period_to",
+       "label": "Amend the claim expiry period to",
+       "kind": "check"
+      },
+      {
+       "id": "claim_period",
+       "label": "Claim period",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "day_month",
+       "label": "Day month",
+       "kind": "select",
+       "options": [
+        "days",
+        "months"
+       ],
+       "half": true
+      },
+      {
+       "id": "amend_the_bg_text_as_provided_below",
+       "label": "Amend the BG text as provided below",
+       "kind": "check"
+      },
+      {
+       "id": "amend",
+       "label": "Amend",
+       "kind": "long"
+      }
+     ]
+    },
+    {
+     "title": "Delivery instructions",
+     "fields": [
+      {
+       "id": "delivery",
+       "label": "Delivery",
+       "kind": "radio",
+       "options": [
+        "Please contact Mr/Mrs.",
+        "Please send the amendment directly to the beneficiary, attn.:",
+        "Free Text"
+       ]
+      },
+      {
+       "id": "contact_name",
+       "label": "Contact name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "passport_ic",
+       "label": "Passport IC",
+       "kind": "select",
+       "options": [
+        "Passport No.",
+        "IC No.",
+        "Others"
+       ],
+       "half": true
+      },
+      {
+       "id": "passport_ic_no",
+       "label": "Passport IC no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "tel_no",
+       "label": "Tel no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "attn",
+       "label": "Attn",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "free_text",
+       "label": "Free text",
+       "kind": "long"
+      }
+     ]
+    },
+    {
+     "title": "We",
+     "fields": [
+      {
+       "id": "acc_no",
+       "label": "Acc no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Signature",
+     "fields": [
+      {
+       "id": "signature",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {}
+ },
+ {
+  "code": "BG",
+  "template": {
+   "title": "Banker's Guarantee Application (BG)",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "Form details",
+     "fields": [
+      {
+       "id": "date",
+       "label": "Date",
+       "kind": "date",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Applicant and beneficiary",
+     "fields": [
+      {
+       "id": "bank_cif_no",
+       "label": "Bank CIF no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_name",
+       "label": "Applicant name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_1",
+       "label": "Applicant address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_2",
+       "label": "Applicant address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_3",
+       "label": "Applicant address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_info_contact_name",
+       "label": "Applicant info: Contact name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_info_tel_no",
+       "label": "Applicant info: Tel no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_info_fax_no",
+       "label": "Applicant info: Fax no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "registration_no",
+       "label": "Registration no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_name",
+       "label": "Beneficiary name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_1",
+       "label": "Beneficiary address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_address_2",
+       "label": "Beneficiary address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_country",
+       "label": "Beneficiary country",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_info_contact_name",
+       "label": "Beneficiary info: Contact name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_info_tel_no",
+       "label": "Beneficiary info: Tel no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "beneficiary_info_fax_no",
+       "label": "Beneficiary info: Fax no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Currency and amount",
+     "fields": [
+      {
+       "id": "currency",
+       "label": "Currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Third party and effective date",
+     "fields": [
+      {
+       "id": "third_party_name",
+       "label": "Third party name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "third_party_address_1",
+       "label": "Third party address 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "third_party_address_2",
+       "label": "Third party address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "third_party_address_3",
+       "label": "Third party address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "effective_date",
+       "label": "Effective date",
+       "kind": "radio",
+       "options": [
+        "Specific Date",
+        "As per format enclosed",
+        "Date of Issue"
+       ]
+      },
+      {
+       "id": "effective_date_specific_date",
+       "label": "Effective date: Specific date",
+       "kind": "date",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Expiry date and claim expiry date",
+     "fields": [
+      {
+       "id": "expiry_date",
+       "label": "Expiry date",
+       "kind": "radio",
+       "options": [
+        "Specific Date",
+        "As per format enclosed",
+        "Open ended (not allowed if beneficiary is located in Singapore, as per ABS Bye-Laws)"
+       ]
+      },
+      {
+       "id": "expiry_date_specific_date",
+       "label": "Expiry date: Specific date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "claim_expiry_date",
+       "label": "Claim expiry date",
+       "kind": "radio",
+       "options": [
+        "Specific Date",
+        "As per format enclosed",
+        "Claim period: after expiry date"
+       ]
+      },
+      {
+       "id": "claim_expiry_date_specific_date",
+       "label": "Claim expiry date: Specific date",
+       "kind": "date",
+       "half": true
+      },
+      {
+       "id": "claim_period",
+       "label": "Claim period",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "day_month",
+       "label": "Day month",
+       "kind": "select",
+       "options": [
+        "days",
+        "months"
+       ],
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Requirements of issuing bank",
+     "fields": [
+      {
+       "id": "requirements",
+       "label": "Requirements",
+       "kind": "radio",
+       "options": [
+        "Issuing Bank shall be the Bank, Singapore",
+        "Issuing Bank shall be branch or subsidiary of the Bank",
+        "Issuing Bank shall be a Correspondent Agent Bank located in country of Beneficiary",
+        "Issuing Bank nominated by the Beneficiary (Name & SWIFT Code)"
+       ]
+      },
+      {
+       "id": "entity",
+       "label": "Entity",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "branch_country",
+       "label": "Branch country",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "issue_bank_name",
+       "label": "Issue bank name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "swift_address",
+       "label": "Swift address",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Delivery instructions",
+     "fields": [
+      {
+       "id": "non_sg",
+       "label": "Non SG",
+       "kind": "radio",
+       "options": [
+        "Please release original guarantee to / to order of our agent / beneficiary Mr/Mrs",
+        "Please courier directly to Beneficiary Address for attention of Contact Person as indicated above in the section “Beneficiary's Information”",
+        "Please courier back to Applicant at Address for attention of Contact Person as indicated above. We are aware of the additional transit time of 3-5 working days."
+       ]
+      },
+      {
+       "id": "mrs",
+       "label": "Mrs",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "passport",
+       "label": "Passport",
+       "kind": "select",
+       "options": [
+        "Passport No.",
+        "IC No.",
+        "Others"
+       ],
+       "half": true
+      },
+      {
+       "id": "passport_no",
+       "label": "Passport no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "at",
+       "label": "At",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "mobile_no",
+       "label": "Mobile no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Guarantees format",
+     "fields": [
+      {
+       "id": "guarantees_format",
+       "label": "Guarantees format",
+       "kind": "long"
+      }
+     ]
+    },
+    {
+     "title": "Special instructions",
+     "fields": [
+      {
+       "id": "special_instructions",
+       "label": "Special instructions",
+       "kind": "long"
+      }
+     ]
+    },
+    {
+     "title": "All fees",
+     "fields": [
+      {
+       "id": "bg_ac_no_acc_no",
+       "label": "BG ac no: Acc no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "header_acc_no",
+       "label": "Header: Acc no",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Signature",
+     "fields": [
+      {
+       "id": "signature",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {}
+ },
+ {
+  "code": "EXPORT",
+  "template": {
+   "title": "Export Financing: Pre-shipment / Sales Invoice Financing",
+   "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+   "sections": [
+    {
+     "title": "Form details",
+     "fields": [
+      {
+       "id": "date",
+       "label": "Date",
+       "kind": "date",
+       "half": true
+      }
+     ]
+    },
+    {
+     "title": "Subfrm",
+     "fields": [
+      {
+       "id": "applicant_name",
+       "label": "Applicant: Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "address",
+       "label": "Address *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_2",
+       "label": "Applicant: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_address_3",
+       "label": "Applicant: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "applicant_name_2",
+       "label": "Applicant: Name *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contact_number",
+       "label": "Contact number *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "fax_no",
+       "label": "Fax No.",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "shipment",
+       "label": "Shipment",
+       "kind": "radio",
+       "options": [
+        "Pre-Shipment Financing against export Documentary Credit No.",
+        "Pre-Shipment Financing against purchase order / export contract or pro-forma invoice from buyer / purchaser under Open Account basis",
+        "Sales Invoice Financing"
+       ]
+      },
+      {
+       "id": "credit_no",
+       "label": "Credit no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "name",
+       "label": "Name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "address_2",
+       "label": "Address",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "third_party_address_2",
+       "label": "Third party: Address 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "third_party_address_3",
+       "label": "Third party: Address 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "b_name",
+       "label": "B name",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency",
+       "label": "Currency *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "amount",
+       "label": "Amount *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "financing_currency",
+       "label": "Financing Currency *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "financing_period_days",
+       "label": "Financing Period (days) *",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "financing_amount",
+       "label": "Financing: Amount",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency_2",
+       "label": "Currency 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "field",
+       "label": "-",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contract_no",
+       "label": "Contract no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "currency_3",
+       "label": "Currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "contract_amount",
+       "label": "Contract: Amount",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "descrip",
+       "label": "Descrip",
+       "kind": "radio",
+       "options": [
+        "Sales of Services",
+        "Sales of Goods"
+       ]
+      },
+      {
+       "id": "services",
+       "label": "Services",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "goods",
+       "label": "Goods",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "doc",
+       "label": "Doc",
+       "kind": "radio",
+       "options": [
+        "Summary Listing of Invoices",
+        "Invoice(s) and/or Evidence of Shipment/Delivery"
+       ]
+      },
+      {
+       "id": "disbursement",
+       "label": "Disbursement",
+       "kind": "radio",
+       "options": [
+        "To credit our account number:",
+        "Others (specify)"
+       ]
+      },
+      {
+       "id": "credit_acc_no",
+       "label": "Credit acc no",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "disbursement_others_1",
+       "label": "Disbursement: Others 1",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "others_2",
+       "label": "Others 2",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "others_3",
+       "label": "Others 3",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "c_currency",
+       "label": "C currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "debit",
+       "label": "Debit",
+       "kind": "radio",
+       "options": [
+        "All charges",
+        "Foreign currency charges"
+       ]
+      },
+      {
+       "id": "re_currency",
+       "label": "Re currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "re_account",
+       "label": "Re account",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "a_currency",
+       "label": "A currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "a_account",
+       "label": "A account",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "f_currency",
+       "label": "F currency",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "f_account",
+       "label": "F account",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "l_account",
+       "label": "L account",
+       "kind": "text",
+       "half": true
+      },
+      {
+       "id": "debit_comm_others_1",
+       "label": "Debit comm: Others 1",
+       "kind": "long"
+      },
+      {
+       "id": "signature",
+       "label": "Signature",
+       "kind": "text",
+       "half": true
+      }
+     ]
+    }
+   ]
+  },
+  "defaults": {
+   "descrip": "Sales of Goods"
+  }
+ }
+]

@@ -15,6 +15,6 @@ const csp = (): Plugin => ({
 export default defineConfig({
   base: "./",
   plugins: [csp()],
-  build: { target: "es2022" },
-  test: { include: ["tests/**/*.test.ts"], alias: [{ find: /^pdfjs-dist$/, replacement: "pdfjs-dist/legacy/build/pdf.mjs" }] },
+  build: { target: "es2022", chunkSizeWarningLimit: 1500 }, // pdf.js is ~1 MB, loaded only when a PDF needs it
+  test: { include: ["tests/**/*.test.ts", "scripts/**/*.test.ts"], alias: [{ find: /^pdfjs-dist$/, replacement: "pdfjs-dist/legacy/build/pdf.mjs" }] },
 });
