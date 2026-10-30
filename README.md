@@ -77,26 +77,131 @@ It reads any PDF:
 | Printed or flattened PDF | From the text: `Label: value`, a label then its value on the same line, ticked boxes. Check these |
 | Scanned PDF | Not readable: it has no text (would need OCR) |
 
-## How it works
+## How it's built
+
+### The stack
+
+| Layer | What | Why |
+|---|---|---|
+| Language | **TypeScript** (strict), about 1,000 lines in `src/` | Plain, typed JavaScript; no framework |
+| UI | Plain DOM (`document.createElement`) + one CSS file | Small and easy to read; nothing to learn first |
+| Writing PDFs | **[pdf-lib](https://pdf-lib.js.org)** | Draws pages and creates real form fields (text boxes, radio buttons, tick boxes, drop-downs); fills and reads them |
+| Reading hard PDFs | **[pdf.js](https://mozilla.github.io/pdf.js/)** (Mozilla, the PDF viewer in Firefox) | Opens encrypted PDFs, Adobe XFA smart forms, and page text. Loaded only when needed |
+| Build | **Vite** | Bundles everything into a static site (`dist/`) |
+| Tests | **Vitest** | Runs the PDF code in Node: build, fill and extract round trips |
+| Hosting | **GitHub Pages**, deployed by **GitHub Actions** | Free; every push to `main` is tested, built and published |
+
+There is **no server and no database**. The website is just files (HTML, JS, CSS). Everything happens in the
+visitor's browser, so a PDF someone opens is never uploaded anywhere.
+
+### Folder structure
 
 ```
- Bank smart form (XFA)  ──pdf.js──▶  questions, choices, sections  ──▶  template (JSON)
-                                                                           │
-                         template + answers ──pdf-lib──▶ fillable PDF ◀────┘
-                                                              │
-                         filled PDF ──pdf-lib / pdf.js──▶ answers as JSON
+pdf-template-studio/
+├── index.html                 the page: top bar (steps, Open a form, Download, Save), left panel, PDF preview
+├── src/
+│   ├── main.ts                the app: three steps (Design / Fill / Extract), buttons, file upload, preview
+│   ├── pdf.ts                 PDF engine (pdf-lib): template -> fillable PDF, fill, read answers, import PDFs
+│   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks
+│   ├── bank-forms.json        the 13 bank trade forms, as templates (generated, see below)
+│   ├── lists.ts               currency codes (ISO 4217) and country names (ISO 3166) for drop-downs
+│   ├── sample.ts              the simple banker's guarantee sample and its sample answers
+│   └── styles.css             black-and-white look
+├── scripts/
+│   └── bank-forms.test.ts     rebuilds bank-forms.json from the bank's smart form PDF
+├── tests/                     automated checks (run with npm test)
+│   ├── pdf.test.ts            build -> fill -> extract gives back every answer
+│   ├── upload.test.ts         uploaded fillable / printed PDFs, text extraction
+│   └── xfa.test.ts            reading an XFA smart form
+├── .github/workflows/pages.yml   test, build and publish on every push
+├── vite.config.ts             build settings + Content Security Policy
+└── package.json               dependencies: pdf-lib, pdfjs-dist (dev: typescript, vite, vitest)
 ```
 
-- Every answer is a real PDF form field named by its key, so extraction reads the field rather than guessing from the page.
-- Each field's tooltip holds its question, and the template is stored inside the PDF, so the answers come back with their questions and sections.
+### The data model: a template
 
-| File | Job |
-|---|---|
-| `src/pdf.ts` | Draws the fillable PDF (`buildPdf`), fills uploaded PDFs, reads answers (`extractPdf`), imports PDFs (`importPdf`). Uses [pdf-lib](https://pdf-lib.js.org) |
-| `src/text.ts` | Reads XFA smart forms, text, `Label: value` pairs and blanks. Uses [pdf.js](https://mozilla.github.io/pdf.js/), loaded only when needed |
-| `src/bank-forms.json` | The 13 trade forms as templates |
-| `scripts/bank-forms.test.ts` | Rebuilds `bank-forms.json` from the smart form |
-| `src/main.ts` | The three-step app |
+Every form, built in or uploaded, becomes one small JSON object. This is the heart of the app:
+
+```ts
+interface Template {
+  title: string;                 // "Banker's Guarantee Application (BG)"
+  note: string;                  // instructions under the title
+  sections: { title: string; fields: Field[] }[];
+  base?: string;                 // an uploaded PDF to fill in place (instead of drawing a new layout)
+}
+interface Field {
+  id: string;                    // the key in the extracted JSON, e.g. "applicant_name"
+  label: string;                 // the question, e.g. "Applicant name"
+  kind: "text" | "long" | "date" | "radio" | "checks" | "check" | "select";
+  options?: string[];            // choices for radio / tick-any / drop-down
+  half?: boolean;                // half width: two questions side by side
+}
+```
+
+Answers are a flat object keyed by field id: `{ "applicant_name": "TAN ENG", "currency": "SGD", "agree": true }`.
+
+### The flow
+
+```
+ ┌───────────────────────────── 0. Getting a template ─────────────────────────────┐
+ │                                                                                  │
+ │  Bank smart form (XFA) ──pdf.js──▶ fields, choices, subforms ──▶ Template (JSON) │
+ │  Fillable PDF         ──pdf-lib──▶ its fields                ──▶ Template + base │
+ │  Printed PDF          ──pdf.js───▶ blanks (____ , ☐)         ──▶ fields added    │
+ │  Or build one by hand in Design                                                  │
+ └──────────────────────────────────────────────────────────────────────────────────┘
+                 │
+                 ▼
+ 1. Design   edit the Template; the preview redraws the real PDF as you type
+                 │
+                 ▼
+ 2. Fill     answers + Template ──buildPdf()──▶ filled, still-fillable PDF ──▶ Save
+                 │
+                 ▼
+ 3. Extract  any PDF ──extractPdf()──▶ form fields? ──yes──▶ answers + questions
+                                          │ no
+                                          ▼
+                              XFA smart form? ──yes──▶ readXfa(): answers per form
+                                          │ no
+                                          ▼
+                              page text ──pairs()──▶ "Label: value" answers
+                                          │
+                                          ▼
+                            table on screen + JSON (Download / Copy)
+```
+
+### The key functions
+
+| Function | File | What it does |
+|---|---|---|
+| `buildPdf(template, answers)` | `pdf.ts` | Lays out the form on A4 pages (title, black section bars, two-column rows, page breaks, footer) and creates a real form field per question, named by its key. Dates get a calendar picker (Acrobat). Stores the template inside the PDF. Returns the PDF bytes |
+| `extractPdf(bytes)` | `pdf.ts` | Opens a PDF and reads every form field's value. If the template is inside, answers come back with their questions and sections |
+| `importPdf(bytes)` | `pdf.ts` | Turns an uploaded PDF into a template: keeps a fillable PDF's fields, or adds fields over the blanks of a printed one |
+| `readXfa(bytes)` | `text.ts` | Uses pdf.js to open an Adobe smart form (even with an owner password) and walks its form tree: every field's subform path, type, choices, caption and value |
+| `xfaTemplate(xfa, code)` | `text.ts` | Turns one form from a smart-form bundle (e.g. `BG`) into a Template: sections from subforms, readable questions from captions or field names (`txtApplicantName` → "Applicant name"), drop-downs, dates |
+| `readText` / `pairs` / `blanks` | `text.ts` | For PDFs without fields: groups page text into lines, finds `Label: value` answers and ticked boxes, and finds `____` / `☐` blanks |
+
+### How extraction knows the phone number is the phone number
+
+It never guesses from the page picture. Each question is a **real PDF form field** whose name is its key
+(`applicant_info_tel_no`), whose tooltip is its question ("Applicant info: Tel no"), and the whole template is
+saved inside the PDF. So reading the answers is a lookup, exactly like reading a database row. Only PDFs with no
+fields at all fall back to reading the page text, and those results are marked "check these".
+
+### How the bank forms were made
+
+1. `readXfa()` opened the bank's trade smart form (`Trade-Smartform.pdf`, 14 forms built in Adobe LiveCycle).
+2. For each form, `xfaTemplate()` produced a Template. Currency and country drop-downs got the standard ISO
+   lists (the smart form fills those by script, so they are not in the file); fields named like dates became dates.
+3. The bank's name was replaced with "the Bank", and the result saved as `src/bank-forms.json`.
+
+To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vitest run scripts`.
+
+### Safety
+
+- No server: nothing a user opens or types leaves their browser.
+- A Content Security Policy (set in `vite.config.ts`) stops the page loading or sending anything to other sites.
+- The bank's original PDF is not in this repository.
 
 ## Run it locally
 
@@ -119,6 +224,6 @@ Every push to `main` runs the tests and publishes the site to GitHub Pages.
 
 - The bank's name is replaced with "the Bank" in the forms; the layout is a plain redraw, not the bank's own design.
 - Some choices come pre-selected because the smart form has them as defaults.
-- Currency and country lists are filled by the smart form's own scripts in Adobe Reader, so they are text boxes here.
+- Currency and country drop-downs use the standard ISO lists; the bank's own lists may be shorter.
 - Standard PDF fonts cover Latin text only; other scripts show as `?`.
 - Proof of concept: built with an AI coding assistant, directed by Jie Yung.

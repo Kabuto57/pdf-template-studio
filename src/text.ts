@@ -5,6 +5,7 @@ import type { TextItem } from "pdfjs-dist/types/src/display/api";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { slug } from "./pdf";
 import type { Field, Template, Values } from "./pdf";
+import { COUNTRIES, CURRENCIES } from "./lists";
 
 if (typeof window !== "undefined") GlobalWorkerOptions.workerSrc = workerUrl; // tests (Node) use the legacy build's own worker
 
@@ -200,15 +201,19 @@ export function xfaTemplate(x: Xfa, code: string): { template: Template; values:
   const sections = new Map<string, Field[]>(), values: Values = {}, keys = new Map<XfaField, string>(), used = new Set<string>();
   const mine = x.fields.filter(f => f.path[1] === code), seen = new Map<string, number>();
   for (const f of mine) { const o = xfaLabel(f).own.toLowerCase(); seen.set(o, (seen.get(o) ?? 0) + 1); }
-  for (const f of mine) {
+  for (let f of mine) {
     const { section, own, group } = xfaLabel(f);
     // Repeated questions ("Tel no" for applicant and beneficiary) get their group in front.
     const label = seen.get(own.toLowerCase())! > 1 && group ? `${group}: ${own}` : f.ui === "check" && f.caption ? f.caption : own;
     let id = slug(label).slice(0, 40), n = 2;
     while (used.has(id)) id = `${slug(label).slice(0, 40)}_${n++}`;
     used.add(id); keys.set(f, id);
-    // A drop-down filled by the form's script at run time has no options in the file: make it a text box.
-    const kind = f.ui === "text" && /date/i.test(f.name) ? "date" : f.ui === "select" && !f.options.length ? "text" : f.ui;
+    // Drop-downs the form fills by script at run time have no options in the file: use the standard
+    // currency / country lists, or a text box for anything else.
+    const list = f.options.length > 1 || f.ui === "check" || f.ui === "radio" ? undefined
+      : /curr|ccy/i.test(f.name) ? CURRENCIES : /countr/i.test(f.name) ? COUNTRIES : undefined;
+    const kind = list ? "select" : f.ui === "text" && /date/i.test(f.name) ? "date" : f.ui === "select" && !f.options.length ? "text" : f.ui;
+    if (list) f = { ...f, options: list };
     sections.set(section, [...sections.get(section) ?? [], {
       id, label, kind, ...(kind === "radio" || kind === "select" ? { options: f.options } : {}),
       ...(kind === "text" || kind === "date" || kind === "select" ? { half: true } : {}),

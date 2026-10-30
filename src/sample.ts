@@ -1,4 +1,5 @@
 import type { Template, Values } from "./pdf";
+import { COUNTRIES, CURRENCIES } from "./lists";
 
 export const GUARANTEE: Template = {
   title: "Banker's Guarantee Application",
@@ -9,14 +10,14 @@ export const GUARANTEE: Template = {
         { id: "applicant_name", label: "Applicant name", kind: "text" },
         { id: "applicant_address", label: "Applicant address", kind: "long" },
         { id: "applicant_town", label: "Town", kind: "text", half: true },
-        { id: "applicant_country", label: "Country", kind: "text", half: true },
+        { id: "applicant_country", label: "Country", kind: "select", options: COUNTRIES, half: true },
         { id: "applicant_tel", label: "Tel no", kind: "text", half: true },
         { id: "applicant_email", label: "Email", kind: "text", half: true },
       ],
     },
     {
       title: "Guarantee amount and type", fields: [
-        { id: "currency", label: "Currency", kind: "text", half: true },
+        { id: "currency", label: "Currency", kind: "select", options: CURRENCIES, half: true },
         { id: "amount", label: "Amount", kind: "text", half: true },
         { id: "amount_in_words", label: "Amount in words", kind: "text" },
         { id: "guarantee_type", label: "Type of guarantee", kind: "radio", options: ["Performance", "Tender / bid", "Advance payment", "Financial", "Other"] },
@@ -27,7 +28,7 @@ export const GUARANTEE: Template = {
         { id: "beneficiary_name", label: "Beneficiary name", kind: "text" },
         { id: "beneficiary_address", label: "Beneficiary address", kind: "long" },
         { id: "beneficiary_town", label: "Town", kind: "text", half: true },
-        { id: "beneficiary_country", label: "Country", kind: "text", half: true },
+        { id: "beneficiary_country", label: "Country", kind: "select", options: COUNTRIES, half: true },
         { id: "purpose", label: "Purpose / contract reference", kind: "text" },
       ],
     },

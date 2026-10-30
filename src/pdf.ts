@@ -121,6 +121,11 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
       if (typeof v === "string" && v) tf.setText(safe(v));
       tf.addToPage(page, { x, y: y - h, width: w, height: h, font, ...opts });
       tf.setFontSize(10);
+      if (f.kind === "date") {
+        // Acrobat / Reader show a calendar picker and check the format.
+        const js = (code: string) => doc.context.obj({ S: "JavaScript", JS: PDFHexString.fromText(code) });
+        tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ F: js('AFDate_FormatEx("dd/mm/yyyy");'), K: js('AFDate_KeystrokeEx("dd/mm/yyyy");') }));
+      }
       if (f.kind === "date" && !v) page.drawText("DD/MM/YYYY", { x: x + w - 58, y: y - h + 6.5, size: 7, font, color: RULE });
     }
     return 13 + h;
