@@ -103,7 +103,7 @@ pdf-template-studio/
 ├── src/
 │   ├── main.ts                the app: three steps (Design / Fill / Extract), buttons, file upload, preview
 │   ├── pdf.ts                 PDF engine (pdf-lib): template -> fillable PDF, fill, read answers, import PDFs
-│   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks
+│   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks, preview drawing
 │   ├── bank-forms.json        the 13 bank trade forms, as templates (generated, see below)
 │   ├── lists.ts               currency codes (ISO 4217) and country names (ISO 3166) for drop-downs
 │   ├── sample.ts              the simple banker's guarantee sample and its sample answers
@@ -180,6 +180,7 @@ Answers are a flat object keyed by field id: `{ "applicant_name": "TAN ENG", "cu
 | `extractPdf(bytes)` | `pdf.ts` | Opens a PDF and reads every form field's value. If the template is inside, answers come back with their questions and sections |
 | `importPdf(bytes)` | `pdf.ts` | Turns an uploaded PDF into a template: keeps a fillable PDF's fields, or adds fields over the blanks of a printed one |
 | `readXfa(bytes)` | `text.ts` | Uses pdf.js to open an Adobe smart form (even with an owner password) and walks its form tree: every field's subform path, type, choices, caption and value |
+| `renderPages(bytes, width)` | `text.ts` | Draws the preview pages on canvases with pdf.js. The browser's own PDF viewer is not used, because it counts every redrawn preview as a file download and company security software checks each one |
 | `xfaTemplate(xfa, code)` | `text.ts` | Turns one form from a smart-form bundle (e.g. `BG`) into a Template: sections from subforms, readable questions from captions or field names (`txtApplicantName` → "Applicant name"), drop-downs, dates |
 | `readText` / `pairs` / `blanks` | `text.ts` | For PDFs without fields: groups page text into lines, finds `Label: value` answers and ticked boxes, and finds `____` / `☐` blanks |
 
@@ -223,6 +224,8 @@ BANK_PDF=~/Downloads/Trade-Smartform.pdf npx vitest run scripts
 Every push to `main` runs the tests and publishes the site to GitHub Pages.
 
 ## Notes and limits
+
+- **All-in-one form:** [Trade-Application-All-in-One.pdf](https://kabuto57.github.io/pdf-template-studio/Trade-Application-All-in-One.pdf) puts all 13 bank forms in one fillable PDF, with an "Application type" tick list first. Rebuild it with `ALL_IN_ONE=public/Trade-Application-All-in-One.pdf npx vitest run scripts/all-in-one`.
 
 - The bank's name is replaced with "the Bank" in the forms; the layout is a plain redraw, not the bank's own design.
 - Some choices come pre-selected because the smart form has them as defaults.

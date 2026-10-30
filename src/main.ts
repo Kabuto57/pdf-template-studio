@@ -41,15 +41,12 @@ function download(bytes: BlobPart, name: string, type: string) {
 }
 
 // ---- Preview ----
-let timer = 0, url = "";
+let timer = 0, drawn = 0;
 function refresh(now = false) {
   try { localStorage.setItem(STORE, JSON.stringify(t)); } catch { /* fine: just not remembered */ }
   clearTimeout(timer);
   timer = window.setTimeout(async () => {
-    const bytes = await buildPdf(t, view === "fill" ? values : {});
-    if (url) URL.revokeObjectURL(url);
-    url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
-    $<HTMLIFrameElement>("#preview").src = url + "#toolbar=0&navpanes=0&view=FitH";
+    showPdf(await buildPdf(t, view === "fill" ? values : {}));
   }, now ? 0 : 450);
 }
 
@@ -253,10 +250,10 @@ async function read(bytes: Uint8Array, name: string) {
   }
 }
 
-function showPdf(bytes: Uint8Array) {
-  if (url) URL.revokeObjectURL(url);
-  url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
-  $<HTMLIFrameElement>("#preview").src = url + "#toolbar=0&navpanes=0&view=FitH";
+async function showPdf(bytes: Uint8Array) {
+  const box = $("#preview"), mine = ++drawn;
+  const pages = await (await text()).renderPages(bytes, Math.min(box.clientWidth - 32, 900));
+  if (mine === drawn) box.replaceChildren(...pages); // a newer edit may have drawn already
 }
 
 // ---- Shell ----

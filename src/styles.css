@@ -26,7 +26,8 @@ button:hover, select:hover, .btn:hover { border-color: var(--ink); }
 
 .main { flex: 1; display: grid; grid-template-columns: minmax(360px, 520px) 1fr; min-height: 0; }
 .panel { overflow: auto; padding: 18px 20px 60px; border-right: 1px solid var(--rule); }
-#preview { width: 100%; height: 100%; border: 0; background: #525659; }
+#preview { overflow: auto; padding: 16px; background: #525659; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+#preview canvas { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 .lead { color: var(--grey); margin: 0 0 14px; }
 .lbl { display: block; font-weight: 700; font-size: 12px; margin-bottom: 12px; }
 .lbl input, .lbl textarea { display: block; width: 100%; margin-top: 4px; font-weight: 400; font-size: 14px; }

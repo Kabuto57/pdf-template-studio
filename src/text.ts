@@ -229,3 +229,21 @@ export function xfaTemplate(x: Xfa, code: string): { template: Template; values:
     values, keys,
   };
 }
+
+/** Draws each page onto a canvas. The preview uses this rather than a PDF in a frame: the browser's
+ *  PDF viewer counts every rebuilt preview as a file download, which security software then checks. */
+export async function renderPages(bytes: Uint8Array, width: number): Promise<HTMLCanvasElement[]> {
+  const doc = await getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+  const out: HTMLCanvasElement[] = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const viewport = page.getViewport({ scale: (width / page.view[2]) * devicePixelRatio });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    canvas.style.width = `${width}px`;
+    await page.render({ canvas, viewport }).promise;
+    out.push(canvas);
+  }
+  await doc.destroy();
+  return out;
+}

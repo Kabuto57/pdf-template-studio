@@ -1,10 +1,10 @@
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
-// Nothing loads or is sent anywhere except the site itself; the preview is a blob: PDF in a frame.
+// Nothing loads or is sent anywhere except the site itself; the preview is drawn on canvases.
 const CSP = [
   "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' blob: data:",
-  "frame-src blob:", "object-src blob:", "connect-src 'self'", "base-uri 'none'", "form-action 'none'",
+  "font-src 'self' data: blob:", "connect-src 'self'", "base-uri 'none'", "form-action 'none'",
 ].join("; ");
 const csp = (): Plugin => ({
   name: "csp",
