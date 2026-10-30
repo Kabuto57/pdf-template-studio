@@ -7,25 +7,25 @@ export const GUARANTEE: Template = {
   sections: [
     {
       title: "Applicant", fields: [
-        { id: "applicant_name", label: "Applicant name", kind: "text" },
-        { id: "applicant_address", label: "Applicant address", kind: "long" },
+        { id: "applicant_name", label: "Applicant name", kind: "text", required: true },
+        { id: "applicant_address", label: "Applicant address", kind: "long", required: true },
         { id: "applicant_town", label: "Town", kind: "text", half: true },
         { id: "applicant_country", label: "Country", kind: "select", options: COUNTRIES, half: true },
-        { id: "applicant_tel", label: "Tel no", kind: "text", half: true },
+        { id: "applicant_tel", label: "Tel no", kind: "text", half: true, required: true },
         { id: "applicant_email", label: "Email", kind: "text", half: true },
       ],
     },
     {
       title: "Guarantee amount and type", fields: [
         { id: "currency", label: "Currency", kind: "select", options: CURRENCIES, half: true },
-        { id: "amount", label: "Amount", kind: "text", half: true },
+        { id: "amount", label: "Amount", kind: "text", half: true, required: true },
         { id: "amount_in_words", label: "Amount in words", kind: "text" },
         { id: "guarantee_type", label: "Type of guarantee", kind: "radio", options: ["Performance", "Tender / bid", "Advance payment", "Financial", "Other"] },
       ],
     },
     {
       title: "For the benefit of (third party)", fields: [
-        { id: "beneficiary_name", label: "Beneficiary name", kind: "text" },
+        { id: "beneficiary_name", label: "Beneficiary name", kind: "text", required: true },
         { id: "beneficiary_address", label: "Beneficiary address", kind: "long" },
         { id: "beneficiary_town", label: "Town", kind: "text", half: true },
         { id: "beneficiary_country", label: "Country", kind: "select", options: COUNTRIES, half: true },
@@ -34,8 +34,8 @@ export const GUARANTEE: Template = {
     },
     {
       title: "Dates", fields: [
-        { id: "effective_date", label: "Effective date", kind: "date", half: true },
-        { id: "expiry_date", label: "Expiry date", kind: "date", half: true },
+        { id: "effective_date", label: "Effective date", kind: "date", half: true, required: true },
+        { id: "expiry_date", label: "Expiry date", kind: "date", half: true, required: true },
         { id: "claim_expiry_date", label: "Claim expiry date", kind: "date", half: true },
       ],
     },
@@ -50,8 +50,8 @@ export const GUARANTEE: Template = {
     },
     {
       title: "Declaration", fields: [
-        { id: "agree", label: "I / We request the bank to issue the guarantee above and agree to the bank's terms and conditions for guarantees, which I / we have read.", kind: "check" },
-        { id: "signatory_name", label: "Authorised signatory name", kind: "text", half: true },
+        { id: "agree", label: "I / We request the bank to issue the guarantee above and agree to the bank's terms and conditions for guarantees, which I / we have read.", kind: "check", required: true },
+        { id: "signatory_name", label: "Authorised signatory name", kind: "text", half: true, required: true },
         { id: "signed_date", label: "Date", kind: "date", half: true },
       ],
     },

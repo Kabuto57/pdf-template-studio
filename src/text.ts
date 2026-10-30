@@ -114,6 +114,7 @@ interface XNode { name: string; attributes?: Record<string, any>; children?: XNo
 export interface XfaField {
   path: string[]; // subforms from the root, e.g. ["form1", "BG", "applicantAndBeneficiary", "subApplicantInfo"]
   name: string; ui: "text" | "long" | "check" | "radio" | "select"; caption: string; options: string[]; value: string | boolean;
+  required: boolean; // mandatory in the form (its "required" setting, or a * in the question)
 }
 export interface Xfa { fields: XfaField[]; titles: Record<string, string> }
 
@@ -137,29 +138,32 @@ export function xfaFields(root: XNode): Xfa {
     const c = cls(n), name: string | undefined = n.attributes?.xfaName;
     if (c.includes("xfaExclgroup")) {
       const opts: { caption: string; on: boolean }[] = [];
+      let required = false;
       const each = (m: XNode) => {
         if (!cls(m).includes("xfaField")) return (m.children ?? []).forEach(each);
         const input = find(m, isUi), cap = find(m, isCaption);
+        if (input?.attributes?.required || input?.attributes?.["aria-required"] === true) required = true;
         if (input?.name === "input") opts.push({ caption: (cap && words(cap)) || input.attributes?.xfaOn || "", on: !!input.attributes?.checked });
       };
       each(n);
-      fields.push({ path, name: name ?? "choice", ui: "radio", caption: "", options: opts.map(o => o.caption), value: opts.find(o => o.on)?.caption ?? "" });
+      fields.push({ path, name: name ?? "choice", ui: "radio", caption: "", options: opts.map(o => o.caption), value: opts.find(o => o.on)?.caption ?? "", required });
       return;
     }
     if (c.includes("xfaField")) {
       const ui = find(n, isUi), cap = find(n, isCaption), caption = cap ? words(cap) : "";
       if (!ui || !name) return;
       const a = ui.attributes ?? {};
+      const required = !!a.required || a["aria-required"] === true || /\*\s*$/.test(caption);
       // Read-only with text in it = a printed label (e.g. a table heading). Read-only and empty = unlocked by the form's script later.
       if ((c.includes("xfaReadOnly") || cls(ui).includes("xfaReadOnly")) && (a.value || a.textContent)) return;
       if (ui.name === "button") { const m = /\(([A-Z]+)\)\s*$/.exec(caption); if (m) titles[m[1]] = caption; return; }
-      if (ui.name === "textarea") fields.push({ path, name, ui: "long", caption, options: [], value: a.textContent ?? "" });
+      if (ui.name === "textarea") fields.push({ path, name, ui: "long", caption, options: [], value: a.textContent ?? "", required });
       else if (ui.name === "select") {
         const opts = (ui.children ?? []).filter(o => !o.attributes?.hidden);
         fields.push({ path, name, ui: "select", caption, options: opts.map(o => (o.value ?? "").trim()).filter(Boolean),
-          value: (opts.find(o => o.attributes?.selected)?.value ?? "").trim() });
-      } else if (a.type === "checkbox") fields.push({ path, name, ui: "check", caption, options: [], value: !!a.checked });
-      else if (a.type === "text") fields.push({ path, name, ui: "text", caption, options: [], value: a.value ?? "" });
+          value: (opts.find(o => o.attributes?.selected)?.value ?? "").trim(), required });
+      } else if (a.type === "checkbox") fields.push({ path, name, ui: "check", caption, options: [], value: !!a.checked, required });
+      else if (a.type === "text") fields.push({ path, name, ui: "text", caption, options: [], value: a.value ?? "", required });
       return;
     }
     const next = c.includes("xfaSubform") && name ? [...path, name] : path;
@@ -180,8 +184,7 @@ export const humanize = (s: string) => {
 /** An XFA field's section, its own question, and the group it sits in (used to tell repeats apart). */
 export function xfaLabel(f: XfaField): { section: string; own: string; group: string } {
   const raw = f.caption && f.caption.length <= 80 ? f.caption : humanize(f.name);
-  const star = /\*\s*$/.test(raw); // required, in the form's own notation
-  let own = raw.replace(/[\s:*]+$/, "") + (star ? " *" : "");
+  let own = raw.replace(/[\s:*]+$/, ""); // the * becomes the field's `required` flag
   if (/^radio button list$/i.test(own)) own = humanize(f.path.at(-1) ?? f.name); // a generic name: use its subform's
   return { section: humanize(f.path[2] ?? f.path[1] ?? "Form"), own: own || humanize(f.name), group: humanize(f.path[3] ?? "") };
 }
@@ -204,7 +207,7 @@ export function xfaTemplate(x: Xfa, code: string): { template: Template; values:
   for (let f of mine) {
     const { section, own, group } = xfaLabel(f);
     // Repeated questions ("Tel no" for applicant and beneficiary) get their group in front.
-    const label = seen.get(own.toLowerCase())! > 1 && group ? `${group}: ${own}` : f.ui === "check" && f.caption ? f.caption : own;
+    const label = seen.get(own.toLowerCase())! > 1 && group ? `${group}: ${own}` : f.ui === "check" && f.caption ? f.caption.replace(/[\s*]+$/, "") : own;
     let id = slug(label).slice(0, 40), n = 2;
     while (used.has(id)) id = `${slug(label).slice(0, 40)}_${n++}`;
     used.add(id); keys.set(f, id);
@@ -217,6 +220,7 @@ export function xfaTemplate(x: Xfa, code: string): { template: Template; values:
     sections.set(section, [...sections.get(section) ?? [], {
       id, label, kind, ...(kind === "radio" || kind === "select" ? { options: f.options } : {}),
       ...(kind === "text" || kind === "date" || kind === "select" ? { half: true } : {}),
+      ...(f.required ? { required: true } : {}),
     }]);
     values[id] = f.value;
   }

@@ -9,7 +9,7 @@ const tree = sub("form1",
   sub("MainPage", field("btnBG", { name: "button" }, "Banker's Guarantee Application (BG)")),
   sub("BG",
     sub("applicant", sub("subApplicantInfo",
-      field("txtApplicantName", { name: "input", attributes: { type: "text", value: "TAN ENG" } }),
+      field("txtApplicantName", { name: "input", attributes: { type: "text", value: "TAN ENG", required: true } }),
       field("txtTelNo", { name: "input", attributes: { type: "text", value: "+65 6123 4567" } }))),
     sub("beneficiary", sub("subBeneficiaryInfo", field("txtTelNo", { name: "input", attributes: { type: "text", value: "" } }))),
     sub("amount", field("drpCurrency", { name: "select", children: [{ name: "option", attributes: { hidden: true }, value: " " },
@@ -29,6 +29,8 @@ it("reads XFA fields, answers and form titles", () => {
     currency: "SGD", expiry_date: "Open ended", we_agree: true,
   });
   expect(template.sections[2].fields[0]).toMatchObject({ kind: "select", options: ["SGD", "USD"] });
+  expect(template.sections[0].fields[0]).toMatchObject({ label: "Applicant name", required: true });
+  expect(template.sections[0].fields[1].required).toBeUndefined();
 });
 
 it("turns XFA names into words", () => {

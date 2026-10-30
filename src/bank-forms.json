@@ -22,15 +22,17 @@
       },
       {
        "id": "applicant_name",
-       "label": "Applicant Name *",
+       "label": "Applicant Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address",
-       "label": "Applicant Address *",
+       "label": "Applicant Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_2",
@@ -45,16 +47,18 @@
        "half": true
       },
       {
-       "id": "name",
-       "label": "Name *",
+       "id": "applicant_name_2",
+       "label": "Applicant: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
-       "id": "tel_no",
-       "label": "Tel No *",
+       "id": "applicant_tel_no",
+       "label": "Applicant: Tel No",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_fax_no",
@@ -124,15 +128,17 @@
       },
       {
        "id": "beneficiary_s_name",
-       "label": "Beneficiary's Name *",
+       "label": "Beneficiary's Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_s_address",
-       "label": "Beneficiary's Address *",
+       "label": "Beneficiary's Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_address_2",
@@ -153,8 +159,8 @@
        "half": true
       },
       {
-       "id": "tel_no_2",
-       "label": "Tel No",
+       "id": "beneficiary_tel_no",
+       "label": "Beneficiary: Tel No",
        "kind": "text",
        "half": true
       },
@@ -166,7 +172,7 @@
       },
       {
        "id": "currency",
-       "label": "Currency *",
+       "label": "Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -330,13 +336,15 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "amount",
-       "label": "Amount *",
+       "label": "Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "gst",
@@ -439,7 +447,8 @@
        "id": "date_of_expiry_date",
        "label": "Date of expiry: Date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "period",
@@ -972,7 +981,8 @@
       {
        "id": "goods_description",
        "label": "Goods description",
-       "kind": "long"
+       "kind": "long",
+       "required": true
       },
       {
        "id": "additional_cond",
@@ -981,8 +991,9 @@
       },
       {
        "id": "all_bank_charges_are_for_account_of",
-       "label": "All Bank Charges are for account of: *",
-       "kind": "check"
+       "label": "All Bank Charges are for account of:",
+       "kind": "check",
+       "required": true
       },
       {
        "id": "charge_account",
@@ -1049,7 +1060,8 @@
        "id": "with_you",
        "label": "with you.",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "authorised_person_s_and_company_stamp",
@@ -1079,9 +1091,10 @@
      "fields": [
       {
        "id": "number",
-       "label": "Number *",
+       "label": "Number",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "number_amend_no",
@@ -1091,9 +1104,10 @@
       },
       {
        "id": "applicant_s_name",
-       "label": "Applicant's Name *",
+       "label": "Applicant's Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_s_address",
@@ -1115,21 +1129,24 @@
       },
       {
        "id": "contact_person",
-       "label": "Contact Person *",
+       "label": "Contact Person",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "tel_no",
-       "label": "Tel No *",
+       "label": "Tel No",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "fax_no",
-       "label": "Fax No *",
+       "label": "Fax No",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_s_name",
@@ -1438,7 +1455,8 @@
        "id": "and_to_be_debited_to_our_account_no",
        "label": "and to be debited to our account no.",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "authorised_person_s_and_company_s_stamp",
@@ -1466,15 +1484,17 @@
      "fields": [
       {
        "id": "beneficiary_name",
-       "label": "Beneficiary Name *",
+       "label": "Beneficiary Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_address",
-       "label": "Beneficiary Address *",
+       "label": "Beneficiary Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "txtbeneficiary_address_2",
@@ -1492,13 +1512,15 @@
        "id": "credit_no",
        "label": "Credit no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "issuing_bank_name",
-       "label": "Issuing Bank Name *",
+       "label": "Issuing Bank Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "issuing_bank_name_1",
@@ -1508,7 +1530,7 @@
       },
       {
        "id": "currency",
-       "label": "Currency *",
+       "label": "Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -1672,37 +1694,43 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "amount",
-       "label": "Amount *",
+       "label": "Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "dated",
        "label": "Dated",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "name",
-       "label": "Name *",
+       "label": "Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "tel_no",
-       "label": "Tel No *",
+       "label": "Tel No",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "fax_no",
-       "label": "Fax No *",
+       "label": "Fax No",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "we_reject_amendment_no",
@@ -1719,7 +1747,8 @@
        "id": "draft_inv_no",
        "label": "Draft inv no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "vessel_name",
@@ -1783,7 +1812,8 @@
        "id": "dep_dated",
        "label": "Dep dated",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "cr_no",
@@ -1993,7 +2023,8 @@
         "with Bank",
         "with other bank"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "bank_2",
@@ -2329,15 +2360,17 @@
      "fields": [
       {
        "id": "drawer_name",
-       "label": "Drawer: Name *",
+       "label": "Drawer: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "drawer_address",
-       "label": "Drawer: Address *",
+       "label": "Drawer: Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "drawer_address_2",
@@ -2353,19 +2386,21 @@
       },
       {
        "id": "contact_person",
-       "label": "Contact Person *",
+       "label": "Contact Person",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "tel",
-       "label": "Tel *",
+       "label": "Tel",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "currency",
-       "label": "Currency *",
+       "label": "Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -2529,25 +2564,29 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "amount",
-       "label": "Amount *",
+       "label": "Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "drawee_bank_name",
-       "label": "Drawee bank: Name *",
+       "label": "Drawee bank: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "drawee_bank_address",
-       "label": "Drawee bank: Address *",
+       "label": "Drawee bank: Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "drawee_bank_address_2",
@@ -2565,7 +2604,8 @@
        "id": "drawee",
        "label": "Drawee",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "payment",
@@ -2581,7 +2621,8 @@
        "id": "invoice_invoice",
        "label": "Invoice: Invoice",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "tenor",
@@ -2626,7 +2667,8 @@
        "id": "dep_dated",
        "label": "Dep dated",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "port_disch",
@@ -2956,15 +2998,17 @@
      "fields": [
       {
        "id": "applicant_name",
-       "label": "Applicant: Name *",
+       "label": "Applicant: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address",
-       "label": "Applicant: Address *",
+       "label": "Applicant: Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_2",
@@ -2980,15 +3024,17 @@
       },
       {
        "id": "applicant_name_2",
-       "label": "Applicant: Name *",
+       "label": "Applicant: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "contact_number",
-       "label": "Contact Number *",
+       "label": "Contact Number",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "fax_number",
@@ -3032,9 +3078,10 @@
       },
       {
        "id": "sup_details_name",
-       "label": "Sup details: Name *",
+       "label": "Sup details: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "city_country",
@@ -3044,9 +3091,10 @@
       },
       {
        "id": "sup_details_address",
-       "label": "Sup details: Address *",
+       "label": "Sup details: Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "sup_details_address_2",
@@ -3061,8 +3109,8 @@
        "half": true
       },
       {
-       "id": "currency",
-       "label": "Currency *",
+       "id": "bill_amount_currency",
+       "label": "Bill amount: Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -3226,17 +3274,19 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
-       "id": "amount",
-       "label": "Amount *",
+       "id": "bill_amount_amount",
+       "label": "Bill amount: Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "financing_currency",
-       "label": "Financing Currency *",
+       "label": "Financing Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -3400,19 +3450,22 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "financing_period_days",
-       "label": "Financing Period (days) *",
+       "label": "Financing Period (days)",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "financing_amount",
        "label": "Financing: Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "currency_2",
@@ -3601,8 +3654,8 @@
        "half": true
       },
       {
-       "id": "currency_3",
-       "label": "Currency",
+       "id": "contract_currency",
+       "label": "Contract: Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -3833,9 +3886,10 @@
       },
       {
        "id": "name_of_beneficiary",
-       "label": "Name of Beneficiary *",
+       "label": "Name of Beneficiary",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "name_2",
@@ -3845,9 +3899,10 @@
       },
       {
        "id": "instructions_address",
-       "label": "Instructions: Address *",
+       "label": "Instructions: Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "instructions_address_2",
@@ -3857,9 +3912,10 @@
       },
       {
        "id": "country",
-       "label": "Country *",
+       "label": "Country",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "postal_code",
@@ -3869,9 +3925,10 @@
       },
       {
        "id": "town",
-       "label": "Town *",
+       "label": "Town",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "account_number",
@@ -3881,9 +3938,10 @@
       },
       {
        "id": "reference_number",
-       "label": "Reference Number *",
+       "label": "Reference Number",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "instructions_name",
@@ -4490,13 +4548,15 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "re_account",
        "label": "Re account",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "authorised_person_s_and_company_stamp",
@@ -4526,7 +4586,8 @@
        "id": "no",
        "label": "No.",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "singapore",
@@ -4538,13 +4599,15 @@
        "id": "exchange",
        "label": "Exchange",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "at",
        "label": "At",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "the_sum_of",
@@ -4568,7 +4631,8 @@
        "id": "value_received",
        "label": "value received",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "value_2",
@@ -4586,7 +4650,8 @@
        "id": "to",
        "label": "To",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "to_2",
@@ -4622,13 +4687,15 @@
        "id": "for_1",
        "label": "For 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "for_2",
        "label": "For 2",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "for",
@@ -4796,7 +4863,8 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -5094,25 +5162,29 @@
        "id": "no",
        "label": "No.",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "singapore",
        "label": "Singapore,",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "exchange",
        "label": "Exchange",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "at",
        "label": "At",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "the_sum_of",
@@ -5136,7 +5208,8 @@
        "id": "to",
        "label": "To",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "to_2",
@@ -5160,7 +5233,8 @@
        "id": "documentary_credit_no",
        "label": "Documentary Credit No.",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "signature_2",
@@ -5178,7 +5252,8 @@
        "id": "for_1",
        "label": "For 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "value_2",
@@ -5202,7 +5277,8 @@
        "id": "for_2",
        "label": "For 2",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "for",
@@ -5370,13 +5446,15 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "value_received_drawn_under",
        "label": "value received \"Drawn under",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -5690,25 +5768,29 @@
        "id": "no",
        "label": "No.",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "singapore",
        "label": "Singapore,",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "exchange",
        "label": "Exchange",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "at",
        "label": "At",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "the_sum_of",
@@ -5732,7 +5814,8 @@
        "id": "value_received_drawn_under",
        "label": "value received \"Drawn under",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "value_2",
@@ -5750,13 +5833,15 @@
        "id": "documentary_credit_no",
        "label": "Documentary Credit No.",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "to",
        "label": "To",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "to_2",
@@ -5786,7 +5871,8 @@
        "id": "dated",
        "label": "dated",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "to_4",
@@ -5798,13 +5884,15 @@
        "id": "for_1",
        "label": "For 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "for_2",
        "label": "For 2",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "for",
@@ -5972,7 +6060,8 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -6297,7 +6386,8 @@
        "id": "page_no",
        "label": "Page no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -6314,13 +6404,15 @@
        "id": "applicant_name",
        "label": "Applicant name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_1",
        "label": "Applicant address 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_2",
@@ -6338,19 +6430,22 @@
        "id": "applicant_info_contact_name",
        "label": "Applicant info: Contact name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_info_tel_no",
        "label": "Applicant info: Tel no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_info_fax_no",
        "label": "Applicant info: Fax no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "registration_no",
@@ -6362,13 +6457,15 @@
        "id": "beneficiary_name",
        "label": "Beneficiary name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_address_1",
        "label": "Beneficiary address 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_address_2",
@@ -6647,25 +6744,29 @@
         "Zimbabwe",
         "Zimbabwe"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_info_contact_name",
        "label": "Beneficiary info: Contact name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_info_tel_no",
        "label": "Beneficiary info: Tel no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_info_fax_no",
        "label": "Beneficiary info: Fax no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -6700,13 +6801,15 @@
        "id": "advising_bank_name",
        "label": "Advising bank name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "advising_bank_address_1",
        "label": "Advising bank address 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "advising_bank_address_2",
@@ -6724,7 +6827,8 @@
        "id": "swift_address",
        "label": "SWIFT address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -6897,25 +7001,29 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "amount",
        "label": "Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "effective_date",
        "label": "Effective date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "expiry_date",
        "label": "Expiry date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -6948,7 +7056,8 @@
       {
        "id": "sblc_format",
        "label": "SBLC format",
-       "kind": "long"
+       "kind": "long",
+       "required": true
       }
      ]
     },
@@ -6989,7 +7098,8 @@
        "id": "header_acc_no",
        "label": "Header: Acc no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -7038,7 +7148,8 @@
        "id": "ref_no",
        "label": "Ref no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -7049,7 +7160,8 @@
        "id": "applicant_name",
        "label": "Applicant name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_1",
@@ -7840,7 +7952,8 @@
        "id": "acc_no",
        "label": "Acc no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -7889,7 +8002,8 @@
        "id": "ref_no",
        "label": "Ref no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -7900,7 +8014,8 @@
        "id": "applicant_name",
        "label": "Applicant name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_1",
@@ -8696,7 +8811,8 @@
        "id": "acc_no",
        "label": "Acc no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -8745,13 +8861,15 @@
        "id": "applicant_name",
        "label": "Applicant name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_1",
        "label": "Applicant address 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_2",
@@ -8769,19 +8887,22 @@
        "id": "applicant_info_contact_name",
        "label": "Applicant info: Contact name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_info_tel_no",
        "label": "Applicant info: Tel no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_info_fax_no",
        "label": "Applicant info: Fax no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "registration_no",
@@ -8793,13 +8914,15 @@
        "id": "beneficiary_name",
        "label": "Beneficiary name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_address_1",
        "label": "Beneficiary address 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_address_2",
@@ -9078,25 +9201,29 @@
         "Zimbabwe",
         "Zimbabwe"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_info_contact_name",
        "label": "Beneficiary info: Contact name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_info_tel_no",
        "label": "Beneficiary info: Tel no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "beneficiary_info_fax_no",
        "label": "Beneficiary info: Fax no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -9269,13 +9396,15 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "amount",
        "label": "Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -9740,7 +9869,8 @@
       {
        "id": "guarantees_format",
        "label": "Guarantees format",
-       "kind": "long"
+       "kind": "long",
+       "required": true
       }
      ]
     },
@@ -9767,7 +9897,8 @@
        "id": "header_acc_no",
        "label": "Header: Acc no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       }
      ]
     },
@@ -9808,15 +9939,17 @@
      "fields": [
       {
        "id": "applicant_name",
-       "label": "Applicant: Name *",
+       "label": "Applicant: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
-       "id": "address",
-       "label": "Address *",
+       "id": "applicant_address",
+       "label": "Applicant: Address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "applicant_address_2",
@@ -9832,15 +9965,17 @@
       },
       {
        "id": "applicant_name_2",
-       "label": "Applicant: Name *",
+       "label": "Applicant: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "contact_number",
-       "label": "Contact number *",
+       "label": "Contact number",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "fax_no",
@@ -9865,14 +10000,14 @@
        "half": true
       },
       {
-       "id": "name",
-       "label": "Name",
+       "id": "third_party_name",
+       "label": "Third party: Name",
        "kind": "text",
        "half": true
       },
       {
-       "id": "address_2",
-       "label": "Address",
+       "id": "third_party_address",
+       "label": "Third party: Address",
        "kind": "text",
        "half": true
       },
@@ -9892,11 +10027,12 @@
        "id": "b_name",
        "label": "B name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
-       "id": "currency",
-       "label": "Currency *",
+       "id": "third_party_currency",
+       "label": "Third party: Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -10060,17 +10196,19 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
-       "id": "amount",
-       "label": "Amount *",
+       "id": "third_party_amount",
+       "label": "Third party: Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "financing_currency",
-       "label": "Financing Currency *",
+       "label": "Financing Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -10234,19 +10372,22 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "financing_period_days",
-       "label": "Financing Period (days) *",
+       "label": "Financing Period (days)",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "financing_amount",
        "label": "Financing: Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "currency_2",
@@ -10429,8 +10570,8 @@
        "half": true
       },
       {
-       "id": "currency_3",
-       "label": "Currency",
+       "id": "contract_currency",
+       "label": "Contract: Currency",
        "kind": "select",
        "options": [
         "SGD",
@@ -11008,13 +11149,15 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "re_account",
        "label": "Re account",
        "kind": "text",
-       "half": true
+       "half": true,
+       "required": true
       },
       {
        "id": "a_currency",

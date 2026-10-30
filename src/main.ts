@@ -96,6 +96,8 @@ function fieldCard(list: Field[], f: Field, i: number): HTMLElement {
       h("label", { className: "key-wrap" }, "Key ", key),
       h("label", { className: "half" }, h("input", { type: "checkbox", checked: !!f.half,
         onchange: (e: Event) => { f.half = (e.target as HTMLInputElement).checked; refresh(); } }), " Half width"),
+      h("label", { className: "half" }, h("input", { type: "checkbox", checked: !!f.required,
+        onchange: (e: Event) => { f.required = (e.target as HTMLInputElement).checked; refresh(); } }), " Required"),
       h("span", { className: "tools" },
         h("button", { type: "button", title: "Move up", "aria-label": "Move up", onclick: () => { move(list, i, -1); renderDesign(); refresh(); } }, "↑"),
         h("button", { type: "button", title: "Move down", "aria-label": "Move down", onclick: () => { move(list, i, 1); renderDesign(); refresh(); } }, "↓"),
@@ -173,12 +175,16 @@ function renderFill() {
     ...t.sections.map((s, si) => h("fieldset", { className: "sec" },
       h("legend", {}, h("span", { className: "num" }, String(si + 1)), s.title),
       h("div", { className: "grid" }, ...s.fields.map(f => f.kind === "check"
-        ? h("label", { className: "full tick" }, input(f), " ", f.label)
+        ? h("label", { className: "full tick" }, input(f), " ", f.label, star(f))
         : h(hasOptions(f.kind) ? "div" : "label", { className: f.half ? "q" : "q full", ...(hasOptions(f.kind) ? {} : { for: f.id }) },
-          h("span", { className: "q-label" }, f.label), input(f)))),
+          h("span", { className: "q-label" }, f.label, star(f)), input(f)))),
     )),
   );
 }
+
+const star = (f: Field) => f.required ? h("span", { className: "req", "aria-label": "required" }, " *") : "";
+const missing = () => t.sections.flatMap(s => s.fields)
+  .filter(f => f.required && (f.kind === "check" ? values[f.id] !== true : !show(values[f.id] ?? "")));
 
 // ---- 3. Extract ----
 const show = (v: Value) => v === true ? "Yes" : v === false ? "No" : Array.isArray(v) ? v.join(", ") : v;
@@ -211,7 +217,8 @@ function renderExtract(result?: Extracted, name?: string, lines?: Line[], note?:
         : result.template ? "Questions matched using the template inside the PDF." : "Read from the PDF's form fields; their names or tooltips are used as questions."),
     ...[...bySection].map(([sec, rows]) => h("table", { className: "result" },
       sec && h("caption", {}, sec),
-      h("tbody", {}, ...rows.map(r => h("tr", {}, h("th", { scope: "row" }, r.label), h("td", { className: show(r.value) ? "" : "empty" }, show(r.value) || "(blank)")))))),
+      h("tbody", {}, ...rows.map(r => h("tr", {}, h("th", { scope: "row" }, r.label, r.required ? h("span", { className: "req" }, " *") : ""),
+        h("td", { className: show(r.value) ? "" : r.required ? "empty req" : "empty" }, show(r.value) || (r.required ? "(blank: required)" : "(blank)"))))))),
     h("div", { className: "btns" },
       h("button", { type: "button", className: "primary", onclick: () => download(json, `${slug(result.template?.title ?? "form")}-answers.json`, "application/json") }, "Download JSON"),
       h("button", { type: "button", onclick: (e: Event) => { navigator.clipboard.writeText(json); (e.target as HTMLElement).textContent = "Copied"; } }, "Copy JSON"),
@@ -265,6 +272,13 @@ $("#bankForms").append(...BANK_FORMS.map(f => h("option", { value: `bank:${f.cod
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.onclick = () => go(b.dataset.view as View));
 $("#blankBtn").onclick = async () => download(await buildPdf(t) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
+  const gaps = missing();
+  if (gaps.length) {
+    if (view !== "fill") go("fill");
+    $("#panel").querySelector(".error")?.remove();
+    alertBox(`${gaps.length} required ${gaps.length === 1 ? "question is" : "questions are"} still blank: ${gaps.slice(0, 6).map(f => f.label).join(", ")}${gaps.length > 6 ? "…" : ""}. Saved anyway; fill them before sending.`);
+    document.getElementById(gaps[0].id)?.focus();
+  }
   filled = await buildPdf(t, values);
   download(filled as BlobPart, `${slug(t.title)}-filled.pdf`, "application/pdf");
 };
@@ -304,7 +318,7 @@ async function showXfa(xfa: Xfa, name: string, bytes: Uint8Array, code?: string)
   const m = await text(), forms = m.xfaForms(xfa).filter(f => f.count > 1).sort((a, b) => b.answered - a.answered);
   const pick = forms.find(f => f.code === code) ?? forms[0];
   const { template, values: v } = m.xfaTemplate(xfa, pick.code);
-  const rows = template.sections.flatMap(s => s.fields.map(q => ({ section: s.title, id: q.id, label: q.label, value: v[q.id] })));
+  const rows = template.sections.flatMap(s => s.fields.map(q => ({ section: s.title, id: q.id, label: q.label, value: v[q.id], required: q.required })));
   renderExtract({ template, rows, data: v }, name, undefined,
     `Adobe smart form (XFA) with ${forms.length} forms. Showing ${pick.title}. Answers include any defaults built into the form.`);
   $("#panel").querySelector(".note")!.after(h("label", { className: "lbl" }, "Form in this file",

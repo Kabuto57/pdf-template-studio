@@ -11,6 +11,13 @@ describe("pdf form", () => {
     expect(rows.find(r => r.id === "applicant_tel")).toMatchObject({ section: "Applicant", label: "Tel no", value: "+65 6123 4567" });
   });
 
+  it("marks required questions as required PDF fields", async () => {
+    const t = { title: "T", note: "", sections: [{ title: "S", fields: [{ id: "name", label: "Name", kind: "text" as const, required: true }, { id: "fax", label: "Fax", kind: "text" as const }] }] };
+    const doc = await PDFDocument.load(await buildPdf(t));
+    expect(doc.getForm().getTextField("name").isRequired()).toBe(true);
+    expect(doc.getForm().getTextField("fax").isRequired()).toBe(false);
+  });
+
   it("extracts empty answers from a blank form", async () => {
     const { data } = await extractPdf(await buildPdf(GUARANTEE));
     expect(data.applicant_name).toBe("");

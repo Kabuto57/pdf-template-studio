@@ -39,7 +39,7 @@ Change the form before using it:
 
 - Rename a section or question by typing over it.
 - Change a question's type: Text, Paragraph, Date, Pick one, Tick any, Tick box, or Drop-down. For choices, type one option per line.
-- Tick **Half width** to put two questions side by side.
+- Tick **Half width** to put two questions side by side, and **Required** to make a question mandatory (red `*`).
 - Use ↑ ↓ to reorder and ✕ to delete. **+ Add question** and **+ Add section** add new ones.
 - Each question has a **Key** (e.g. `applicant_name`). That is the name its answer gets when you extract it.
 
@@ -53,7 +53,8 @@ Change the form before using it:
 
 1. Click **2 Fill**.
 2. Type your answers on the left; the PDF on the right updates as you type.
-3. Click **Save filled PDF** (top right). The saved PDF is still fillable, so it can be opened and changed in Adobe Reader or Preview.
+3. Mandatory questions have a red `*`, taken from the bank's forms. If any are blank when you save, a warning lists them.
+4. Click **Save filled PDF** (top right). The saved PDF is still fillable, so it can be opened and changed in Adobe Reader or Preview.
 
 Or click **Download blank PDF** and fill it in Adobe Reader instead.
 
@@ -61,7 +62,7 @@ Or click **Download blank PDF** and fill it in Adobe Reader instead.
 
 1. Click **3 Extract**.
 2. Click **Open filled PDF…** or drop a PDF on the page. **Use the form I just saved** takes the one you saved in Fill.
-3. Every answer is listed next to its question, by section. **Download JSON** or **Copy JSON** gives the data, e.g.
+3. Every answer is listed next to its question, by section. Blank mandatory answers are marked *(blank: required)*. **Download JSON** or **Copy JSON** gives the data, e.g.
 
 ```json
 { "applicant_name": "TAN ENGINEERING PTE LTD", "applicant_info_tel_no": "+65 6123 4567", "expiry_date": "Specific Date" }
@@ -135,6 +136,7 @@ interface Field {
   kind: "text" | "long" | "date" | "radio" | "checks" | "check" | "select";
   options?: string[];            // choices for radio / tick-any / drop-down
   half?: boolean;                // half width: two questions side by side
+  required?: boolean;            // mandatory: red * on the form, and a required field in the PDF
 }
 ```
 
@@ -174,7 +176,7 @@ Answers are a flat object keyed by field id: `{ "applicant_name": "TAN ENG", "cu
 
 | Function | File | What it does |
 |---|---|---|
-| `buildPdf(template, answers)` | `pdf.ts` | Lays out the form on A4 pages (title, black section bars, two-column rows, page breaks, footer) and creates a real form field per question, named by its key. Dates get a calendar picker (Acrobat). Stores the template inside the PDF. Returns the PDF bytes |
+| `buildPdf(template, answers)` | `pdf.ts` | Lays out the form on A4 pages (title, black section bars, two-column rows, page breaks, footer) and creates a real form field per question, named by its key. Mandatory questions get a red `*` and are marked required in the PDF (Acrobat outlines them in red). Dates get a calendar picker (Acrobat). Stores the template inside the PDF. Returns the PDF bytes |
 | `extractPdf(bytes)` | `pdf.ts` | Opens a PDF and reads every form field's value. If the template is inside, answers come back with their questions and sections |
 | `importPdf(bytes)` | `pdf.ts` | Turns an uploaded PDF into a template: keeps a fillable PDF's fields, or adds fields over the blanks of a printed one |
 | `readXfa(bytes)` | `text.ts` | Uses pdf.js to open an Adobe smart form (even with an owner password) and walks its form tree: every field's subform path, type, choices, caption and value |
@@ -192,7 +194,7 @@ fields at all fall back to reading the page text, and those results are marked "
 
 1. `readXfa()` opened the bank's trade smart form (`Trade-Smartform.pdf`, 14 forms built in Adobe LiveCycle).
 2. For each form, `xfaTemplate()` produced a Template. Currency and country drop-downs got the standard ISO
-   lists (the smart form fills those by script, so they are not in the file); fields named like dates became dates.
+   lists (the smart form fills those by script, so they are not in the file); fields named like dates became dates; the smart form's mandatory fields (its "required" setting or a `*`) stay mandatory.
 3. The bank's name was replaced with "the Bank", and the result saved as `src/bank-forms.json`.
 
 To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vitest run scripts`.

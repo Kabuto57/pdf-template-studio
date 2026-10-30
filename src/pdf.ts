@@ -5,7 +5,7 @@ import {
 } from "pdf-lib";
 
 export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check" | "select";
-export interface Field { id: string; label: string; kind: Kind; options?: string[]; half?: boolean }
+export interface Field { id: string; label: string; kind: Kind; options?: string[]; half?: boolean; required?: boolean }
 export interface Section { title: string; fields: Field[] }
 export interface Template {
   title: string; note: string; sections: Section[];
@@ -19,7 +19,7 @@ export const KINDS: Record<Kind, string> = {
 };
 export const hasOptions = (k: Kind) => k === "radio" || k === "checks" || k === "select";
 
-const INK = rgb(0, 0, 0), GREY = rgb(0.35, 0.35, 0.35), RULE = rgb(0.75, 0.75, 0.75), WHITE = rgb(1, 1, 1);
+const RED = rgb(0.8, 0, 0), INK = rgb(0, 0, 0), GREY = rgb(0.35, 0.35, 0.35), RULE = rgb(0.75, 0.75, 0.75), WHITE = rgb(1, 1, 1);
 const W = 595.28, H = 841.89, M = 42, GAP = 16, BOTTOM = 56;
 const KEY = PDFName.of("FormTemplate"); // the template rides inside the PDF, so extraction knows the sections
 
@@ -70,18 +70,23 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
         const cb = form.createCheckBox(f.id);
         cb.addToPage(page, { x, y: top - 11, width: 10, height: 10, ...opts });
         tip(cb, f.label);
+        if (f.required) { cb.enableRequired(); page.drawText("*", { x: x - 7, y: top - 10, size: 9, font: bold, color: RED }); }
         if (v === true) cb.check();
         lines.forEach((l, i) => page.drawText(l, { x: x + 16, y: top - 9 - i * 11, size: 9, font, color: INK }));
       }
       return Math.max(12, lines.length * 11);
     }
-    if (draw) page.drawText(safe(f.label), { x, y: top - 8, size: 8, font, color: INK });
+    if (draw) {
+      page.drawText(safe(f.label), { x, y: top - 8, size: 8, font, color: INK });
+      if (f.required) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), 8) + 2, y: top - 8, size: 9, font: bold, color: RED });
+    }
     let y = top - 13;
     if (f.kind === "select") {
       if (draw) {
         const dd = form.createDropdown(f.id);
         dd.addOptions((f.options ?? []).map(safe));
         tip(dd, f.label);
+        if (f.required) dd.enableRequired();
         if (typeof v === "string" && f.options?.includes(v)) dd.select(safe(v));
         dd.addToPage(page, { x, y: y - 20, width: w, height: 20, font, ...opts });
         dd.setFontSize(10);
@@ -91,7 +96,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     if (hasOptions(f.kind)) {
       const list = f.options ?? [];
       const group = f.kind === "radio" && draw ? form.createRadioGroup(f.id) : undefined;
-      if (group) tip(group, f.label);
+      if (group) { tip(group, f.label); if (f.required) group.enableRequired(); }
       let cx = x;
       list.forEach((o, i) => {
         const span = 14 + font.widthOfTextAtSize(safe(o), 9) + 14;
@@ -117,6 +122,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     if (draw) {
       const tf = form.createTextField(f.id);
       if (f.kind === "long") tf.enableMultiline();
+      if (f.required) tf.enableRequired();
       tip(tf, f.kind === "date" ? `${f.label} (DD/MM/YYYY)` : f.label);
       if (typeof v === "string" && v) tf.setText(safe(v));
       tf.addToPage(page, { x, y: y - h, width: w, height: h, font, ...opts });
@@ -234,6 +240,7 @@ export async function importPdf(bytes: Uint8Array, name: string,
       f instanceof PDFDropdown || f instanceof PDFOptionList ? { id, label: "", kind: "select", options: f.getOptions() } :
       { id, label: "", kind: f instanceof PDFTextField && f.isMultiline() ? "long" : "text" };
     field.label = text(f.acroField.dict.lookup(PDFName.of("TU"))) ?? words(id);
+    if (f.isRequired()) field.required = true;
     sections.set(page, [...sections.get(page) ?? [], field]);
     // Clear answers so the template starts blank; they come back as `values`.
     if (f instanceof PDFTextField) f.setText(undefined); else if (f instanceof PDFCheckBox) f.uncheck();
@@ -250,7 +257,7 @@ export async function importPdf(bytes: Uint8Array, name: string,
   return { template, values: data, found };
 }
 
-export interface Row { section: string; id: string; label: string; value: Value }
+export interface Row { section: string; id: string; label: string; value: Value; required?: boolean }
 export interface Extracted { template?: Template; rows: Row[]; data: Record<string, unknown> }
 
 const text = (o: unknown) => (o instanceof PDFHexString || o instanceof PDFString ? o.decodeText() : undefined);
@@ -281,7 +288,7 @@ async function extractFields(doc: PDFDocument): Promise<Extracted> {
       const value: Value = f.kind === "checks"
         ? (f.options ?? []).filter((_, i) => raw.get(subId(f.id, i)) === true)
         : raw.get(f.id) ?? (f.kind === "check" ? false : "");
-      rows.push({ section: s.title, id: f.id, label: f.label, value });
+      rows.push({ section: s.title, id: f.id, label: f.label, value, required: f.required });
       data[f.id] = value;
     }
   } else {
