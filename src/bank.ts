@@ -3,6 +3,7 @@ import "./site.css";
 import { $, download, h } from "./dom";
 import { LC } from "./lc";
 import { buildLcPdf } from "./lc-pdf";
+import { buildPdf } from "./pdf";
 import { OPS_ADDRESS, sendMail } from "./mailbox";
 
 const FILE = "Irrevocable-Documentary-Credit-Application.pdf";
@@ -25,7 +26,9 @@ function page() {
       h("span", { className: "doc", "aria-hidden": "true" }, "PDF"),
       h("div", { className: "what" }, h("b", {}, "Irrevocable Documentary Credit Application"), h("span", { className: "new-tag" }, "UPDATED"),
         h("small", {}, "Apply for an import letter of credit. Checks your entries as you fill in, in Adobe Acrobat Reader.")),
-      h("button", { type: "button", className: "primary", onclick: async () => download(await buildLcPdf(LC.defaults) as BlobPart, FILE, "application/pdf") }, "Download PDF")),
+      h("div", { className: "dl" },
+        h("button", { type: "button", className: "primary", onclick: async () => download(await buildLcPdf(LC.defaults) as BlobPart, FILE, "application/pdf") }, "Download PDF"),
+        h("button", { type: "button", onclick: async () => download(await buildPdf(LC.template, LC.defaults) as BlobPart, FILE.replace(".pdf", "-new-design.pdf"), "application/pdf") }, "New design (preview)"))),
     ...OTHER_FORMS.map(t => h("div", { className: "form-row" },
       h("span", { className: "doc", "aria-hidden": "true" }, "PDF"),
       h("div", { className: "what" }, h("b", {}, t), h("small", {}, "Not part of this demo")),

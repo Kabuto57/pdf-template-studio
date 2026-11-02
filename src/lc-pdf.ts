@@ -3,13 +3,13 @@
 import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFPage, PDFRadioGroup, StandardFonts, rgb } from "pdf-lib";
 import layout from "./lc-layout.json";
 import { LC } from "./lc";
-import { addChecks, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
+import { addChecks, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
 
-type Item = { k: string; x: number; y: number; w?: number; h?: number; x2?: number; y2?: number; size?: number; bold?: boolean;
+type Item = { k: string; line?: string; x: number; y: number; w?: number; h?: number; x2?: number; y2?: number; size?: number; bold?: boolean;
   align?: string; text?: string; edges?: boolean[]; key?: string; option?: string | null; round?: boolean; multi?: boolean };
 
 const W = 595.28, H = 841.89, MM = 72 / 25.4;
-const INK = rgb(0, 0, 0), RED = rgb(0.8, 0, 0), FILL = rgb(0.93, 0.95, 1), GREY = rgb(0.35, 0.35, 0.35);
+const INK = rgb(0, 0, 0), RED = rgb(0.8, 0, 0), PINK = rgb(1, 0.88, 0.88), WHITE = rgb(1, 1, 1), GREY = rgb(0.35, 0.35, 0.35);
 
 // Bank form field (XFA path) -> our question. Repeated paths (two "txtApplyForward") list their questions in order.
 const P = "form1.LC.subfrmLC.", F = "form1.LC.subfrmLCFoot.", ONE = F + "subfrmDetails.subfrmOne.";
@@ -97,7 +97,10 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
     const [qid, i] = id.split("#"), f = fields.get(qid);
     return f && [f, i === undefined ? undefined : Number(i)];
   };
-  const look = (f: Field) => ({ borderColor: isRequired(f, values) && blank(values[f.id]) ? RED : INK, borderWidth: isRequired(f, values) && blank(values[f.id]) ? 1.2 : 0.6, backgroundColor: FILL });
+  // As on the bank's form: text boxes are a bottom line, tick boxes a plain box. Mandatory and still blank: red.
+  const underlined = new Set<string>();
+  const look = (f: Field, line?: string) => isRequired(f, values) && blank(values[f.id]) ? { borderColor: RED, borderWidth: 1, backgroundColor: PINK }
+    : line === "under" ? { borderWidth: 0 } : { borderColor: INK, borderWidth: 0.6, backgroundColor: WHITE };
 
   const draw = (page: PDFPage, it: Item) => {
     const f: PDFFont = it.bold ? bold : font, size = Math.min(it.size ?? 8, 11);
@@ -121,7 +124,11 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
   const widget = (page: PDFPage, it: Item) => {
     const q = question(it.key!);
     if (!q) return;
-    const [f, sub] = q, v = values[f.id], rect = { x: X(it.x), y: Y(it.y + it.h!), width: it.w! * MM, height: it.h! * MM, ...look(f) };
+    const [f, sub] = q, v = values[f.id], rect = { x: X(it.x), y: Y(it.y + it.h!), width: it.w! * MM, height: it.h! * MM, ...look(f, it.line) };
+    if (it.k === "field" && it.line === "under") {
+      underlined.add(f.id);
+      page.drawLine({ start: { x: rect.x, y: rect.y }, end: { x: rect.x + rect.width, y: rect.y }, thickness: 0.5, color: INK });
+    }
     const tip = (o: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }) => o.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(safe(f.label)));
     if (f.kind === "radio") {
       const opts = f.options ?? [], i = OPTIONS[f.id] ? OPTIONS[f.id].indexOf(it.option ?? "") : opts.indexOf(it.option ?? "");
@@ -138,13 +145,13 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
       const dd = form.createDropdown(f.id);
       dd.addOptions((f.options ?? []).map(safe)); tip(dd);
       if (typeof v === "string" && f.options?.includes(v)) dd.select(safe(v));
-      dd.addToPage(page, { ...rect, font }); dd.setFontSize(9);
+      dd.addToPage(page, { ...rect, font }); dd.setFontSize(8);
     } else {
       const tf = form.createTextField(f.id);
       if (f.kind === "long" || it.multi) tf.enableMultiline();
       if (f.max) tf.setMaxLength(f.max);
       if (typeof v === "string" && v) tf.setText(safe(v).slice(0, f.max));
-      tf.addToPage(page, { ...rect, font }); tf.setFontSize(9); tip(tf);
+      tf.addToPage(page, { ...rect, font }); tf.setFontSize(8); tip(tf);
       if (f.kind === "date") tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ F: js('AFDate_FormatEx("dd/mm/yyyy");'), K: js('AFDate_KeystrokeEx("dd/mm/yyyy");') }));
       else if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${f.format === "number" ? "[^0-9]" : "[^0-9.,]"}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
     }
@@ -157,8 +164,9 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
     const n = `Page ${i + 1} of ${pages.length}`;
     page.drawText(n, { x: (W - font.widthOfTextAtSize(n, 7)) / 2, y: 22, size: 7, font, color: GREY });
   });
-  addChecks(doc, form, pages[0], font, LC.template, js);
+  addChecks(doc, form, pages[0], font, LC.template, js, underlined);
   form.updateFieldAppearances(font);
+  finishForm(doc, font);
   return doc.save();
 }
 

@@ -182,6 +182,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   });
   if (t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
   form.updateFieldAppearances(font);
+  finishForm(doc, font);
   return doc.save();
 }
 
@@ -190,10 +191,11 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
  * a hidden field recalculates on every change, sets each field's required flag and outlines blank mandatory ones in
  * red; a "Check form" button lists what is missing; saving or printing an incomplete form shows a warning.
  */
-export function addChecks(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, font: PDFFont, t: Template, js: (code: string) => PDFObject) {
+export function addChecks(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, font: PDFFont, t: Template, js: (code: string) => PDFObject,
+  underlined: Set<string> = new Set()) { // fields drawn as a bottom line: no outline once filled
   const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
-  const model: Record<string, { k: Kind; l: string; c?: 1; s?: 1; o?: string[]; r?: [string, string[], 0 | 1][] }> = {};
-  const add = (f: Field) => model[f.id] ??= { k: f.kind, l: safe(f.label), ...(f.kind === "checks" ? { o: (f.options ?? []).map(safe) } : {}) };
+  const model: Record<string, { k: Kind; l: string; c?: 1; s?: 1; u?: 1; o?: string[]; r?: [string, string[], 0 | 1][] }> = {};
+  const add = (f: Field) => model[f.id] ??= { k: f.kind, l: safe(f.label), ...(f.kind === "checks" ? { o: (f.options ?? []).map(safe) } : {}), ...(underlined.has(f.id) ? { u: 1 as const } : {}) };
   for (const f of all.filter(f => f.required || f.requiredIf)) {
     Object.assign(add(f), { c: 1 as const }, f.required ? { s: 1 as const } : {}, f.requiredIf ? { r: f.requiredIf.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]) } : {});
     for (const r of f.requiredIf ?? []) { const by = byId.get(r.field); if (by) add(by); }
@@ -224,7 +226,8 @@ for (id in M) {
   q = need(id); b = q && (m.k == "check" ? val(id) != "true" : empty(val(id)));
   if (b) miss.push(m.l);
   names = [id]; if (m.k == "checks") { names = []; for (i = 0; i < m.o.length; i++) names.push(id + "__" + i); }
-  for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.k != "checks") f.required = q; f.strokeColor = b ? color.red : color.black; }
+  for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.k != "checks") f.required = q;
+    f.lineWidth = b || !m.u ? 1 : 0; f.strokeColor = b ? color.red : m.u ? color.transparent : color.black; f.fillColor = b ? ["RGB", 1, 0.88, 0.88] : m.u ? color.transparent : color.white; }
 }
 d.missingQuestions = miss;`;
   const calc = form.createTextField("__checks");
@@ -250,6 +253,16 @@ const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } 
   f.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(label));
 /** Stores the template (minus any uploaded PDF) inside the PDF, so extraction knows the questions and sections. */
 export const stamp = (doc: PDFDocument, t: Template) => doc.catalog.set(KEY, PDFHexString.fromText(JSON.stringify({ ...t, base: undefined, uploaded: !!t.base })));
+
+/**
+ * Acrobat looks up the font named in each field's /DA in the form's default resources (/DR). Without it, clicking a
+ * field does nothing: it cannot be typed in (pdf.js and browsers don't mind, so previews look fine).
+ */
+export function finishForm(doc: PDFDocument, font: PDFFont) {
+  const af = doc.getForm().acroForm.dict;
+  af.set(PDFName.of("DR"), doc.context.obj({ Font: { Helvetica: font.ref, Helv: font.ref } }));
+  af.set(PDFName.of("DA"), PDFString.of("/Helv 0 Tf 0 g"));
+}
 
 export const toB64 = (b: Uint8Array) => { let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
 const fromB64 = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0));

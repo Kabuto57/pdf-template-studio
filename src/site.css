@@ -89,3 +89,4 @@ section { margin-bottom: 36px; }
 [hidden] { display: none !important; }
 .gap-top { margin-top: 36px; } .gap-top-s { margin-top: 12px; } .flush { margin: 0; } .err { color: var(--bad); } .pad { padding: 16px; }
 .ops-head .who a { color: #9fb0c8; }
+.dl { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }

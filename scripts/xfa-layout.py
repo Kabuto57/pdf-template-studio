@@ -14,8 +14,8 @@ NS = root.tag.split("}")[0] + "}"
 T = lambda e: e.tag.replace(NS, "")
 XH = "{http://www.w3.org/1999/xhtml}"
 PAGE_TOP, PAGE_LEFT, PAGE_H = 28.325, 12.0, 255.675  # content area of the bank's page (A4)
-S = 1.7   # rows are this much taller than on the bank's form: same layout, more room
-FIELD = 1.25  # boxes grow less than rows and stay centred in them, so neighbouring rows never touch
+S = 1.0   # 1 = the bank's own size and spacing (the original look)
+FIELD = 1.0  # how much boxes grow with the rows (when S > 1)
 
 def mm(v, default=0.0):
     if v is None: return default
@@ -173,7 +173,9 @@ def field(f, x, y, h, stack, group=None):
         if ctext: add("text", x + s + 1.2, y + (h - csize[0] * 25.4 / 72) / 2, w=max(w - s - 1.2, 1), size=round(csize[0], 2), bold=csize[1], align="left", text=ctext)
         return
     multi = kind == "textEdit" and ui[0].get("multiLine") == "1"
-    add("field", bx, by, w=bw, h=bh, key=path_of(stack, f.get("name")), ui=kind, multi=multi, size=round(size, 2))
+    e = edges(ui[0]) or edges(f)
+    line = "box" if e and all(e) else "under" if e and e[2] else "none"  # most boxes on the bank's form are a bottom line
+    add("field", bx, by, w=bw, h=bh, key=path_of(stack, f.get("name")), ui=kind, multi=multi, size=round(size, 2), line=line)
 
 def move(items, dy):
     for i in items:
@@ -269,7 +271,7 @@ for page in pages:
     boxes = [i for i in page if i["k"] == "field"]
     for a in boxes:
         for b in boxes:
-            if a is not b and a["y"] < b["y"] < a["y"] + a["h"] and a["x"] < b["x"] + b["w"] and b["x"] < a["x"] + a["w"]:
+            if a is not b and a.get("line") != "under" and a["y"] < b["y"] < a["y"] + a["h"] and a["x"] < b["x"] + b["w"] and b["x"] < a["x"] + a["w"]:
                 a["h"] = round(b["y"] - a["y"] - 0.5, 2)
 
 # A box that runs into a label on its row (the bank's "Tel No" box covers the start of "Fax No:") stops before it.
@@ -278,7 +280,7 @@ for page in pages:
     for f in (i for i in page if i["k"] == "field"):
         for t in labels:
             th = t["size"] * 25.4 / 72
-            if t["y"] < f["y"] + f["h"] and t["y"] + th > f["y"] and f["x"] + 3 < t["x"] < f["x"] + f["w"]:
+            if f["y"] < t["y"] + th / 2 < f["y"] + f["h"] and f["x"] + 3 < t["x"] < f["x"] + f["w"]:
                 f["w"] = round(t["x"] - f["x"] - 0.8, 2)
 
 json.dump({"header": header, "pages": pages}, open(sys.argv[2], "w"), indent=None, separators=(",", ":"))
