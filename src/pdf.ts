@@ -73,6 +73,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   for (const line of wrap(t.note, font, 8.5, W - 2 * M)) { page.drawText(line, { x: M, y: top - 9, size: 8.5, font, color: INK }); top -= 11.5; }
   top -= 10;
 
+  const blocks: Blocks = new Map();
   const plain = { borderColor: INK, borderWidth: 0.75, backgroundColor: WHITE };
   const mandatory = { ...plain, borderColor: RED, borderWidth: 1.25 }; // mandatory boxes are outlined in red, not only starred
   // Lays out a field at (x, top) in width w; draws it only when `draw`. Returns the height used.
@@ -92,6 +93,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
       return Math.max(12, lines.length * 11);
     }
     if (draw) {
+      blocks.set(f.id, { page, label: { x, y: top - 8, text: safe(f.label) } });
       page.drawText(safe(f.label), { x, y: top - 8, size: 8, font, color: INK });
       if (req) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), 8) + 2, y: top - 8, size: 9, font: bold, color: RED });
     }
@@ -110,6 +112,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     }
     if (hasOptions(f.kind)) {
       const list = f.options ?? [];
+      let right = x;
       const group = f.kind === "radio" && draw ? form.createRadioGroup(f.id) : undefined;
       if (group) { tip(group, f.label); if (req) group.enableRequired(); }
       let cx = x;
@@ -128,9 +131,11 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
           }
           page.drawText(safe(o), { x: cx + 14, y: y - 9.5, size: 9, font, color: INK });
         }
+        right = Math.max(right, cx + span - 10);
         cx += span;
       });
       if (group && typeof v === "string" && list.includes(v)) group.select(safe(v));
+      if (draw) blocks.get(f.id)!.box = [x - 3, y - 14, right - x + 6, top - 13 - y + 17]; // all the options, framed as one
       return top - y + 14;
     }
     const h = f.kind === "long" ? 46 : 20;
@@ -180,7 +185,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     const n = `Page ${i + 1} of ${pages.length}`;
     p.drawText(n, { x: W - M - font.widthOfTextAtSize(n, 7.5), y: 24, size: 7.5, font, color: GREY });
   });
-  addRedFrames(doc, form, t, values);
+  addRedFrames(doc, form, t, values, { blocks, font });
   if (t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
@@ -194,7 +199,10 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
  * red frame when on and as nothing when off: tick "Bill of lading" and its boxes are framed in red.
  * The copies sit underneath the real boxes, so typing and clicking still go to those.
  */
-export function addRedFrames(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, t: Template, values: Values) {
+type Blocks = Map<string, { page: PDFPage; label: { x: number; y: number; text: string }; box?: [number, number, number, number] }>;
+export function addRedFrames(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, t: Template, values: Values,
+  // New design: frame a question's options as one and underline its label in red, as the app does.
+  look?: { blocks: Blocks; font: PDFFont }) {
   const ctx = doc.context, pages = doc.getPages(), GAP = 0.6, T = 1.6;
   const off = (w: number, h: number) => ctx.register(ctx.stream("", { Type: "XObject", Subtype: "Form", BBox: [0, 0, w, h] }));
   const on = (w: number, h: number) => ctx.register(ctx.stream(`0.85 0 0 rg 0 0 ${w} ${h} re f`, { Type: "XObject", Subtype: "Form", BBox: [0, 0, w, h] }));
@@ -211,21 +219,34 @@ export function addRedFrames(doc: PDFDocument, form: ReturnType<PDFDocument["get
     if (!state) continue; // lists and "not" rules need JavaScript; the field still turns red where it runs
     const owner = trigger as PDFCheckBox | PDFRadioGroup;
     const isOn = trigger instanceof PDFCheckBox ? values[r.field] === true : values[r.field] === r.values[0];
-    const targets = f.kind === "checks" ? (f.options ?? []).map((_, i) => subId(f.id, i)) : [f.id];
-    for (const name of targets) for (const w of form.getFieldMaybe(name)?.acroField.getWidgets() ?? []) {
-      const { x, y, width: w0, height: h0 } = w.getRectangle(), page = pages.find(p => p.ref === w.P()) ?? pages[0];
-      // Four thin strips just outside the box, never over it: clicks inside the box still reach the box.
-      const o = GAP + T, strips: [number, number, number, number][] = [
-        [x - o, y + h0 + GAP, w0 + 2 * o, T], [x - o, y - o, w0 + 2 * o, T], [x - o, y - GAP, T, h0 + 2 * GAP], [x + w0 + GAP, y - GAP, T, h0 + 2 * GAP]];
-      for (const [sx, sy, sw, sh] of strips) {
-        const copy = ctx.register(ctx.obj({
-          Type: "Annot", Subtype: "Widget", F: 0, // shown on screen, not printed
-          Rect: [sx, sy, sx + sw, sy + sh], P: page.ref, Parent: owner.ref, AS: isOn ? state : PDFName.of("Off"),
-          AP: { N: { [state.decodeText()]: on(sw, sh), Off: off(sw, sh) } },
-        }));
-        owner.acroField.addWidget(copy);
-        page.node.Annots()!.insert(0, copy);
+    // Acrobat ignores a tick box's own pictures and draws its tick symbol (MK CA) in the DA colour and size instead.
+    // So the symbol is a red square (ZapfDingbats "n") far bigger than the strip: cut to the strip, it fills it red.
+    const copy = (page: PDFPage, [sx, sy, sw, sh]: number[]) => {
+      const c = ctx.register(ctx.obj({
+        Type: "Annot", Subtype: "Widget", F: 64, // shown on screen, not printed; read-only, so clicks on it do nothing
+        Rect: [sx, sy, sx + sw, sy + sh], P: page.ref, Parent: owner.ref, AS: isOn ? state : PDFName.of("Off"),
+        MK: { CA: PDFString.of("n") }, DA: PDFString.of(`/ZaDb ${Math.ceil(2 * Math.max(sw, sh) + 10)} Tf 0.85 0 0 rg`), BS: { W: 0 },
+        AP: { N: { [state!.decodeText()]: on(sw, sh), Off: off(sw, sh) } }, // the same, for every other viewer
+      }));
+      owner.acroField.addWidget(c);
+      page.node.Annots()!.insert(0, c); // underneath the real boxes, so typing and clicking still go to those
+    };
+    // Four thin strips just outside the box, never over it: clicks inside the box still reach the box.
+    const frame = (page: PDFPage, x: number, y: number, w0: number, h0: number) => {
+      const o = GAP + T;
+      for (const r of [[x - o, y + h0 + GAP, w0 + 2 * o, T], [x - o, y - o, w0 + 2 * o, T], [x - o, y - GAP, T, h0 + 2 * GAP], [x + w0 + GAP, y - GAP, T, h0 + 2 * GAP]])
+        copy(page, r);
+    };
+    const block = look?.blocks.get(f.id);
+    if (block?.box) frame(block.page, ...block.box);
+    else for (const name of f.kind === "checks" ? (f.options ?? []).map((_, i) => subId(f.id, i)) : [f.id])
+      for (const w of form.getFieldMaybe(name)?.acroField.getWidgets() ?? []) {
+        const { x, y, width, height } = w.getRectangle();
+        frame(pages.find(p => p.ref === w.P()) ?? pages[0], x, y, width, height);
       }
+    if (block && look) { // a red line under the question's label
+      const { x, y, text } = block.label;
+      copy(block.page, [x, y - 3.5, look.font.widthOfTextAtSize(text, 8), T]);
     }
   }
 }

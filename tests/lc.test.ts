@@ -48,10 +48,13 @@ describe("within Adobe's limits", () => {
 });
 
 describe("red frames without JavaScript", () => {
-  it.each([["original look", () => buildLcPdf()], ["new design", () => buildPdf(LC.template)]])("%s: ticking Bill of lading frames its 3 questions", async (_, make) => {
-    const form = (await PDFDocument.load(await make())).getForm();
-    const kids = form.getCheckBox("doc_bill_of_lading").acroField.getWidgets().length;
+  it.each([
     // the tick box itself + 4 strips around each of the 6 boxes: made out to (3 options), freight (2), notify party (1)
-    expect(kids).toBe(1 + 4 * 6);
+    ["original look", () => buildLcPdf(), 1 + 4 * 6],
+    // the tick box + per question: 4 strips around all its options + its label in red
+    ["new design", () => buildPdf(LC.template), 1 + 3 * (4 + 1)],
+  ] as const)("%s: ticking Bill of lading frames its 3 questions", async (_, make, n) => {
+    const form = (await PDFDocument.load(await make())).getForm();
+    expect(form.getCheckBox("doc_bill_of_lading").acroField.getWidgets().length).toBe(n);
   });
 });
