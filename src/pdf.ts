@@ -1,6 +1,6 @@
 // Build a fillable PDF form from a template, and read the answers back out of a filled one.
 import {
-  PDFButton, PDFCheckBox, PDFDict, PDFRawStream, decodePDFRawStream, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
+  AcroButtonFlags, PDFButton, PDFCheckBox, PDFDict, PDFRawStream, decodePDFRawStream, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
   PDFRadioGroup, PDFString, PDFTextField, StandardFonts, TextAlignment, rgb,
 } from "pdf-lib";
 
@@ -180,10 +180,54 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     const n = `Page ${i + 1} of ${pages.length}`;
     p.drawText(n, { x: W - M - font.widthOfTextAtSize(n, 7.5), y: 24, size: 7.5, font, color: GREY });
   });
+  addRedFrames(doc, form, t, values);
   if (t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
   return doc.save();
+}
+
+/**
+ * Red frames that need no JavaScript (many work laptops have Acrobat JavaScript switched off by IT).
+ * A tick box or radio option can have extra copies of itself; ticking it switches every copy to its "on"
+ * picture at once. So each trigger gets a copy just around every box its rule makes mandatory, drawn as a
+ * red frame when on and as nothing when off: tick "Bill of lading" and its boxes are framed in red.
+ * The copies sit underneath the real boxes, so typing and clicking still go to those.
+ */
+export function addRedFrames(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, t: Template, values: Values) {
+  const ctx = doc.context, pages = doc.getPages(), GAP = 0.6, T = 1.6;
+  const off = (w: number, h: number) => ctx.register(ctx.stream("", { Type: "XObject", Subtype: "Form", BBox: [0, 0, w, h] }));
+  const on = (w: number, h: number) => ctx.register(ctx.stream(`0.85 0 0 rg 0 0 ${w} ${h} re f`, { Type: "XObject", Subtype: "Form", BBox: [0, 0, w, h] }));
+  for (const f of t.sections.flatMap(s => s.fields)) for (const r of f.requiredIf ?? []) {
+    if (r.not) continue;
+    const trigger = form.getFieldMaybe(r.field);
+    let state: PDFName | undefined;
+    if (trigger instanceof PDFCheckBox) { if (r.values.includes("true")) state = trigger.acroField.getOnValue(); }
+    else if (trigger instanceof PDFRadioGroup) {
+      const i = trigger.getOptions().indexOf(safe(r.values[0]));
+      state = i < 0 ? undefined : trigger.acroField.getOnValues()[i];
+      trigger.acroField.setFlagTo(AcroButtonFlags.RadiosInUnison, true); // copies with the same option switch together
+    }
+    if (!state) continue; // lists and "not" rules need JavaScript; the field still turns red where it runs
+    const owner = trigger as PDFCheckBox | PDFRadioGroup;
+    const isOn = trigger instanceof PDFCheckBox ? values[r.field] === true : values[r.field] === r.values[0];
+    const targets = f.kind === "checks" ? (f.options ?? []).map((_, i) => subId(f.id, i)) : [f.id];
+    for (const name of targets) for (const w of form.getFieldMaybe(name)?.acroField.getWidgets() ?? []) {
+      const { x, y, width: w0, height: h0 } = w.getRectangle(), page = pages.find(p => p.ref === w.P()) ?? pages[0];
+      // Four thin strips just outside the box, never over it: clicks inside the box still reach the box.
+      const o = GAP + T, strips: [number, number, number, number][] = [
+        [x - o, y + h0 + GAP, w0 + 2 * o, T], [x - o, y - o, w0 + 2 * o, T], [x - o, y - GAP, T, h0 + 2 * GAP], [x + w0 + GAP, y - GAP, T, h0 + 2 * GAP]];
+      for (const [sx, sy, sw, sh] of strips) {
+        const copy = ctx.register(ctx.obj({
+          Type: "Annot", Subtype: "Widget", F: 0, // shown on screen, not printed
+          Rect: [sx, sy, sx + sw, sy + sh], P: page.ref, Parent: owner.ref, AS: isOn ? state : PDFName.of("Off"),
+          AP: { N: { [state.decodeText()]: on(sw, sh), Off: off(sw, sh) } },
+        }));
+        owner.acroField.addWidget(copy);
+        page.node.Annots()!.insert(0, copy);
+      }
+    }
+  }
 }
 
 /**

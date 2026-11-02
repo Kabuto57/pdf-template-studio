@@ -120,3 +120,22 @@ it("the Check form button and the save / print warnings are valid scripts", asyn
   new Function("app", `var lcRules = function () { return ["Amount"]; }; ${js(btn)}`)({ alert: (m: string) => alerts.push(m) });
   expect(alerts[0]).toContain("1 mandatory question is still blank");
 });
+
+describe("every conditional rule lights up its field (the PDF's own script)", async () => {
+  const { LC } = await import("../src/lc");
+  const { buildLcPdf } = await import("../src/lc-pdf");
+  const fields = LC.template.sections.flatMap(s => s.fields), byId = new Map(fields.map(f => [f.id, f]));
+  // The answer that makes each rule apply, as Acrobat reports it (tick boxes "Yes"/"Off", radios their option).
+  const trigger = (id: string, values: string[]) => byId.get(id)!.kind === "check" ? (values[0] === "true" ? "Yes" : "Off") : values[0];
+  const cases = fields.flatMap(f => (f.requiredIf ?? []).filter(r => !r.not).map(r => [f.id, r.field, trigger(r.field, r.values)] as const));
+  for (const [name, make] of [["new design", () => buildPdf(LC.template)], ["original look", () => buildLcPdf()]] as const) {
+    const doc = await PDFDocument.load(await make()), lib = library(doc);
+    it.each(cases)(`${name}: %s turns red when %s = %s`, (target, by, value) => {
+      const state: Record<string, { value: string; strokeColor?: unknown; fillColor?: unknown; required?: boolean }> = {};
+      const acro = { getField: (n: string) => state[n] ??= { value: n === by ? value : doc.getForm().getFieldMaybe(n) instanceof PDFTextField ? "" : "Off" } };
+      new Function("color", "console", `${lib}; lcRules(this);`).call(acro, { red: "red", black: "black", white: "white", transparent: "none" }, { println() {} });
+      const shown = byId.get(target)!.kind === "checks" ? state[`${target}__0`] : state[target];
+      expect(shown?.strokeColor).toBe("red");
+    });
+  }
+});

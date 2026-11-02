@@ -3,7 +3,7 @@
 import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFPage, PDFRadioGroup, StandardFonts, rgb } from "pdf-lib";
 import layout from "./lc-layout.json";
 import { LC } from "./lc";
-import { addChecks, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
+import { addChecks, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
 
 type Item = { k: string; line?: string; x: number; y: number; w?: number; h?: number; x2?: number; y2?: number; size?: number; bold?: boolean;
   align?: string; text?: string; edges?: boolean[]; key?: string; option?: string | null; round?: boolean; multi?: boolean };
@@ -164,6 +164,7 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
     const n = `Page ${i + 1} of ${pages.length}`;
     page.drawText(n, { x: (W - font.widthOfTextAtSize(n, 7)) / 2, y: 22, size: 7, font, color: GREY });
   });
+  addRedFrames(doc, form, LC.template, values);
   addChecks(doc, form, pages[0], font, LC.template, js, underlined);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
