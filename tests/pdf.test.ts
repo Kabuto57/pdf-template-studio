@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
-import { buildPdf, extractPdf } from "../src/pdf";
+import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
 
 describe("pdf form", () => {
@@ -31,5 +31,34 @@ describe("pdf form", () => {
     doc.catalog.delete((await import("pdf-lib")).PDFName.of("FormTemplate"));
     const { rows } = await extractPdf(await doc.save());
     expect(rows.find(r => r.id === "applicant_tel")).toMatchObject({ label: "Tel no", value: "999" });
+  });
+});
+
+describe("conditional mandatory questions", () => {
+  const t = { title: "T", note: "", sections: [{ title: "S", fields: [
+    { id: "drafts", label: "Drafts", kind: "radio" as const, options: ["Sight", "Term"] },
+    { id: "term", label: "Term", kind: "text" as const, requiredIf: [{ field: "drafts", values: ["Term"] }] },
+    { id: "tol", label: "Tolerance", kind: "check" as const },
+    { id: "plus", label: "Plus", kind: "text" as const, requiredIf: [{ field: "tol", values: ["true"] }] },
+  ] }] };
+
+  it("is mandatory only when its option is picked", () => {
+    const [, term, , plus] = t.sections[0].fields;
+    expect(isRequired(term, { drafts: "Sight" })).toBe(false);
+    expect(isRequired(term, { drafts: "Term" })).toBe(true);
+    expect(isRequired(plus, { tol: false })).toBe(false);
+    expect(isRequired(plus, { tol: true })).toBe(true);
+  });
+
+  it("extract flags the blank conditional answer", async () => {
+    const { rows } = await extractPdf(await buildPdf(t, { drafts: "Term", tol: false }));
+    expect(rows.find(r => r.id === "term")?.required).toBe(true);
+    expect(rows.find(r => r.id === "plus")?.required).toBeFalsy();
+  });
+
+  it("the bank LC carries the smart form's rules", async () => {
+    const lc = (await import("../src/bank-forms.json")).default.find(f => f.code === "LC")!;
+    const term = lc.template.sections.flatMap(s => s.fields).find(f => f.label === "Term") as Field;
+    expect(term.requiredIf?.[0].values).toEqual(["Term:"]);
   });
 });

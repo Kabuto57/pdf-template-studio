@@ -2,7 +2,7 @@
 //   ALL_IN_ONE=out.pdf npx vitest run scripts/all-in-one
 import { expect, it } from "vitest";
 import { writeFileSync } from "node:fs";
-import { buildPdf, extractPdf, type Section, type Template, type Values } from "../src/pdf";
+import { buildPdf, extractPdf, type Field, type Section, type Template, type Values } from "../src/pdf";
 import forms from "../src/bank-forms.json";
 
 export function allInOne(): { template: Template; values: Values } {
@@ -15,7 +15,8 @@ export function allInOne(): { template: Template; values: Values } {
     // ponytail: ids prefixed per form so the same question in two forms stays two fields; no de-duplication of shared applicant details
     for (const s of t.sections) sections.push({
       title: t.sections.length === 1 ? part : `${part} - ${s.title}`,
-      fields: s.fields.map(x => ({ ...x, id: `${f.code}_${x.id}` })),
+      fields: (s.fields as Field[]).map(x => ({ ...x, id: `${f.code}_${x.id}`,
+        ...(x.requiredIf ? { requiredIf: x.requiredIf.map(r => ({ ...r, field: `${f.code}_${r.field}` })) } : {}) })),
     });
     for (const [k, v] of Object.entries(f.defaults as Values)) values[`${f.code}_${k}`] = v;
   });

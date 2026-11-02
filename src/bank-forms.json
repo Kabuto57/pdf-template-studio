@@ -364,13 +364,29 @@
        "id": "plus_value",
        "label": "Plus value",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "tolerance_on_credit_amount_and_goods_qua",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "minus_value",
        "label": "Minus value",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "tolerance_on_credit_amount_and_goods_qua",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "price_basis",
@@ -391,7 +407,15 @@
        "id": "others",
        "label": "Others",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "price_basis",
+         "values": [
+          "Others"
+         ]
+        }
+       ]
       },
       {
        "id": "partial_shipment",
@@ -492,19 +516,43 @@
        "id": "term",
        "label": "Term",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "drafts",
+         "values": [
+          "Term:"
+         ]
+        }
+       ]
       },
       {
        "id": "days_after",
        "label": "days after",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "drafts",
+         "values": [
+          "Term:"
+         ]
+        }
+       ]
       },
       {
        "id": "drafts_date",
        "label": "Drafts: Date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "drafts",
+         "values": [
+          "Date"
+         ]
+        }
+       ]
       },
       {
        "id": "full_set_of_clean_on_board_marine_bills_",
@@ -515,7 +563,15 @@
        "id": "full_set",
        "label": "Full set",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "consignee",
+         "values": [
+          "3"
+         ]
+        }
+       ]
       },
       {
        "id": "consignee",
@@ -525,6 +581,14 @@
         "order of the Bank or",
         "order blank endorsed, marked Freight",
         "3"
+       ],
+       "requiredIf": [
+        {
+         "field": "full_set_of_clean_on_board_marine_bills_",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
@@ -534,13 +598,29 @@
        "options": [
         "Prepaid or",
         "Collect"
+       ],
+       "requiredIf": [
+        {
+         "field": "full_set_of_clean_on_board_marine_bills_",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
        "id": "drafts_notify_party",
        "label": "Drafts: Notify party",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "full_set_of_clean_on_board_marine_bills_",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "original_air_waybill_consigned_to_the_ba",
@@ -554,13 +634,29 @@
        "options": [
         "Prepaid or",
         "Collect"
+       ],
+       "requiredIf": [
+        {
+         "field": "original_air_waybill_consigned_to_the_ba",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
        "id": "original_air_waybill_notify_party",
        "label": "Original air waybill: Notify party",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "original_air_waybill_consigned_to_the_ba",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "delivery_order_in",
@@ -571,13 +667,29 @@
        "id": "originals",
        "label": "originals",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery_order_in",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "transport_documents_by_do_copies",
        "label": "Transport documents by DO: copies",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery_order_in",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "countersigned_by",
@@ -587,7 +699,15 @@
         "One",
         "Two"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery_order_in",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "whose_signature",
@@ -597,7 +717,15 @@
         "need",
         "need not"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery_order_in",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "marine_air_insurance_policy_or_certifica",
@@ -954,7 +1082,15 @@
        "id": "other_doc",
        "label": "Other doc",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "other_documents",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "other_doc_1",
@@ -986,6 +1122,14 @@
        "options": [
         "Beneficiary, except charges at DC Issuing Bank's counter",
         "Applicant (including all charges incurred inside and outside of"
+       ],
+       "requiredIf": [
+        {
+         "field": "all_bank_charges_are_for_account_of",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
@@ -1000,6 +1144,14 @@
        "options": [
         "Applicant",
         "Beneficiary"
+       ],
+       "requiredIf": [
+        {
+         "field": "confirmation_required",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
@@ -1015,13 +1167,29 @@
         "SGD financing, or",
         "Foreign Currency Financing in",
         "Apply Forward Contract No:"
+       ],
+       "requiredIf": [
+        {
+         "field": "please_provide_us_with_post_shipment_fin",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
        "id": "forgeign",
        "label": "Forgeign",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "trust_receipts",
+         "values": [
+          "Foreign Currency Financing in"
+         ]
+        }
+       ]
       },
       {
        "id": "details_apply_forward",
@@ -1033,7 +1201,15 @@
        "id": "details_apply_forward_2",
        "label": "Details: Apply forward",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "trust_receipts",
+         "values": [
+          "Apply Forward Contract No:"
+         ]
+        }
+       ]
       },
       {
        "id": "details_btb",
@@ -1333,13 +1509,29 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "amount_of_the_dc",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amount_2",
        "label": "Amount 2",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "amount_of_the_dc",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amount_of_the_dc",
@@ -1353,13 +1545,29 @@
        "options": [
         "increased by",
         "decreased by"
+       ],
+       "requiredIf": [
+        {
+         "field": "amount_of_the_dc",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
        "id": "date_of_expiry_date",
        "label": "Date of expiry: Date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_expiry_date_of_the_dc_is_extended_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "the_expiry_date_of_the_dc_is_extended_to",
@@ -1370,7 +1578,15 @@
        "id": "shipment_date_date",
        "label": "Shipment date: Date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_latest_shipment_date_is_extended_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "the_latest_shipment_date_is_extended_to",
@@ -1384,6 +1600,14 @@
        "options": [
         "allowed",
         "not allowed"
+       ],
+       "requiredIf": [
+        {
+         "field": "partial_shipment_is",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
@@ -1393,6 +1617,14 @@
        "options": [
         "allowed",
         "not allowed"
+       ],
+       "requiredIf": [
+        {
+         "field": "transhipment_is",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
@@ -1414,7 +1646,15 @@
        "id": "partialshipment_amend_no",
        "label": "Partialshipment: Amend no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "presentation_period_is_amended_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -1440,7 +1680,14 @@
        "label": "and to be debited to our account no.",
        "kind": "text",
        "half": true,
-       "required": true
+       "requiredIf": [
+        {
+         "field": "amendment_charges",
+         "values": [
+          "Applicant"
+         ]
+        }
+       ]
       },
       {
        "id": "authorised_person_s_and_company_s_stamp",
@@ -1725,7 +1972,15 @@
        "id": "reject",
        "label": "Reject",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "we_reject_amendment_no",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "draft_inv_no",
@@ -1760,19 +2015,43 @@
        "id": "term",
        "label": "Term",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "tenor",
+         "values": [
+          "Term"
+         ]
+        }
+       ]
       },
       {
        "id": "days",
        "label": "days",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "tenor",
+         "values": [
+          "Term"
+         ]
+        }
+       ]
       },
       {
        "id": "tenor_date",
        "label": "Tenor date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "tenor",
+         "values": [
+          "Date"
+         ]
+        }
+       ]
       },
       {
        "id": "port_disch",
@@ -2014,7 +2293,15 @@
        "id": "bank_2",
        "label": "Bank",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "bank",
+         "values": [
+          "with other bank"
+         ]
+        }
+       ]
       },
       {
        "id": "checking_of_documents",
@@ -2240,7 +2527,15 @@
        "id": "rate",
        "label": "Rate",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "subfrmfinancing_request_1_2",
+         "values": [
+          "Without a Hedging Transaction with a Haircut Percentage of"
+         ]
+        }
+       ]
       },
       {
        "id": "subfrmfinancing_request_2_2",
@@ -2275,7 +2570,15 @@
        "id": "credit_fund",
        "label": "Credit fund",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "credit_the_funds_to_our_account_no",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "remit_the_funds_to",
@@ -2286,7 +2589,15 @@
        "id": "remit_the_funds",
        "label": "Remit the funds",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "remit_the_funds_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "use_the_funds_to_repay",
@@ -2297,7 +2608,15 @@
        "id": "use_the_funds",
        "label": "Use the funds",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "use_the_funds_to_repay",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "use_fx_contract_ref",
@@ -2308,7 +2627,15 @@
        "id": "use_fx",
        "label": "Use FX",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "use_fx_contract_ref",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "others_1",
@@ -2621,13 +2948,29 @@
        "id": "term",
        "label": "Term",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "tenor",
+         "values": [
+          "Term"
+         ]
+        }
+       ]
       },
       {
        "id": "days",
        "label": "days",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "tenor",
+         "values": [
+          "Term"
+         ]
+        }
+       ]
       },
       {
        "id": "vessel_no",
@@ -2868,13 +3211,29 @@
        "id": "p_a_from",
        "label": "% p.a. from",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "collect_interest_from_drawee_at",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "interest_start_date_to",
        "label": "( interest start date) to",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "collect_interest_from_drawee_at",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "to",
@@ -2911,7 +3270,15 @@
        "id": "of_the_collection_amount",
        "label": "% of the collection amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "please_finance_us_for",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "please_forward_documents_to_drawee_s_ban",
@@ -2932,7 +3299,15 @@
        "id": "with_you",
        "label": "with you",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "please_credit_financing_payment_proceeds",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "please_use_fx_contract_ref",
@@ -2943,7 +3318,15 @@
        "id": "ref",
        "label": "Ref",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "please_use_fx_contract_ref",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "other_special_instructions_other_special",
@@ -2953,7 +3336,15 @@
       {
        "id": "other_special_instructions_other_special_2",
        "label": "Other special instructions: Other special instructions",
-       "kind": "long"
+       "kind": "long",
+       "requiredIf": [
+        {
+         "field": "other_special_instructions_other_special",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "authorised_person_s_and_company_stamp",
@@ -3824,13 +4215,29 @@
        "id": "services",
        "label": "Services",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "descrip",
+         "values": [
+          "Purchase of Services"
+         ]
+        }
+       ]
       },
       {
        "id": "goods",
        "label": "Goods",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "descrip",
+         "values": [
+          "Purchase of Goods"
+         ]
+        }
+       ]
       },
       {
        "id": "doc",
@@ -3848,6 +4255,16 @@
        "options": [
         "2",
         "1"
+       ],
+       "requiredIf": [
+        {
+         "field": "brp",
+         "values": [
+          "Post-shipment Financing on open account basis/ Purchase Invoice Financing",
+          "Pre-shipment Financing against purchase order/ import contract or pro-forma invoice from seller/ supplier",
+          null
+         ]
+        }
        ]
       },
       {
@@ -3857,6 +4274,14 @@
        "options": [
         "SFT",
         "CSH"
+       ],
+       "requiredIf": [
+        {
+         "field": "remit",
+         "values": [
+          "2"
+         ]
+        }
        ]
       },
       {
@@ -3866,6 +4291,14 @@
        "options": [
         "Yes",
         "No"
+       ],
+       "requiredIf": [
+        {
+         "field": "remit",
+         "values": [
+          "2"
+         ]
+        }
        ]
       },
       {
@@ -3873,7 +4306,21 @@
        "label": "Name of Beneficiary",
        "kind": "text",
        "half": true,
-       "required": true
+       "requiredIf": [
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ]
+        },
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ],
+         "not": true
+        }
+       ]
       },
       {
        "id": "name_2",
@@ -3886,7 +4333,21 @@
        "label": "Instructions: Address",
        "kind": "text",
        "half": true,
-       "required": true
+       "requiredIf": [
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ]
+        },
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ],
+         "not": true
+        }
+       ]
       },
       {
        "id": "instructions_address_2",
@@ -3899,7 +4360,21 @@
        "label": "Country",
        "kind": "text",
        "half": true,
-       "required": true
+       "requiredIf": [
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ]
+        },
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ],
+         "not": true
+        }
+       ]
       },
       {
        "id": "postal_code",
@@ -3912,26 +4387,70 @@
        "label": "Town",
        "kind": "text",
        "half": true,
-       "required": true
+       "requiredIf": [
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ]
+        },
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ],
+         "not": true
+        }
+       ]
       },
       {
        "id": "account_number",
        "label": "Account Number",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ]
+        }
+       ]
       },
       {
        "id": "reference_number",
        "label": "Reference Number",
        "kind": "text",
        "half": true,
-       "required": true
+       "requiredIf": [
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ]
+        },
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ],
+         "not": true
+        }
+       ]
       },
       {
        "id": "instructions_name",
        "label": "Instructions: Name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "instructions",
+         "values": [
+          "SFT"
+         ]
+        }
+       ]
       },
       {
        "id": "instructions_address_3",
@@ -3989,7 +4508,15 @@
        "id": "to_credit_our_account_number",
        "label": "To credit our account number",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "remit",
+         "values": [
+          "1"
+         ]
+        }
+       ]
       },
       {
        "id": "others_1",
@@ -4178,13 +4705,29 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "All charges"
+         ]
+        }
+       ]
       },
       {
        "id": "a_account",
        "label": "A account",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "All charges"
+         ]
+        }
+       ]
       },
       {
        "id": "f_currency",
@@ -4352,19 +4895,43 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "Foreign currency charges"
+         ]
+        }
+       ]
       },
       {
        "id": "f_account",
        "label": "F account",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "Foreign currency charges"
+         ]
+        }
+       ]
       },
       {
        "id": "l_account",
        "label": "L account",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "Foreign currency charges"
+         ]
+        }
+       ]
       },
       {
        "id": "re_currency",
@@ -7460,7 +8027,15 @@
         "Increase",
         "Decrease"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "currency",
@@ -7628,19 +8203,43 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amount",
        "label": "Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amount_2",
        "label": "Amount 2",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "currency_2",
@@ -7808,7 +8407,15 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amend_the_expiry_date_to",
@@ -7819,7 +8426,15 @@
        "id": "expiry_date",
        "label": "Expiry date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "amend_the_expiry_date_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amend_the_sblc_text_as_provided_below",
@@ -7829,7 +8444,15 @@
       {
        "id": "amend",
        "label": "Amend",
-       "kind": "long"
+       "kind": "long",
+       "requiredIf": [
+        {
+         "field": "amend_the_sblc_text_as_provided_below",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -7850,7 +8473,15 @@
        "id": "contact_name",
        "label": "Contact name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please contact Mr/Mrs."
+         ]
+        }
+       ]
       },
       {
        "id": "passport_ic",
@@ -7861,30 +8492,70 @@
         "IC No.",
         "Others"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please contact Mr/Mrs."
+         ]
+        }
+       ]
       },
       {
        "id": "passport_ic_no",
        "label": "Passport IC no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please contact Mr/Mrs."
+         ]
+        }
+       ]
       },
       {
        "id": "tel_no",
        "label": "Tel no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please contact Mr/Mrs."
+         ]
+        }
+       ]
       },
       {
        "id": "attn",
        "label": "Attn",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please send the amendment directly to the beneficiary, attn.:"
+         ]
+        }
+       ]
       },
       {
        "id": "free_text",
        "label": "Free text",
-       "kind": "long"
+       "kind": "long",
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Free Text"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -8280,7 +8951,15 @@
         "Increase",
         "Decrease"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "currency",
@@ -8448,19 +9127,43 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amount",
        "label": "Amount",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amount_2",
        "label": "Amount 2",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "currency_2",
@@ -8628,7 +9331,15 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "the_amount_by",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amend_the_expiry_date_to",
@@ -8639,7 +9350,15 @@
        "id": "expiry_date",
        "label": "Expiry date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "amend_the_expiry_date_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amend_the_claim_expiry_date_to",
@@ -8650,7 +9369,15 @@
        "id": "claim_expiry_date",
        "label": "Claim expiry date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "amend_the_claim_expiry_date_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amend_the_claim_expiry_period_to",
@@ -8661,7 +9388,15 @@
        "id": "claim_period",
        "label": "Claim period",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "amend_the_claim_expiry_period_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "day_month",
@@ -8671,7 +9406,15 @@
         "days",
         "months"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "amend_the_claim_expiry_period_to",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       },
       {
        "id": "amend_the_bg_text_as_provided_below",
@@ -8681,7 +9424,15 @@
       {
        "id": "amend",
        "label": "Amend",
-       "kind": "long"
+       "kind": "long",
+       "requiredIf": [
+        {
+         "field": "amend_the_bg_text_as_provided_below",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -8702,7 +9453,15 @@
        "id": "contact_name",
        "label": "Contact name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please contact Mr/Mrs."
+         ]
+        }
+       ]
       },
       {
        "id": "passport_ic",
@@ -8713,30 +9472,70 @@
         "IC No.",
         "Others"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please contact Mr/Mrs."
+         ]
+        }
+       ]
       },
       {
        "id": "passport_ic_no",
        "label": "Passport IC no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please contact Mr/Mrs."
+         ]
+        }
+       ]
       },
       {
        "id": "tel_no",
        "label": "Tel no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please contact Mr/Mrs."
+         ]
+        }
+       ]
       },
       {
        "id": "attn",
        "label": "Attn",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Please send the amendment directly to the beneficiary, attn.:"
+         ]
+        }
+       ]
       },
       {
        "id": "free_text",
        "label": "Free text",
-       "kind": "long"
+       "kind": "long",
+       "requiredIf": [
+        {
+         "field": "delivery",
+         "values": [
+          "Free Text"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -9369,7 +10168,15 @@
        "id": "effective_date_specific_date",
        "label": "Effective date: Specific date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "effective_date",
+         "values": [
+          "Specific Date"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -9390,7 +10197,15 @@
        "id": "expiry_date_specific_date",
        "label": "Expiry date: Specific date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "expiry_date",
+         "values": [
+          "Specific Date"
+         ]
+        }
+       ]
       },
       {
        "id": "claim_expiry_date",
@@ -9406,13 +10221,29 @@
        "id": "claim_expiry_date_specific_date",
        "label": "Claim expiry date: Specific date",
        "kind": "date",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "claim_expiry_date",
+         "values": [
+          "Specific Date"
+         ]
+        }
+       ]
       },
       {
        "id": "claim_period",
        "label": "Claim period",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "claim_expiry_date",
+         "values": [
+          "Claim period: after expiry date"
+         ]
+        }
+       ]
       },
       {
        "id": "day_month",
@@ -9422,7 +10253,15 @@
         "days",
         "months"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "claim_expiry_date",
+         "values": [
+          "Claim period: after expiry date"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -9444,7 +10283,15 @@
        "id": "entity",
        "label": "Entity",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "requirements",
+         "values": [
+          "Issuing Bank shall be branch or subsidiary of the Bank"
+         ]
+        }
+       ]
       },
       {
        "id": "branch_country",
@@ -9701,19 +10548,43 @@
         "Zambia",
         "Zimbabwe"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "requirements",
+         "values": [
+          "Issuing Bank shall be branch or subsidiary of the Bank"
+         ]
+        }
+       ]
       },
       {
        "id": "issue_bank_name",
        "label": "Issue bank name",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "requirements",
+         "values": [
+          "Issuing Bank nominated by the Beneficiary (Name & SWIFT Code)"
+         ]
+        }
+       ]
       },
       {
        "id": "swift_address",
        "label": "Swift address",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "requirements",
+         "values": [
+          "Issuing Bank nominated by the Beneficiary (Name & SWIFT Code)"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -9734,7 +10605,15 @@
        "id": "mrs",
        "label": "Mrs",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "non_sg",
+         "values": [
+          "Please release original guarantee to / to order of our agent / beneficiary Mr/Mrs"
+         ]
+        }
+       ]
       },
       {
        "id": "passport",
@@ -9745,25 +10624,57 @@
         "IC No.",
         "Others"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "non_sg",
+         "values": [
+          "Please release original guarantee to / to order of our agent / beneficiary Mr/Mrs"
+         ]
+        }
+       ]
       },
       {
        "id": "passport_no",
        "label": "Passport no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "non_sg",
+         "values": [
+          "Please release original guarantee to / to order of our agent / beneficiary Mr/Mrs"
+         ]
+        }
+       ]
       },
       {
        "id": "at",
        "label": "At",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "non_sg",
+         "values": [
+          "Please release original guarantee to / to order of our agent / beneficiary Mr/Mrs"
+         ]
+        }
+       ]
       },
       {
        "id": "mobile_no",
        "label": "Mobile no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "non_sg",
+         "values": [
+          "Please release original guarantee to / to order of our agent / beneficiary Mr/Mrs"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -9901,7 +10812,15 @@
        "id": "credit_no",
        "label": "Credit no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "shipment",
+         "values": [
+          "Pre-Shipment Financing against export Documentary Credit No."
+         ]
+        }
+       ]
       },
       {
        "id": "third_party_name",
@@ -10660,13 +11579,29 @@
        "id": "services",
        "label": "Services",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "descrip",
+         "values": [
+          "Sales of Services"
+         ]
+        }
+       ]
       },
       {
        "id": "goods",
        "label": "Goods",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "descrip",
+         "values": [
+          "Sales of Goods"
+         ]
+        }
+       ]
       },
       {
        "id": "doc",
@@ -10690,13 +11625,29 @@
        "id": "credit_acc_no",
        "label": "Credit acc no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "disbursement",
+         "values": [
+          "To credit our account number:"
+         ]
+        }
+       ]
       },
       {
        "id": "disbursement_others_1",
        "label": "Disbursement: Others 1",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "disbursement",
+         "values": [
+          "Others (specify)"
+         ]
+        }
+       ]
       },
       {
        "id": "others_2",
@@ -10876,7 +11827,15 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "disbursement",
+         "values": [
+          "To credit our account number:"
+         ]
+        }
+       ]
       },
       {
        "id": "debit",
@@ -11229,13 +12188,29 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "All charges"
+         ]
+        }
+       ]
       },
       {
        "id": "a_account",
        "label": "A account",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "All charges"
+         ]
+        }
+       ]
       },
       {
        "id": "f_currency",
@@ -11403,19 +12378,43 @@
         "ZMW",
         "ZWG"
        ],
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "Foreign currency charges"
+         ]
+        }
+       ]
       },
       {
        "id": "f_account",
        "label": "F account",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "Foreign currency charges"
+         ]
+        }
+       ]
       },
       {
        "id": "l_account",
        "label": "L account",
        "kind": "text",
-       "half": true
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "debit",
+         "values": [
+          "Foreign currency charges"
+         ]
+        }
+       ]
       },
       {
        "id": "debit_comm_others_1",

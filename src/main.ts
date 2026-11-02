@@ -1,5 +1,5 @@
 import "./styles.css";
-import { KINDS, buildPdf, extractPdf, hasOptions, importPdf, slug } from "./pdf";
+import { KINDS, buildPdf, extractPdf, hasOptions, importPdf, isRequired, slug } from "./pdf";
 import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
 import BANK from "./bank-forms.json";
@@ -101,6 +101,7 @@ function fieldCard(list: Field[], f: Field, i: number): HTMLElement {
         onchange: (e: Event) => { f.half = (e.target as HTMLInputElement).checked; refresh(); } }), " Half width"),
       h("label", { className: "half" }, h("input", { type: "checkbox", checked: !!f.required,
         onchange: (e: Event) => { f.required = (e.target as HTMLInputElement).checked; refresh(); } }), " Required"),
+      f.requiredIf && h("span", { className: "when" }, `Required when ${rule(f)}`),
       h("span", { className: "tools" },
         h("button", { type: "button", title: "Move up", "aria-label": "Move up", onclick: () => { move(list, i, -1); renderDesign(); refresh(); } }, "↑"),
         h("button", { type: "button", title: "Move down", "aria-label": "Move down", onclick: () => { move(list, i, 1); renderDesign(); refresh(); } }, "↓"),
@@ -150,7 +151,7 @@ const fromIso = (d: string) => d ? d.split("-").reverse().join("/") : "";
 
 function input(f: Field): HTMLElement {
   const v = values[f.id];
-  const set = (x: Value) => { values[f.id] = x; refresh(); };
+  const set = (x: Value) => { values[f.id] = x; paint(); refresh(); };
   const val = (e: Event) => (e.target as HTMLInputElement).value;
   switch (f.kind) {
     case "long": return h("textarea", { id: f.id, rows: 3, value: (v as string) ?? "", oninput: (e: Event) => set(val(e)) });
@@ -178,16 +179,37 @@ function renderFill() {
     ...t.sections.map((s, si) => h("fieldset", { className: "sec" },
       h("legend", {}, h("span", { className: "num" }, String(si + 1)), s.title),
       h("div", { className: "grid" }, ...s.fields.map(f => f.kind === "check"
-        ? h("label", { className: "full tick" }, input(f), " ", f.label, star(f))
-        : h(hasOptions(f.kind) ? "div" : "label", { className: f.half ? "q" : "q full", ...(hasOptions(f.kind) ? {} : { for: f.id }) },
+        ? h("label", { className: "full tick", "data-q": f.id }, input(f), " ", f.label, star(f))
+        : h(hasOptions(f.kind) ? "div" : "label", { className: f.half ? "q" : "q full", "data-q": f.id, ...(hasOptions(f.kind) ? {} : { for: f.id }) },
           h("span", { className: "q-label" }, f.label, star(f)), input(f)))),
     )),
   );
+  $("#panel .btns").after(h("p", { id: "left", role: "status" }));
+  paint();
 }
 
-const star = (f: Field) => f.required ? h("span", { className: "req", "aria-label": "required" }, " *") : "";
-const missing = () => t.sections.flatMap(s => s.fields)
-  .filter(f => f.required && (f.kind === "check" ? values[f.id] !== true : !show(values[f.id] ?? "")));
+const star = (f: Field) => h("span", { className: "req", "aria-label": "mandatory", hidden: !f.required }, " *");
+const blank = (f: Field) => f.kind === "check" ? values[f.id] !== true : !show(values[f.id] ?? "");
+const missing = () => t.sections.flatMap(s => s.fields).filter(f => isRequired(f, values) && blank(f));
+const rule = (f: Field) => f.requiredIf?.map(r => {
+  const by = t.sections.flatMap(s => s.fields).find(q => q.id === r.field);
+  const vs = r.values.map(v => v === "true" ? "ticked" : v === "false" ? "not ticked" : `"${v}"`).join(" or ");
+  return `${by?.label ?? r.field} is ${r.not ? "not " : ""}${vs}`;
+}).join("; ");
+
+/** Mandatory questions follow the answers: picking an option can make others mandatory. Blank ones are outlined in red. */
+function paint() {
+  if (view !== "fill") return;
+  for (const f of t.sections.flatMap(s => s.fields)) {
+    const el = document.querySelector(`[data-q="${CSS.escape(f.id)}"]`), req = isRequired(f, values);
+    if (!el) continue;
+    el.classList.toggle("missing", req && blank(f));
+    (el.querySelector(".req") as HTMLElement).hidden = !req;
+    if (f.requiredIf) el.setAttribute("title", req ? `Mandatory because ${rule(f)}` : `Mandatory when ${rule(f)}`);
+  }
+  const n = missing().length, left = document.getElementById("left");
+  if (left) { left.className = n ? "error" : "note"; left.textContent = n ? `${n} mandatory ${n === 1 ? "question is" : "questions are"} still blank (outlined in red).` : "All mandatory questions are answered."; }
+}
 
 // ---- 3. Extract ----
 const show = (v: Value) => v === true ? "Yes" : v === false ? "No" : Array.isArray(v) ? v.join(", ") : v;
@@ -330,15 +352,20 @@ $("#bankForms").append(...BANK_FORMS.map(f => h("option", { value: `bank:${f.cod
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.onclick = () => go(b.dataset.view as View));
 $("#blankBtn").onclick = async () => download(await buildPdf(t) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
-  const gaps = missing();
-  if (gaps.length) {
-    if (view !== "fill") go("fill");
-    $("#panel").querySelector(".error")?.remove();
-    alertBox(`${gaps.length} required ${gaps.length === 1 ? "question is" : "questions are"} still blank: ${gaps.slice(0, 6).map(f => f.label).join(", ")}${gaps.length > 6 ? "…" : ""}. Saved anyway; fill them before sending.`);
-    document.getElementById(gaps[0].id)?.focus();
-  }
-  filled = await buildPdf(t, values);
-  download(filled as BlobPart, `${slug(t.title)}-filled.pdf`, "application/pdf");
+  const gaps = missing(), save = async (suffix: string) => {
+    filled = await buildPdf(t, values);
+    download(filled as BlobPart, `${slug(t.title)}-${suffix}.pdf`, "application/pdf");
+  };
+  if (!gaps.length) return save("filled");
+  // Enforced: a form with blank mandatory answers is only saved as a draft, on purpose.
+  if (view !== "fill") go("fill");
+  $("#panel").querySelector("#gaps")?.remove();
+  $("#panel").prepend(h("div", { className: "error", role: "alert", id: "gaps" },
+    `Not saved: ${gaps.length} mandatory ${gaps.length === 1 ? "question is" : "questions are"} blank: ${gaps.slice(0, 6).map(f => f.label).join(", ")}${gaps.length > 6 ? "…" : ""}. Fill the ones outlined in red. `,
+    h("button", { type: "button", onclick: () => { $("#gaps").remove(); save("draft"); } }, "Save as draft anyway")));
+  const first = document.querySelector<HTMLElement>(`[data-q="${CSS.escape(gaps[0].id)}"]`);
+  first?.scrollIntoView({ block: "center" });
+  (first?.querySelector("input, select, textarea") as HTMLElement | null)?.focus();
 };
 $("#templateSel").onchange = async e => {
   const v = (e.target as HTMLSelectElement).value;

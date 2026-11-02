@@ -5,7 +5,12 @@ import {
 } from "pdf-lib";
 
 export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check" | "select";
-export interface Field { id: string; label: string; kind: Kind; options?: string[]; half?: boolean; required?: boolean }
+export interface Field {
+  id: string; label: string; kind: Kind; options?: string[]; half?: boolean; required?: boolean;
+  requiredIf?: Rule[]; // mandatory only when another answer is picked (any rule matching is enough)
+}
+/** Mandatory when `field` is one of `values` (or, with `not`, none of them). A tick box's values are "true" / "false". */
+export interface Rule { field: string; values: string[]; not?: boolean }
 export interface Section { title: string; fields: Field[] }
 export interface Template {
   title: string; note: string; sections: Section[];
@@ -13,6 +18,11 @@ export interface Template {
 }
 export type Value = string | string[] | boolean;
 export type Values = Record<string, Value>;
+
+export const isRequired = (f: Field, v: Values) => !!f.required || !!f.requiredIf?.some(r => {
+  const x = v[r.field], hit = Array.isArray(x) ? x.some(o => r.values.includes(o)) : r.values.includes(String(x ?? ""));
+  return r.not ? !hit && x !== undefined && x !== "" : hit;
+});
 
 export const KINDS: Record<Kind, string> = {
   text: "Text", long: "Paragraph", date: "Date", radio: "Pick one", checks: "Tick any", check: "Tick box", select: "Drop-down",
@@ -60,17 +70,18 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   for (const line of wrap(t.note, font, 8.5, W - 2 * M)) { page.drawText(line, { x: M, y: top - 9, size: 8.5, font, color: INK }); top -= 11.5; }
   top -= 10;
 
-  const opts = { borderColor: INK, borderWidth: 0.75, backgroundColor: WHITE };
+  const plain = { borderColor: INK, borderWidth: 0.75, backgroundColor: WHITE };
+  const mandatory = { ...plain, borderColor: RED, borderWidth: 1.25 }; // mandatory boxes are outlined in red, not only starred
   // Lays out a field at (x, top) in width w; draws it only when `draw`. Returns the height used.
   function place(f: Field, x: number, w: number, draw: boolean): number {
-    const v = values[f.id];
+    const v = values[f.id], req = isRequired(f, values), opts = req ? mandatory : plain;
     if (f.kind === "check") {
       const lines = wrap(f.label, font, 9, w - 16);
       if (draw) {
         const cb = form.createCheckBox(f.id);
         cb.addToPage(page, { x, y: top - 11, width: 10, height: 10, ...opts });
         tip(cb, f.label);
-        if (f.required) { cb.enableRequired(); page.drawText("*", { x: x - 7, y: top - 10, size: 9, font: bold, color: RED }); }
+        if (req) { cb.enableRequired(); page.drawText("*", { x: x - 7, y: top - 10, size: 9, font: bold, color: RED }); }
         if (v === true) cb.check();
         lines.forEach((l, i) => page.drawText(l, { x: x + 16, y: top - 9 - i * 11, size: 9, font, color: INK }));
       }
@@ -78,7 +89,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     }
     if (draw) {
       page.drawText(safe(f.label), { x, y: top - 8, size: 8, font, color: INK });
-      if (f.required) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), 8) + 2, y: top - 8, size: 9, font: bold, color: RED });
+      if (req) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), 8) + 2, y: top - 8, size: 9, font: bold, color: RED });
     }
     let y = top - 13;
     if (f.kind === "select") {
@@ -86,7 +97,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
         const dd = form.createDropdown(f.id);
         dd.addOptions((f.options ?? []).map(safe));
         tip(dd, f.label);
-        if (f.required) dd.enableRequired();
+        if (req) dd.enableRequired();
         if (typeof v === "string" && f.options?.includes(v)) dd.select(safe(v));
         dd.addToPage(page, { x, y: y - 20, width: w, height: 20, font, ...opts });
         dd.setFontSize(10);
@@ -96,7 +107,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     if (hasOptions(f.kind)) {
       const list = f.options ?? [];
       const group = f.kind === "radio" && draw ? form.createRadioGroup(f.id) : undefined;
-      if (group) { tip(group, f.label); if (f.required) group.enableRequired(); }
+      if (group) { tip(group, f.label); if (req) group.enableRequired(); }
       let cx = x;
       list.forEach((o, i) => {
         const span = 14 + font.widthOfTextAtSize(safe(o), 9) + 14;
@@ -122,7 +133,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     if (draw) {
       const tf = form.createTextField(f.id);
       if (f.kind === "long") tf.enableMultiline();
-      if (f.required) tf.enableRequired();
+      if (req) tf.enableRequired();
       tip(tf, f.kind === "date" ? `${f.label} (DD/MM/YYYY)` : f.label);
       if (typeof v === "string" && v) tf.setText(safe(v));
       tf.addToPage(page, { x, y: y - h, width: w, height: h, font, ...opts });
@@ -260,7 +271,9 @@ export async function importPdf(bytes: Uint8Array, name: string,
 export interface Row { section: string; id: string; label: string; value: Value; required?: boolean }
 export interface Extracted { template?: Template; rows: Row[]; data: Record<string, unknown> }
 
-const text = (o: unknown) => (o instanceof PDFHexString || o instanceof PDFString ? o.decodeText() : undefined);
+// pdf-lib's decodeText() overflows the stack on long strings (a big embedded template): decode UTF-16 ourselves.
+const utf16 = (b: Uint8Array) => b[0] === 0xfe && b[1] === 0xff ? new TextDecoder("utf-16be").decode(b) : undefined;
+const text = (o: unknown) => o instanceof PDFHexString ? utf16(o.asBytes()) ?? o.decodeText() : o instanceof PDFString ? o.decodeText() : undefined;
 
 /** Reads every answer from a filled PDF form, with the question it belongs to. */
 export async function extractPdf(bytes: Uint8Array | ArrayBuffer): Promise<Extracted> {
@@ -288,9 +301,11 @@ async function extractFields(doc: PDFDocument): Promise<Extracted> {
       const value: Value = f.kind === "checks"
         ? (f.options ?? []).filter((_, i) => raw.get(subId(f.id, i)) === true)
         : raw.get(f.id) ?? (f.kind === "check" ? false : "");
-      rows.push({ section: s.title, id: f.id, label: f.label, value, required: f.required });
+      rows.push({ section: s.title, id: f.id, label: f.label, value });
       data[f.id] = value;
     }
+    const fields = template.sections.flatMap(s => s.fields); // rules can point at later answers, so judge once all are read
+    rows.forEach((r, i) => { if (isRequired(fields[i], data)) r.required = true; });
   } else {
     // A form made elsewhere: fall back to each field's tooltip as its label.
     for (const [id, value] of raw) { rows.push({ section: "", id, label: tips.get(id)!, value }); data[id] = value; }

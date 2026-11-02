@@ -218,7 +218,7 @@ export function xfaTemplate(x: Xfa, code: string): { template: Template; values:
     const kind = list ? "select" : f.ui === "text" && /date/i.test(f.name) ? "date" : f.ui === "select" && !f.options.length ? "text" : f.ui;
     if (list) f = { ...f, options: list };
     sections.set(section, [...sections.get(section) ?? [], {
-      id, label, kind, ...(kind === "radio" || kind === "select" ? { options: f.options } : {}),
+      id, label, kind, ...(kind === "radio" || kind === "select" ? { options: [...new Set(f.options)] } : {}),
       ...(kind === "text" || kind === "date" || kind === "select" ? { half: true } : {}),
       ...(f.required ? { required: true } : {}),
     }]);

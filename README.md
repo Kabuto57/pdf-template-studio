@@ -53,7 +53,8 @@ Change the form before using it:
 
 1. Click **2 Fill**.
 2. Type your answers on the left; the PDF on the right updates as you type. **Fill with sample** fills any form (all 13 bank forms, uploaded ones too) with made-up but realistic answers, guessed from each question's wording, so you can try Save, Extract and Review straight away.
-3. Mandatory questions have a red `*`, taken from the bank's forms. If any are blank when you save, a warning lists them.
+3. Mandatory questions have a red `*`, and while blank they are **outlined in red**; a line at the top counts how many are left. Some are mandatory only after you pick an option, exactly as in the bank's smart form. On the LC, for example, picking **Drafts: Term** makes *Term* and *days after* mandatory, and ticking **Tolerance** makes *Plus value* and *Minus value* mandatory. Hover a question to see why it is mandatory. In Design, such a question shows "Required when …".
+   **Save filled PDF** is blocked while any are blank: it lists them and jumps to the first. **Save as draft anyway** saves a `-draft.pdf` on purpose. In the PDF, mandatory boxes are outlined in red too.
 4. Click **Save filled PDF** (top right). The saved PDF is still fillable, so it can be opened and changed in Adobe Reader or Preview.
 
 Or click **Download blank PDF** and fill it in Adobe Reader instead.
@@ -235,6 +236,19 @@ fields at all fall back to reading the page text, and those results are marked "
 3. The bank's name was replaced with "the Bank", and the result saved as `src/bank-forms.json`.
 
 To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vitest run scripts`.
+
+
+**Conditional mandatory rules.** The smart form makes questions mandatory with scripts, e.g. `if (this.rawValue == "Term") controlScript.mandatoryChange(txtTerm, 1)`. `scripts/xfa-rules.py` reads those scripts from the decrypted form and writes one rule per trigger, value and target (99 rules over 10 forms, 22 on the LC); simple `==` / `||` conditions and their `else` branches are understood, anything more complex is skipped. The generator then stores them on each question as `requiredIf`:
+
+```json
+{ "id": "term", "label": "Term", "kind": "text", "requiredIf": [{ "field": "drafts", "values": ["Term:"] }] }
+```
+
+`isRequired(field, answers)` in `pdf.ts` decides, and Fill, Save, Extract and Review all use it.
+
+```
+BANK_PDF=~/Downloads/Trade-Smartform.pdf BANK_RULES=rules.json npx vitest run scripts/bank-forms
+```
 
 ### Safety
 
