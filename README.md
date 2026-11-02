@@ -52,7 +52,7 @@ Change the form before using it:
 ### 2. Fill
 
 1. Click **2 Fill**.
-2. Type your answers on the left; the PDF on the right updates as you type.
+2. Type your answers on the left; the PDF on the right updates as you type. **Fill with sample** fills any form (all 13 bank forms, uploaded ones too) with made-up but realistic answers, guessed from each question's wording, so you can try Save, Extract and Review straight away.
 3. Mandatory questions have a red `*`, taken from the bank's forms. If any are blank when you save, a warning lists them.
 4. Click **Save filled PDF** (top right). The saved PDF is still fillable, so it can be opened and changed in Adobe Reader or Preview.
 
@@ -131,7 +131,7 @@ pdf-template-studio/
 │   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks, preview drawing
 │   ├── bank-forms.json        the 13 bank trade forms, as templates (generated, see below)
 │   ├── lists.ts               currency codes (ISO 4217) and country names (ISO 3166) for drop-downs
-│   ├── sample.ts              the simple banker's guarantee sample and its sample answers
+│   ├── sample.ts              the simple banker's guarantee sample, and sampleFor(): sample answers for any form
 │   └── styles.css             black-and-white look
 ├── scripts/
 │   ├── bank-forms.test.ts     rebuilds bank-forms.json from the bank's smart form PDF

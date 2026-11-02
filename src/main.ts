@@ -1,7 +1,7 @@
 import "./styles.css";
 import { KINDS, buildPdf, extractPdf, hasOptions, importPdf, slug } from "./pdf";
 import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
-import { GUARANTEE, SAMPLE } from "./sample";
+import { GUARANTEE, sampleFor } from "./sample";
 import BANK from "./bank-forms.json";
 import type { Line, Xfa } from "./text";
 import { DECISIONS, DEMO_WATCHLIST, aiPrompt, reportTemplate, review } from "./review";
@@ -172,7 +172,7 @@ function renderFill() {
   $("#panel").replaceChildren(
     h("p", { className: "lead" }, "Fill in the form as an applicant would. The preview is the real PDF. You can also download the blank PDF and fill it in Acrobat or Preview."),
     h("div", { className: "btns" },
-      Object.keys(SAMPLE).some(k => t.sections.some(s => s.fields.some(f => f.id === k))) && h("button", { type: "button", onclick: () => { values = Object.fromEntries(Object.entries(SAMPLE).filter(([k]) => t.sections.some(s => s.fields.some(f => f.id === k)))); renderFill(); refresh(true); } }, "Fill with sample"),
+      h("button", { type: "button", onclick: () => { values = sampleFor(t); renderFill(); refresh(true); } }, "Fill with sample"),
       h("button", { type: "button", onclick: () => { values = {}; renderFill(); refresh(true); } }, "Clear"),
     ),
     ...t.sections.map((s, si) => h("fieldset", { className: "sec" },

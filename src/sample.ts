@@ -75,3 +75,52 @@ export const SAMPLE: Values = {
   debit_account: "072-123456-7", margin: "No",
   agree: true, signatory_name: "TAN WEI MING", signed_date: "29/10/2026",
 };
+
+const day = (plus: number) => { const d = new Date(); d.setDate(d.getDate() + plus); return d.toLocaleDateString("en-GB"); };
+const TEXT: [RegExp, string][] = [
+  [/e-?mail/i, "finance@tan-eng.com.sg"],
+  [/tel|phone|mobile|fax|contact (no|number)/i, "+65 6123 4567"],
+  [/passport|\bic\b/i, "S1234567A"],
+  [/swift/i, "EXBKSGSG"],
+  [/cif|registration|ref|acc(ount)? ?no|account|\b(dc|cr|lc) no/i, "072-123456-7"],
+  [/word/i, "Two hundred and fifty thousand only"],
+  [/plus|minus|%|rate/i, "5"],
+  [/amount|sum|value/i, "250,000.00"],
+  [/currency/i, "SGD"],
+  [/copies|originals/i, "2"],
+  [/(beneficiary|third party|3party|drawee|consignee|buyer).*address.*3/i, "Singapore 098632"],
+  [/(beneficiary|third party|3party|drawee|consignee|buyer).*address.*2/i, "HarbourFront Centre"],
+  [/(beneficiary|third party|3party|drawee|consignee|buyer).*address/i, "1 Harbourfront Avenue"],
+  [/country|\bport|airport|place/i, "Singapore"],
+  [/address.*3/i, "Singapore 018982"],
+  [/address.*2/i, "#20-01 Tower 3"],
+  [/address/i, "12 Marina Boulevard"],
+  [/days|period|term|tenor/i, "90"],
+  [/(beneficiary|third party|drawee).*(contact|person|attention)/i, "LIM MEI LING"],
+  [/bank|correspondent/i, "Example Bank Ltd, Singapore"],
+  [/beneficiary|drawee|third party|3party|consignee|buyer|notify/i, "HARBOUR DEVELOPMENT AUTHORITY"],
+  [/signat|contact|attention|person/i, "TAN WEI MING"],
+  [/name|applicant|drawer|seller|shipper|company/i, "TAN ENGINEERING PTE LTD"],
+  [/\bno\b|number|code|\bid\b/i, "REF-2026-0114"],
+];
+const STORY = "Steel fittings for Pier 3 refurbishment, contract HDA/2026/114";
+
+/** Plausible answers for any form, so every bank form can be tried end to end. The simple guarantee keeps its own. */
+export function sampleFor(t: Template): Values {
+  const out: Values = {};
+  for (const f of t.sections.flatMap(s => s.fields)) {
+    const own = SAMPLE[f.id], opts = (f.options ?? []).filter(o => !o.startsWith("<"));
+    if (own !== undefined && !(f.kind !== "long" && String(own).includes("\n")) && (!opts.length || [own].flat().every(v => opts.includes(v as string)))) { out[f.id] = own; continue; }
+    const guess = TEXT.find(([re]) => re.test(f.label))?.[1];
+    switch (f.kind) {
+      case "check": if (f.required) out[f.id] = true; break; // ponytail: ticking every box would pick conflicting options
+      case "radio": out[f.id] = opts[0] ?? ""; break;
+      case "checks": out[f.id] = opts.slice(0, 1); break;
+      case "select": out[f.id] = opts.find(o => o === guess) ?? opts[0] ?? ""; break;
+      case "date": out[f.id] = day(/claim/i.test(f.label) ? 462 : /expir|until|latest|last/i.test(f.label) ? 372 : /effective|ship|from/i.test(f.label) ? 7 : 0); break;
+      case "long": out[f.id] = /address/i.test(f.label) ? "12 Marina Boulevard\n#20-01 Tower 3" : guess ?? STORY; break;
+      default: out[f.id] = guess ?? (/purpose|goods|descri|instruction|remark|service|detail/i.test(f.label) ? STORY : "SAMPLE");
+    }
+  }
+  return out;
+}
