@@ -14,6 +14,9 @@ const pick = (id: string, label: string, options: string[], more: Partial<Field>
 const req = { required: true };
 
 const sections: Section[] = [
+  { title: "Application", fields: [
+    { id: "application_date", label: "Date", kind: "date", half: true, ...req },
+  ] },
   { title: "Mode of Advising", fields: [
     pick("mode_of_advising", "Mode of advising", ["Full Swift", "Registered Airmail", "Airmail with Brief Swift", "Courier Service", "Courier Service with Brief Swift"], req),
   ] },
@@ -150,7 +153,6 @@ const sections: Section[] = [
     tick("bank_charges", "All bank charges are for account of", req),
     pick("bank_charges_for", "Charges for account of", ["Beneficiary, except charges at DC Issuing Bank's counter", "Applicant (including all charges incurred inside and outside of DC Issuing Bank's country)"],
       { requiredIf: ticked("bank_charges") }),
-    tick("pay_at_counters", "Pay upon receipt of documents at the Bank's counters in Singapore (if not checked, a Reimbursing Bank may be nominated)"),
     tick("confirmation", "Confirmation required"),
     pick("confirmation_charges", "Confirmation charges", ["Applicant", "Beneficiary"], { requiredIf: ticked("confirmation") }),
     tick("post_shipment_financing", "Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies"),
@@ -159,7 +161,6 @@ const sections: Section[] = [
     text("forward_contract_no", "Forward contract no", { max: 20, requiredIf: when("financing_type", "Apply Forward Contract") }),
     tick("advance_payment", "We authorise you to debit DC amount in full from our account for advance payment"),
     text("advance_payment_account", "Account no for advance payment", { requiredIf: ticked("advance_payment"), max: 20 }),
-    tick("tt_reimbursement", "T/T reimbursement allowed"),
     tick("debit_issuance_charges", "Please debit all DC issuance charges to our account with you"),
     text("issuance_charges_account", "Account no for DC issuance charges", { ...req, max: 17 }),
   ] },
@@ -176,11 +177,11 @@ export const LC: { code: string; template: Template; defaults: Values } = {
 
 /** A realistic import LC: steel coils from Shanghai, FOB, 90 days after bill of lading date. */
 export const LC_SAMPLE: Values = {
-  mode_of_advising: "Full Swift",
+  application_date: "02/11/2026", mode_of_advising: "Full Swift",
   applicant_name: "TAN ENGINEERING PTE LTD", applicant_address_1: "12 Marina Boulevard", applicant_address_2: "#20-01 Tower 3", applicant_address_3: "Singapore 018982",
   contact_name: "TAN WEI MING", contact_tel: "+65 6123 4567", contact_fax: "+65 6123 4568",
   beneficiary_name: "SHANGHAI EASTERN STEEL CO LTD", beneficiary_address_1: "88 Pudong Avenue", beneficiary_address_2: "Pudong New District", beneficiary_address_3: "Shanghai 200120, China",
-  beneficiary_contact: "LI MING", beneficiary_tel: "+86 21 5888 1234",
+  beneficiary_contact: "LI MING", beneficiary_tel: "+86 21 58881234",
   currency: "USD", amount: "480,000.00", tolerance: true, tolerance_plus: "5", tolerance_minus: "5",
   price_basis: "FOB", partial_shipment: "not allowed", transhipment: "allowed",
   shipment_from: "Port of Loading / Airport of Departure", shipment_from_place: "Shanghai, China",

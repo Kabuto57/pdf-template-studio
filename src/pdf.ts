@@ -39,7 +39,7 @@ const KEY = PDFName.of("FormTemplate"); // the template rides inside the PDF, so
 const MAP: Record<string, string> = { "‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-", "…": "..." };
 export const safe = (s: string) => s.replace(/[^\n\x20-\x7e\xa0-\xff€]/g, c => MAP[c] ?? "?");
 
-const subId = (id: string, i: number) => `${id}__${i}`;
+export const subId = (id: string, i: number) => `${id}__${i}`;
 
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
   const out: string[] = [];
@@ -190,7 +190,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
  * a hidden field recalculates on every change, sets each field's required flag and outlines blank mandatory ones in
  * red; a "Check form" button lists what is missing; saving or printing an incomplete form shows a warning.
  */
-function addChecks(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, font: PDFFont, t: Template, js: (code: string) => PDFObject) {
+export function addChecks(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, font: PDFFont, t: Template, js: (code: string) => PDFObject) {
   const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
   const model: Record<string, { k: Kind; l: string; c?: 1; s?: 1; o?: string[]; r?: [string, string[], 0 | 1][] }> = {};
   const add = (f: Field) => model[f.id] ??= { k: f.kind, l: safe(f.label), ...(f.kind === "checks" ? { o: (f.options ?? []).map(safe) } : {}) };
@@ -249,7 +249,7 @@ ${always ? 'else app.alert("All mandatory questions are answered. You can save t
 const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }, label: string) =>
   f.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(label));
 /** Stores the template (minus any uploaded PDF) inside the PDF, so extraction knows the questions and sections. */
-const stamp = (doc: PDFDocument, t: Template) => doc.catalog.set(KEY, PDFHexString.fromText(JSON.stringify({ ...t, base: undefined, uploaded: !!t.base })));
+export const stamp = (doc: PDFDocument, t: Template) => doc.catalog.set(KEY, PDFHexString.fromText(JSON.stringify({ ...t, base: undefined, uploaded: !!t.base })));
 
 export const toB64 = (b: Uint8Array) => { let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
 const fromB64 = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
