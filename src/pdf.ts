@@ -3,6 +3,7 @@ import {
   AcroButtonFlags, PDFButton, PDFCheckBox, PDFDict, PDFRawStream, decodePDFRawStream, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
   PDFRadioGroup, PDFString, PDFTextField, StandardFonts, TextAlignment, rgb,
 } from "pdf-lib";
+import { addXfa, recordDrawing, xfaAnswers } from "./xfa";
 
 export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check" | "select";
 export interface Field {
@@ -57,7 +58,7 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
 /** Makes the blank (or, with values, the filled) form. */
 export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8Array> {
   if (t.base) return fillBase(t, values);
-  const doc = await PDFDocument.create();
+  const doc = await PDFDocument.create(), drawn = recordDrawing(doc);
   const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const form = doc.getForm();
   const js = (code: string) => doc.context.obj({ S: "JavaScript", JS: PDFHexString.fromText(code) });
@@ -184,7 +185,8 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   if (t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
-  return doc.save();
+  addXfa(doc, t, values, drawn);
+  return doc.save({ updateFieldAppearances: false }); // done above; redoing it calls getForm(), which deletes the XFA
 }
 
 /**
@@ -437,7 +439,7 @@ export async function extractPdf(bytes: Uint8Array | ArrayBuffer): Promise<Extra
 }
 
 async function extractFields(doc: PDFDocument): Promise<Extracted> {
-  const raw = new Map<string, Value>(), tips = new Map<string, string>();
+  const raw = new Map<string, Value>(), tips = new Map<string, string>(), acrobat = xfaAnswers(doc); // filled in Acrobat: answers are in the XFA layer
   for (const f of doc.getForm().getFields()) {
     const name = f.getName();
     if (f instanceof PDFButton || name.startsWith("__")) continue; // the built-in checks, not answers
@@ -447,6 +449,8 @@ async function extractFields(doc: PDFDocument): Promise<Extracted> {
       f instanceof PDFCheckBox ? f.isChecked() :
       f instanceof PDFDropdown || f instanceof PDFOptionList ? f.getSelected().join(", ") : "";
     raw.set(name, v);
+    const saved = acrobat?.get(name);
+    if (saved !== undefined) raw.set(name, typeof v === "boolean" ? saved === "1" : saved);
     tips.set(name, text(f.acroField.dict.lookup(PDFName.of("TU"))) ?? name);
   }
   let template: Template | undefined;

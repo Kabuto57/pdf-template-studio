@@ -3,6 +3,7 @@
 import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFPage, PDFRadioGroup, StandardFonts, rgb } from "pdf-lib";
 import layout from "./lc-layout.json";
 import { LC } from "./lc";
+import { addXfa, recordDrawing } from "./xfa";
 import { addChecks, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
 
 type Item = { k: string; line?: string; x: number; y: number; w?: number; h?: number; x2?: number; y2?: number; size?: number; bold?: boolean;
@@ -81,7 +82,7 @@ const blank = (v: Values[string] | undefined) => v === undefined || v === "" || 
 
 /** The LC application as a fillable PDF in the bank's layout, with the same checks as the app. */
 export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
+  const doc = await PDFDocument.create(), drawn = recordDrawing(doc);
   const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const form = doc.getForm(), js = (code: string) => doc.context.obj({ S: "JavaScript", JS: PDFHexString.fromText(code) });
   doc.setTitle(LC.template.title); doc.setCreator("PDF Template Studio");
@@ -168,7 +169,8 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
   addChecks(doc, form, pages[0], font, LC.template, js, underlined);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
-  return doc.save();
+  addXfa(doc, LC.template, values, drawn, underlined);
+  return doc.save({ updateFieldAppearances: false }); // done above; redoing it calls getForm(), which deletes the XFA
 }
 
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
