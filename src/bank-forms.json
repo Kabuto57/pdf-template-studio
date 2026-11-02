@@ -31,46 +31,53 @@
        "label": "Applicant name",
        "kind": "text",
        "half": false,
-       "required": true
+       "required": true,
+       "max": 35
       },
       {
        "id": "applicant_address_1",
        "label": "Applicant address",
        "kind": "text",
        "half": false,
-       "required": true
+       "required": true,
+       "max": 35
       },
       {
        "id": "applicant_address_2",
        "label": "Applicant address (line 2)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "applicant_address_3",
        "label": "Applicant address (line 3)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "contact_name",
        "label": "Contact party for this application & confirmation of FX rate: Name",
        "kind": "text",
        "half": false,
-       "required": true
+       "required": true,
+       "max": 35
       },
       {
        "id": "contact_tel",
        "label": "Contact party: Tel no",
        "kind": "text",
        "half": true,
-       "required": true
+       "required": true,
+       "max": 15
       },
       {
        "id": "contact_fax",
        "label": "Contact party: Fax no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "max": 15
       }
      ]
     },
@@ -98,25 +105,29 @@
        "id": "advising_bank_name",
        "label": "Name",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "advising_bank_address_1",
        "label": "Address",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "advising_bank_address_2",
        "label": "Address (line 2)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "advising_bank_address_3",
        "label": "Address (line 3)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       }
      ]
     },
@@ -127,25 +138,29 @@
        "id": "third_party_name",
        "label": "Name",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "third_party_address_1",
        "label": "Address",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "third_party_address_2",
        "label": "Address (line 2)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "third_party_address_3",
        "label": "Address (line 3)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       }
      ]
     },
@@ -157,44 +172,51 @@
        "label": "Beneficiary's name",
        "kind": "text",
        "half": false,
-       "required": true
+       "required": true,
+       "max": 35
       },
       {
        "id": "beneficiary_address_1",
        "label": "Beneficiary's address",
        "kind": "text",
        "half": false,
-       "required": true
+       "required": true,
+       "max": 35
       },
       {
        "id": "beneficiary_address_2",
        "label": "Beneficiary's address (line 2)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "beneficiary_address_3",
        "label": "Beneficiary's address (line 3)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "beneficiary_contact",
        "label": "Contact person",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 35
       },
       {
        "id": "beneficiary_tel",
        "label": "Tel no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "max": 15
       },
       {
        "id": "beneficiary_fax",
        "label": "Fax no",
        "kind": "text",
-       "half": true
+       "half": true,
+       "max": 15
       }
      ]
     },
@@ -375,7 +397,8 @@
        "label": "Amount",
        "kind": "text",
        "half": true,
-       "required": true
+       "required": true,
+       "format": "amount"
       },
       {
        "id": "gst",
@@ -403,7 +426,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "tolerance_minus",
@@ -417,7 +442,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       }
      ]
     },
@@ -445,6 +472,7 @@
        "label": "Others (please specify)",
        "kind": "text",
        "half": false,
+       "max": 35,
        "requiredIf": [
         {
          "field": "price_basis",
@@ -498,6 +526,7 @@
        "label": "Shipment from: place",
        "kind": "text",
        "half": true,
+       "max": 35,
        "requiredIf": [
         {
          "field": "shipment_from",
@@ -507,6 +536,12 @@
          "not": true
         }
        ]
+      },
+      {
+       "id": "shipment_from_place_2",
+       "label": "Shipment from: place (line 2)",
+       "kind": "text",
+       "half": true
       },
       {
        "id": "shipment_to",
@@ -525,6 +560,7 @@
        "label": "Shipment to: place",
        "kind": "text",
        "half": true,
+       "max": 35,
        "requiredIf": [
         {
          "field": "shipment_to",
@@ -534,6 +570,12 @@
          "not": true
         }
        ]
+      },
+      {
+       "id": "shipment_to_place_2",
+       "label": "Shipment to: place (line 2)",
+       "kind": "text",
+       "half": true
       },
       {
        "id": "latest_shipment_date",
@@ -557,7 +599,8 @@
        "id": "presentation_days",
        "label": "Presentation period (days after shipment)",
        "kind": "text",
-       "half": true
+       "half": true,
+       "format": "number"
       }
      ]
     },
@@ -581,7 +624,8 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 20
       },
       {
        "id": "master_dc_issued_by",
@@ -595,7 +639,8 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 35
       }
      ]
     },
@@ -637,7 +682,8 @@
           "Term"
          ]
         }
-       ]
+       ],
+       "format": "number"
       },
       {
        "id": "term_after",
@@ -651,7 +697,8 @@
           "Term"
          ]
         }
-       ]
+       ],
+       "max": 35
       },
       {
        "id": "draft_date",
@@ -724,7 +771,8 @@
           "other (specify)"
          ]
         }
-       ]
+       ],
+       "max": 70
       },
       {
        "id": "bl_freight",
@@ -749,6 +797,7 @@
        "label": "Notify party (if not specified, notify party is considered to be applicant)",
        "kind": "text",
        "half": false,
+       "max": 114,
        "requiredIf": [
         {
          "field": "doc_bill_of_lading",
@@ -786,6 +835,7 @@
        "label": "Notify party (if not specified, notify party is considered to be applicant)",
        "kind": "text",
        "half": false,
+       "max": 114,
        "requiredIf": [
         {
          "field": "doc_air_waybill",
@@ -812,7 +862,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "do_copies",
@@ -826,7 +878,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "do_countersigned_by",
@@ -886,6 +940,7 @@
        "label": "Open cover no",
        "kind": "text",
        "half": true,
+       "max": 20,
        "requiredIf": [
         {
          "field": "insurance_arrangement",
@@ -900,6 +955,7 @@
        "label": "With",
        "kind": "text",
        "half": true,
+       "max": 35,
        "requiredIf": [
         {
          "field": "insurance_arrangement",
@@ -944,7 +1000,8 @@
           "true"
          ]
         }
-       ]
+       ],
+       "format": "number"
       },
       {
        "id": "doc_commercial_invoice",
@@ -963,7 +1020,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "invoice_copies",
@@ -977,7 +1036,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "doc_packing_list",
@@ -996,7 +1057,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "packing_list_copies",
@@ -1010,7 +1073,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "doc_weight_note",
@@ -1029,7 +1094,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "weight_note_copies",
@@ -1043,7 +1110,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "doc_certificate_of_origin",
@@ -1062,7 +1131,9 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "origin_copies",
@@ -1076,263 +1147,14 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 2,
+       "format": "number"
       },
       {
        "id": "origin_country",
        "label": "Showing country of origin as",
-       "kind": "select",
-       "options": [
-        "Afghanistan",
-        "Åland Islands",
-        "Albania",
-        "Algeria",
-        "American Samoa",
-        "Andorra",
-        "Angola",
-        "Anguilla",
-        "Antarctica",
-        "Antigua & Barbuda",
-        "Argentina",
-        "Armenia",
-        "Aruba",
-        "Australia",
-        "Austria",
-        "Azerbaijan",
-        "Bahamas",
-        "Bahrain",
-        "Bangladesh",
-        "Barbados",
-        "Belarus",
-        "Belgium",
-        "Belize",
-        "Benin",
-        "Bermuda",
-        "Bhutan",
-        "Bolivia",
-        "Bosnia & Herzegovina",
-        "Botswana",
-        "Bouvet Island",
-        "Brazil",
-        "British Indian Ocean Territory",
-        "British Virgin Islands",
-        "Brunei",
-        "Bulgaria",
-        "Burkina Faso",
-        "Burundi",
-        "Cambodia",
-        "Cameroon",
-        "Canada",
-        "Cape Verde",
-        "Caribbean Netherlands",
-        "Cayman Islands",
-        "Central African Republic",
-        "Chad",
-        "Chile",
-        "China",
-        "Christmas Island",
-        "Cocos (Keeling) Islands",
-        "Colombia",
-        "Comoros",
-        "Congo - Brazzaville",
-        "Congo - Kinshasa",
-        "Cook Islands",
-        "Costa Rica",
-        "Côte d’Ivoire",
-        "Croatia",
-        "Cuba",
-        "Curaçao",
-        "Cyprus",
-        "Czechia",
-        "Denmark",
-        "Djibouti",
-        "Dominica",
-        "Dominican Republic",
-        "Ecuador",
-        "Egypt",
-        "El Salvador",
-        "Equatorial Guinea",
-        "Eritrea",
-        "Estonia",
-        "Eswatini",
-        "Ethiopia",
-        "Falkland Islands",
-        "Faroe Islands",
-        "Fiji",
-        "Finland",
-        "France",
-        "French Guiana",
-        "French Polynesia",
-        "French Southern Territories",
-        "Gabon",
-        "Gambia",
-        "Georgia",
-        "Germany",
-        "Ghana",
-        "Gibraltar",
-        "Greece",
-        "Greenland",
-        "Grenada",
-        "Guadeloupe",
-        "Guam",
-        "Guatemala",
-        "Guernsey",
-        "Guinea",
-        "Guinea-Bissau",
-        "Guyana",
-        "Haiti",
-        "Heard & McDonald Islands",
-        "Honduras",
-        "Hong Kong SAR China",
-        "Hungary",
-        "Iceland",
-        "India",
-        "Indonesia",
-        "Iran",
-        "Iraq",
-        "Ireland",
-        "Isle of Man",
-        "Israel",
-        "Italy",
-        "Jamaica",
-        "Japan",
-        "Jersey",
-        "Jordan",
-        "Kazakhstan",
-        "Kenya",
-        "Kiribati",
-        "Kuwait",
-        "Kyrgyzstan",
-        "Laos",
-        "Latvia",
-        "Lebanon",
-        "Lesotho",
-        "Liberia",
-        "Libya",
-        "Liechtenstein",
-        "Lithuania",
-        "Luxembourg",
-        "Macao SAR China",
-        "Madagascar",
-        "Malawi",
-        "Malaysia",
-        "Maldives",
-        "Mali",
-        "Malta",
-        "Marshall Islands",
-        "Martinique",
-        "Mauritania",
-        "Mauritius",
-        "Mayotte",
-        "Mexico",
-        "Micronesia",
-        "Moldova",
-        "Monaco",
-        "Mongolia",
-        "Montenegro",
-        "Montserrat",
-        "Morocco",
-        "Mozambique",
-        "Myanmar (Burma)",
-        "Namibia",
-        "Nauru",
-        "Nepal",
-        "Netherlands",
-        "New Caledonia",
-        "New Zealand",
-        "Nicaragua",
-        "Niger",
-        "Nigeria",
-        "Niue",
-        "Norfolk Island",
-        "North Korea",
-        "North Macedonia",
-        "Northern Mariana Islands",
-        "Norway",
-        "Oman",
-        "Pakistan",
-        "Palau",
-        "Palestinian Territories",
-        "Panama",
-        "Papua New Guinea",
-        "Paraguay",
-        "Peru",
-        "Philippines",
-        "Pitcairn Islands",
-        "Poland",
-        "Portugal",
-        "Puerto Rico",
-        "Qatar",
-        "Réunion",
-        "Romania",
-        "Russia",
-        "Rwanda",
-        "Samoa",
-        "San Marino",
-        "São Tomé & Príncipe",
-        "Saudi Arabia",
-        "Senegal",
-        "Serbia",
-        "Seychelles",
-        "Sierra Leone",
-        "Singapore",
-        "Sint Maarten",
-        "Slovakia",
-        "Slovenia",
-        "Solomon Islands",
-        "Somalia",
-        "South Africa",
-        "South Georgia & South Sandwich Islands",
-        "South Korea",
-        "South Sudan",
-        "Spain",
-        "Sri Lanka",
-        "St. Barthélemy",
-        "St. Helena",
-        "St. Kitts & Nevis",
-        "St. Lucia",
-        "St. Martin",
-        "St. Pierre & Miquelon",
-        "St. Vincent & Grenadines",
-        "Sudan",
-        "Suriname",
-        "Svalbard & Jan Mayen",
-        "Sweden",
-        "Switzerland",
-        "Syria",
-        "Taiwan",
-        "Tajikistan",
-        "Tanzania",
-        "Thailand",
-        "Timor-Leste",
-        "Togo",
-        "Tokelau",
-        "Tonga",
-        "Trinidad & Tobago",
-        "Tunisia",
-        "Türkiye",
-        "Turkmenistan",
-        "Turks & Caicos Islands",
-        "Tuvalu",
-        "U.S. Outlying Islands",
-        "U.S. Virgin Islands",
-        "Uganda",
-        "Ukraine",
-        "United Arab Emirates",
-        "United Kingdom",
-        "United States",
-        "Uruguay",
-        "Uzbekistan",
-        "Vanuatu",
-        "Vatican City",
-        "Venezuela",
-        "Vietnam",
-        "Wallis & Futuna",
-        "Western Sahara",
-        "Yemen",
-        "Zambia",
-        "Zimbabwe"
-       ],
+       "kind": "text",
        "half": true,
        "requiredIf": [
         {
@@ -1341,7 +1163,8 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 35
       },
       {
        "id": "doc_other",
@@ -1353,6 +1176,7 @@
        "label": "Other documents",
        "kind": "text",
        "half": false,
+       "max": 70,
        "requiredIf": [
         {
          "field": "doc_other",
@@ -1366,7 +1190,8 @@
        "id": "other_documents_2",
        "label": "Other documents (line 2)",
        "kind": "text",
-       "half": false
+       "half": false,
+       "max": 70
       }
      ]
     },
@@ -1377,6 +1202,7 @@
        "id": "goods_description",
        "label": "Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)",
        "kind": "long",
+       "max": 6500,
        "required": true
       }
      ]
@@ -1387,7 +1213,8 @@
       {
        "id": "additional_conditions",
        "label": "Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)",
-       "kind": "long"
+       "kind": "long",
+       "max": 6500
       }
      ]
     },
@@ -1420,11 +1247,6 @@
       {
        "id": "pay_at_counters",
        "label": "Pay upon receipt of documents at the Bank's counters in Singapore (if not checked, a Reimbursing Bank may be nominated)",
-       "kind": "check"
-      },
-      {
-       "id": "tt_reimbursement",
-       "label": "T/T reimbursement allowed",
        "kind": "check"
       },
       {
@@ -1475,170 +1297,9 @@
       {
        "id": "financing_currency",
        "label": "Foreign currency financing in (type of currency)",
-       "kind": "select",
-       "options": [
-        "SGD",
-        "USD",
-        "EUR",
-        "GBP",
-        "JPY",
-        "CNY",
-        "HKD",
-        "AUD",
-        "NZD",
-        "CAD",
-        "CHF",
-        "MYR",
-        "IDR",
-        "THB",
-        "INR",
-        "KRW",
-        "TWD",
-        "PHP",
-        "VND",
-        "AED",
-        "SAR",
-        "AFN",
-        "ALL",
-        "AMD",
-        "ANG",
-        "AOA",
-        "ARS",
-        "AWG",
-        "AZN",
-        "BAM",
-        "BBD",
-        "BDT",
-        "BGN",
-        "BHD",
-        "BIF",
-        "BMD",
-        "BND",
-        "BOB",
-        "BRL",
-        "BSD",
-        "BTN",
-        "BWP",
-        "BYN",
-        "BZD",
-        "CDF",
-        "CLP",
-        "COP",
-        "CRC",
-        "CUC",
-        "CUP",
-        "CVE",
-        "CZK",
-        "DJF",
-        "DKK",
-        "DOP",
-        "DZD",
-        "EGP",
-        "ERN",
-        "ETB",
-        "FJD",
-        "FKP",
-        "GEL",
-        "GHS",
-        "GIP",
-        "GMD",
-        "GNF",
-        "GTQ",
-        "GYD",
-        "HNL",
-        "HRK",
-        "HTG",
-        "HUF",
-        "ILS",
-        "IQD",
-        "IRR",
-        "ISK",
-        "JMD",
-        "JOD",
-        "KES",
-        "KGS",
-        "KHR",
-        "KMF",
-        "KPW",
-        "KWD",
-        "KYD",
-        "KZT",
-        "LAK",
-        "LBP",
-        "LKR",
-        "LRD",
-        "LSL",
-        "LYD",
-        "MAD",
-        "MDL",
-        "MGA",
-        "MKD",
-        "MMK",
-        "MNT",
-        "MOP",
-        "MRU",
-        "MUR",
-        "MVR",
-        "MWK",
-        "MXN",
-        "MZN",
-        "NAD",
-        "NGN",
-        "NIO",
-        "NOK",
-        "NPR",
-        "OMR",
-        "PAB",
-        "PEN",
-        "PGK",
-        "PKR",
-        "PLN",
-        "PYG",
-        "QAR",
-        "RON",
-        "RSD",
-        "RUB",
-        "RWF",
-        "SBD",
-        "SCR",
-        "SDG",
-        "SEK",
-        "SHP",
-        "SLE",
-        "SOS",
-        "SRD",
-        "SSP",
-        "STN",
-        "SVC",
-        "SYP",
-        "SZL",
-        "TJS",
-        "TMT",
-        "TND",
-        "TOP",
-        "TRY",
-        "TTD",
-        "TZS",
-        "UAH",
-        "UGX",
-        "UYU",
-        "UZS",
-        "VES",
-        "VUV",
-        "WST",
-        "XAF",
-        "XCD",
-        "XCG",
-        "XDR",
-        "XOF",
-        "XPF",
-        "XSU",
-        "YER",
-        "ZAR",
-        "ZMW",
-        "ZWG"
-       ],
+       "kind": "text",
        "half": true,
+       "max": 20,
        "requiredIf": [
         {
          "field": "financing_type",
@@ -1653,6 +1314,7 @@
        "label": "Forward contract no",
        "kind": "text",
        "half": true,
+       "max": 20,
        "requiredIf": [
         {
          "field": "financing_type",
@@ -1679,14 +1341,26 @@
           "true"
          ]
         }
-       ]
+       ],
+       "max": 20
+      },
+      {
+       "id": "tt_reimbursement",
+       "label": "T/T reimbursement allowed",
+       "kind": "check"
+      },
+      {
+       "id": "debit_issuance_charges",
+       "label": "Please debit all DC issuance charges to our account with you",
+       "kind": "check"
       },
       {
        "id": "issuance_charges_account",
-       "label": "Please debit all DC issuance charges to our account no. with you",
+       "label": "Account no for DC issuance charges",
        "kind": "text",
        "half": true,
-       "required": true
+       "required": true,
+       "max": 17
       }
      ]
     },
@@ -1708,7 +1382,8 @@
    "presentation_days": "21",
    "bank_charges": true,
    "bank_charges_for": "Beneficiary, except charges at DC Issuing Bank's counter",
-   "post_shipment_financing": true
+   "post_shipment_financing": true,
+   "debit_issuance_charges": true
   }
  },
  {
@@ -4732,8 +4407,7 @@
          "field": "brp",
          "values": [
           "Post-shipment Financing on open account basis/ Purchase Invoice Financing",
-          "Pre-shipment Financing against purchase order/ import contract or pro-forma invoice from seller/ supplier",
-          null
+          "Pre-shipment Financing against purchase order/ import contract or pro-forma invoice from seller/ supplier"
          ]
         }
        ]

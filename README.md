@@ -59,6 +59,13 @@ Change the form before using it:
 
 Or click **Download blank PDF** and fill it in Adobe Reader instead.
 
+**Checks inside the downloaded PDF.** **Download blank PDF** (or a saved one) carries the same rules, so they work while filling it offline in **Adobe Acrobat or Reader**, before it is emailed:
+- picking an option or ticking a row makes its boxes mandatory and outlines them in red until filled;
+- a **Check form** button (top right of page 1, not printed) lists every mandatory question still blank;
+- saving or printing an incomplete form shows the same warning;
+- number boxes refuse letters, dates are checked, and each box takes no more characters than on the bank's form.
+Mac Preview and web browsers do not run PDF scripts: there the form still fills, but only the starting red outlines show.
+
 ### 3. Extract
 
 1. Click **3 Extract**.

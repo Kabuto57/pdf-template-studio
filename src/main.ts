@@ -154,7 +154,7 @@ function input(f: Field): HTMLElement {
   const set = (x: Value) => { values[f.id] = x; paint(); refresh(); };
   const val = (e: Event) => (e.target as HTMLInputElement).value;
   switch (f.kind) {
-    case "long": return h("textarea", { id: f.id, rows: 3, value: (v as string) ?? "", oninput: (e: Event) => set(val(e)) });
+    case "long": return h("textarea", { id: f.id, rows: 3, value: (v as string) ?? "", ...(f.max ? { maxLength: f.max } : {}), oninput: (e: Event) => set(val(e)) });
     case "date": return h("input", { id: f.id, type: "date", value: toIso((v as string) ?? ""), oninput: (e: Event) => set(fromIso(val(e))) });
     case "check": return h("input", { id: f.id, type: "checkbox", checked: v === true, onchange: (e: Event) => set((e.target as HTMLInputElement).checked) });
     case "select": return h("select", { id: f.id, onchange: (e: Event) => set((e.target as HTMLSelectElement).value) },
@@ -165,7 +165,13 @@ function input(f: Field): HTMLElement {
           checked: Array.isArray(v) ? v.includes(o) : v === o,
           onchange: () => set(f.kind === "radio" ? o : (f.options ?? []).filter((_, i) =>
             document.querySelectorAll<HTMLInputElement>(`input[name="${f.id}"]`)[i].checked)) }), " ", o)));
-    default: return h("input", { id: f.id, type: f.id.includes("email") ? "email" : "text", value: (v as string) ?? "", oninput: (e: Event) => set(val(e)) });
+    default: return h("input", { id: f.id, type: f.id.includes("email") ? "email" : "text", value: (v as string) ?? "",
+      ...(f.max ? { maxLength: f.max } : {}), ...(f.format ? { inputMode: f.format === "number" ? "numeric" : "decimal" } : {}),
+      oninput: (e: Event) => {
+        const el = e.target as HTMLInputElement;
+        if (f.format) el.value = el.value.replace(f.format === "number" ? /[^0-9]/g : /[^0-9.,]/g, ""); // same keys the bank's form accepts
+        set(el.value);
+      } });
   }
 }
 

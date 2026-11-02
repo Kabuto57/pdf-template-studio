@@ -1,6 +1,6 @@
 // Build a fillable PDF form from a template, and read the answers back out of a filled one.
 import {
-  PDFCheckBox, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFOptionList, PDFPage,
+  PDFButton, PDFCheckBox, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
   PDFRadioGroup, PDFString, PDFTextField, StandardFonts, rgb,
 } from "pdf-lib";
 
@@ -8,6 +8,8 @@ export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check" | "se
 export interface Field {
   id: string; label: string; kind: Kind; options?: string[]; half?: boolean; required?: boolean;
   requiredIf?: Rule[]; // mandatory only when another answer is picked (any rule matching is enough)
+  max?: number; // most characters allowed, as on the bank's form
+  format?: "number" | "amount"; // digits only, or an amount (digits , .)
 }
 /** Mandatory when `field` is one of `values` (or, with `not`, none of them). A tick box's values are "true" / "false". */
 export interface Rule { field: string; values: string[]; not?: boolean }
@@ -58,6 +60,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const form = doc.getForm();
+  const js = (code: string) => doc.context.obj({ S: "JavaScript", JS: PDFHexString.fromText(code) });
   doc.setTitle(safe(t.title));
   doc.setCreator("PDF Template Studio");
   stamp(doc, t);
@@ -74,7 +77,8 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   const mandatory = { ...plain, borderColor: RED, borderWidth: 1.25 }; // mandatory boxes are outlined in red, not only starred
   // Lays out a field at (x, top) in width w; draws it only when `draw`. Returns the height used.
   function place(f: Field, x: number, w: number, draw: boolean): number {
-    const v = values[f.id], req = isRequired(f, values), opts = req ? mandatory : plain;
+    const v = values[f.id], req = isRequired(f, values);
+    const opts = req && (v === undefined || v === "" || v === false || (Array.isArray(v) && !v.length)) ? mandatory : plain; // red = mandatory and still blank
     if (f.kind === "check") {
       const lines = wrap(f.label, font, 9, w - 16);
       if (draw) {
@@ -135,14 +139,13 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
       if (f.kind === "long") tf.enableMultiline();
       if (req) tf.enableRequired();
       tip(tf, f.kind === "date" ? `${f.label} (DD/MM/YYYY)` : f.label);
-      if (typeof v === "string" && v) tf.setText(safe(v));
+      if (f.max) tf.setMaxLength(f.max);
+      if (typeof v === "string" && v) tf.setText(safe(v).slice(0, f.max));
       tf.addToPage(page, { x, y: y - h, width: w, height: h, font, ...opts });
       tf.setFontSize(10);
-      if (f.kind === "date") {
-        // Acrobat / Reader show a calendar picker and check the format.
-        const js = (code: string) => doc.context.obj({ S: "JavaScript", JS: PDFHexString.fromText(code) });
-        tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ F: js('AFDate_FormatEx("dd/mm/yyyy");'), K: js('AFDate_KeystrokeEx("dd/mm/yyyy");') }));
-      }
+      // Acrobat / Reader: a calendar picker and format check for dates; number boxes refuse other keys.
+      if (f.kind === "date") tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ F: js('AFDate_FormatEx("dd/mm/yyyy");'), K: js('AFDate_KeystrokeEx("dd/mm/yyyy");') }));
+      else if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${f.format === "number" ? "[^0-9]" : "[^0-9.,]"}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
       if (f.kind === "date" && !v) page.drawText("DD/MM/YYYY", { x: x + w - 58, y: y - h + 6.5, size: 7, font, color: RULE });
     }
     return 13 + h;
@@ -177,8 +180,70 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     const n = `Page ${i + 1} of ${pages.length}`;
     p.drawText(n, { x: W - M - font.widthOfTextAtSize(n, 7.5), y: 24, size: 7.5, font, color: GREY });
   });
+  if (t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
   form.updateFieldAppearances(font);
   return doc.save();
+}
+
+/**
+ * The same mandatory rules as the app, inside the PDF, for Adobe Acrobat / Reader (other viewers ignore PDF scripts):
+ * a hidden field recalculates on every change, sets each field's required flag and outlines blank mandatory ones in
+ * red; a "Check form" button lists what is missing; saving or printing an incomplete form shows a warning.
+ */
+function addChecks(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, font: PDFFont, t: Template, js: (code: string) => PDFObject) {
+  const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
+  const model: Record<string, { k: Kind; l: string; c?: 1; s?: 1; o?: string[]; r?: [string, string[], 0 | 1][] }> = {};
+  const add = (f: Field) => model[f.id] ??= { k: f.kind, l: safe(f.label), ...(f.kind === "checks" ? { o: (f.options ?? []).map(safe) } : {}) };
+  for (const f of all.filter(f => f.required || f.requiredIf)) {
+    Object.assign(add(f), { c: 1 as const }, f.required ? { s: 1 as const } : {}, f.requiredIf ? { r: f.requiredIf.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]) } : {});
+    for (const r of f.requiredIf ?? []) { const by = byId.get(r.field); if (by) add(by); }
+  }
+  const code = `var d = this, M = ${JSON.stringify(model)};
+function has(a, x) { for (var i = 0; i < a.length; i++) if (a[i] == x) return true; return false; }
+function val(id) {
+  var m = M[id], f, a = [], i;
+  if (m.k == "checks") { for (i = 0; i < m.o.length; i++) { f = d.getField(id + "__" + i); if (f && f.value != "Off") a.push(m.o[i]); } return a; }
+  f = d.getField(id); if (!f) return "";
+  if (m.k == "check") return f.value != "Off" ? "true" : "false";
+  return f.value == "Off" ? "" : String(f.value);
+}
+function empty(x) { return typeof x == "object" ? !x.length : x === ""; }
+function need(id) {
+  var m = M[id], r = m.r || [], i, j, x, hit;
+  if (m.s) return true;
+  for (i = 0; i < r.length; i++) {
+    x = val(r[i][0]); hit = false;
+    if (typeof x == "object") { for (j = 0; j < x.length; j++) if (has(r[i][1], x[j])) hit = true; } else hit = has(r[i][1], x);
+    if (r[i][2] ? !hit && !empty(x) : hit) return true;
+  }
+  return false;
+}
+var miss = [], id, m, q, b, names, i, f;
+for (id in M) {
+  m = M[id]; if (!m.c) continue;
+  q = need(id); b = q && (m.k == "check" ? val(id) != "true" : empty(val(id)));
+  if (b) miss.push(m.l);
+  names = [id]; if (m.k == "checks") { names = []; for (i = 0; i < m.o.length; i++) names.push(id + "__" + i); }
+  for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.k != "checks") f.required = q; f.strokeColor = b ? color.red : color.black; }
+}
+d.missingQuestions = miss;`;
+  const calc = form.createTextField("__checks");
+  calc.addToPage(page, { x: 0, y: 0, width: 0, height: 0, borderWidth: 0 });
+  calc.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(2)); // hidden
+  calc.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ C: js(code) }));
+  form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj([calc.ref])); // recalculated after every change
+
+  const report = (always: boolean) => `this.calculateNow(); var m = this.missingQuestions || [];
+if (m.length) app.alert("This form is not complete: " + m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank (outlined in red):\\n\\n- " + m.slice(0, 20).join("\\n- ") + (m.length > 20 ? "\\n- ..." : "") + "\\n\\nPlease fill them in before you send the form.", 1);
+${always ? 'else app.alert("All mandatory questions are answered. You can save the form and send it.", 3);' : ""}`;
+  const btn = form.createButton("__check_form");
+  btn.addToPage("Check form", page, { x: W - M - 84, y: H - 44, width: 84, height: 18, font, textColor: WHITE, backgroundColor: INK, borderColor: INK });
+  btn.setFontSize(9);
+  const widget = btn.acroField.getWidgets()[0].dict;
+  widget.set(PDFName.of("A"), js(report(true)));
+  widget.set(PDFName.of("F"), PDFNumber.of(0)); // shown on screen, not printed
+  doc.catalog.set(PDFName.of("AA"), doc.context.obj({ WS: js(report(false)), WP: js(report(false)) })); // before save / print
+  doc.catalog.set(PDFName.of("OpenAction"), js("this.calculateNow();"));
 }
 
 const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }, label: string) =>
@@ -284,6 +349,7 @@ async function extractFields(doc: PDFDocument): Promise<Extracted> {
   const raw = new Map<string, Value>(), tips = new Map<string, string>();
   for (const f of doc.getForm().getFields()) {
     const name = f.getName();
+    if (f instanceof PDFButton || name.startsWith("__")) continue; // the built-in checks, not answers
     const v: Value =
       f instanceof PDFTextField ? f.getText() ?? "" :
       f instanceof PDFRadioGroup ? f.getSelected() ?? "" :

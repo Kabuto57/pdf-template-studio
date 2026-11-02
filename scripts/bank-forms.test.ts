@@ -38,7 +38,9 @@ it.skipIf(!process.env.BANK_PDF)("bank forms", async () => {
     for (const r of rules) {
       const trigger = byKey.get(plain(r.trigger)), target = byKey.get(plain(r.target));
       if (!trigger || !target) continue;
-      const vals = trigger.kind === "check" ? r.values.map(v => String(v === "1")) : r.options ? r.options.map(i => trigger.options![i]) : r.values;
+      const vals = (trigger.kind === "check" ? r.values.map(v => String(v === "1")) : r.options ? r.options.map(i => trigger.options![i]) : r.values)
+        .filter((v): v is string => typeof v === "string"); // an option the converted form lacks
+      if (!vals.length) continue;
       (target.requiredIf ??= []).push({ field: trigger.id, values: vals, ...(r.not ? { not: true } : {}) });
       delete target.required; // the smart form sets it at run time, so it is not mandatory by default
     }
