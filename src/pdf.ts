@@ -9,6 +9,7 @@ export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check" | "se
 export interface Field {
   id: string; label: string; kind: Kind; options?: string[]; half?: boolean; required?: boolean;
   requiredIf?: Rule[]; // mandatory only when another answer is picked (any rule matching is enough)
+  openIf?: Rule[]; // read-only (and cleared) until one matches, as on the bank's form: tick the row to fill it in
   max?: number; // most characters allowed, as on the bank's form
   format?: "number" | "amount"; // digits only, or an amount (digits , .)
 }

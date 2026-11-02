@@ -60,14 +60,20 @@ function draw(o: Op): string {
  */
 function rulesScript(t: Template, paths: Map<string, string>, underlined: Set<string>): string {
   const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
-  const model: Record<string, { k: Kind; l: string; p: string | string[]; c?: 1; s?: 1; u?: 1; o?: string[]; r?: [string, string[], 0 | 1][] }> = {};
+  type R = [string, string[], 0 | 1][];
+  const rules = (rs: Field["requiredIf"]) => (rs ?? []).map(r => [r.field, r.values.map(safe), r.not ? 1 : 0]) as R;
+  const model: Record<string, { k: Kind; l: string; p: string | string[]; c?: 1; s?: 1; u?: 1; o?: string[]; r?: R; x?: R }> = {};
   const add = (f: Field) => model[f.id] ??= {
     k: f.kind, l: safe(f.label), ...(underlined.has(f.id) ? { u: 1 as const } : {}),
     ...(f.kind === "checks" ? { o: (f.options ?? []).map(safe), p: (f.options ?? []).map((_, i) => paths.get(subId(f.id, i)) ?? "") } : { p: paths.get(f.id) ?? "" }),
   };
   for (const f of all.filter(f => f.required || f.requiredIf)) {
-    Object.assign(add(f), { c: 1 as const }, f.required ? { s: 1 as const } : {}, f.requiredIf ? { r: f.requiredIf.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]) } : {});
+    Object.assign(add(f), { c: 1 as const }, f.required ? { s: 1 as const } : {}, f.requiredIf ? { r: rules(f.requiredIf) } : {});
     for (const r of f.requiredIf ?? []) { const by = byId.get(r.field); if (by) add(by); }
+  }
+  for (const f of all.filter(f => f.openIf)) {
+    add(f).x = rules(f.openIf);
+    for (const r of f.openIf!) { const by = byId.get(r.field); if (by) add(by); }
   }
   return `var M = ${JSON.stringify(model)};
 function has(a, x) { for (var i = 0; i < a.length; i++) if (a[i] == x) return true; return false; }
@@ -81,36 +87,66 @@ function val(id, oid, ov) {
   return raw(node(m.p));
 }
 function empty(x) { return typeof x == "object" ? !x.length : x === ""; }
-function need(id, oid, ov) {
-  var m = M[id], r = m.r || [], i, j, x, hit;
-  if (m.s) return true;
+function hit(r, oid, ov) {
+  var i, j, x, h;
   for (i = 0; i < r.length; i++) {
-    x = val(r[i][0], oid, ov); hit = false;
-    if (typeof x == "object") { for (j = 0; j < x.length; j++) if (has(r[i][1], x[j])) hit = true; } else hit = has(r[i][1], x);
-    if (r[i][2] ? !hit && !empty(x) : hit) return true;
+    x = val(r[i][0], oid, ov); h = false;
+    if (typeof x == "object") { for (j = 0; j < x.length; j++) if (has(r[i][1], x[j])) h = true; } else h = has(r[i][1], x);
+    if (r[i][2] ? !h && !empty(x) : h) return true;
   }
   return false;
 }
-function look(f, bad, u) {
+function open(id, oid, ov) { var m = M[id]; return !m.x || hit(m.x, oid, ov); }
+function need(id, oid, ov) { var m = M[id]; return open(id, oid, ov) && (!!m.s || hit(m.r || [], oid, ov)); }
+// The boxes of one question: a group's options, or the field itself.
+function boxes(m) {
+  var out = [], i, n, k;
+  if (m.k == "checks") { for (i = 0; i < m.p.length; i++) { n = node(m.p[i]); if (n) out.push(n); } return out; }
+  n = node(m.p); if (!n) return out;
+  if (m.k == "radio") { for (i = 0; i < n.nodes.length; i++) { k = n.nodes.item(i); if (k.className == "field") out.push(k); } return out; }
+  return [n];
+}
+// Red = mandatory and blank; grey = locked until its row is ticked.
+function look(f, bad, u, locked) {
   var b = f.border, i, e;
-  for (i = 0; i < 4; i++) { e = b.getElement("edge", i); e.presence = bad || !u ? "visible" : "hidden"; e.color.value = bad ? "204,0,0" : "0,0,0"; e.thickness = bad ? "1pt" : "0.6pt"; }
-  b.fill.presence = bad || !u ? "visible" : "hidden";
-  b.fill.color.value = bad ? "255,224,224" : "255,255,255";
+  for (i = 0; i < 4; i++) { e = b.getElement("edge", i); e.presence = bad || !u ? "visible" : "hidden"; e.color.value = bad ? "204,0,0" : locked ? "150,150,150" : "0,0,0"; e.thickness = bad ? "1pt" : "0.6pt"; }
+  b.fill.presence = bad || !u || locked ? "visible" : "hidden";
+  b.fill.color.value = bad ? "255,224,224" : locked ? "232,232,232" : "255,255,255";
+}
+// Locks (read-only, cleared) every box whose row is not ticked; again, so a cleared choice also locks what it opened.
+function lock(oid, ov) {
+  var pass, id, m, o, i, n, bs, changed;
+  for (pass = 0; pass < 3; pass++) {
+    changed = false;
+    for (id in M) {
+      m = M[id]; if (!m.x) continue;
+      o = open(id, oid, ov); n = m.k == "checks" ? null : node(m.p); bs = boxes(m);
+      if (n) n.access = o ? "open" : "readOnly";
+      for (i = 0; i < bs.length; i++) bs[i].access = o ? "open" : "readOnly";
+      if (o || empty(val(id, oid, ov)) || val(id, oid, ov) == "false") continue;
+      if (m.k == "checks") { for (i = 0; i < bs.length; i++) bs[i].rawValue = 0; } else n.rawValue = m.k == "check" ? 0 : null;
+      changed = true;
+    }
+    if (!changed) break;
+  }
 }
 function run(oid, ov) {
-  var miss = [], id, m, q, b, i, n, k;
-  for (id in M) {
-    m = M[id]; if (!m.c) continue;
-    q = need(id, oid, ov); b = q && (m.k == "check" ? val(id, oid, ov) != "true" : empty(val(id, oid, ov)));
-    if (b) miss.push(m.l);
-    if (m.k == "checks") { for (i = 0; i < m.p.length; i++) { n = node(m.p[i]); if (n) look(n, b, m.u); } continue; }
-    n = node(m.p); if (!n) continue;
-    if (m.k != "check") n.validate.nullTest = q ? "error" : "disabled";
-    if (m.k == "radio") { for (i = 0; i < n.nodes.length; i++) { k = n.nodes.item(i); if (k.className == "field") look(k, b, m.u); } }
-    else look(n, b, m.u);
-  }
+  var miss = [], id, m, q, b, i, bs, locked;
+  try {
+    lock(oid, ov);
+    for (id in M) {
+      m = M[id]; locked = !open(id, oid, ov);
+      if (!m.c && !m.x) continue;
+      q = m.c && need(id, oid, ov); b = q && (m.k == "check" ? val(id, oid, ov) != "true" : empty(val(id, oid, ov)));
+      if (b) miss.push(m.l);
+      if (m.c && m.k != "check" && m.k != "checks" && node(m.p)) node(m.p).validate.nullTest = q ? "error" : "disabled";
+      bs = boxes(m);
+      for (i = 0; i < bs.length; i++) look(bs[i], b, m.u, locked);
+    }
+  } catch (e) { status("JavaScript: error " + e); }
   return miss;
 }
+function status(s) { var n = xfa.resolveNode("form1.#subform[0].XfaStatus"); if (n) n.rawValue = s; }
 function report(always) {
   var m = run();
   if (m.length) xfa.host.messageBox("This form is not complete: " + m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank (outlined in red):\\n\\n- " + m.slice(0, 20).join("\\n- ") + (m.length > 20 ? "\\n- ..." : "") + "\\n\\nPlease fill them in before you send the form.", "Check form", 1);
@@ -152,6 +188,13 @@ export function addXfa(doc: PDFDocument, t: Template, values: Values, drawn: Op[
       body[p].push(`<field name="CheckForm" ${xywh} relevant="-print"><bind match="none"/><ui><button highlight="push"/></ui>`
         + `<caption placement="inline"><value><text>Check form</text></value>${font(9, false, "255,255,255")}<para hAlign="center" vAlign="middle"/></caption>`
         + `<border>${edge(true)}<fill><color value="0,0,0"/></fill></border>${js("click", "rules.report(true);")}</field>`);
+      // Shows on screen whether Acrobat runs this layer's scripts (each fills in its own line when it runs).
+      const r = widgets[0].getRectangle(), x = r.x + r.width - 160;
+      const line = (name: string, y: number, text: string, script: string) => body[p].push(`<field name="${name}" x="${pt(x)}" y="${pt(H - r.y + y)}" w="160pt" h="8pt" access="readOnly" relevant="-print">`
+        + `<bind match="none"/><ui><textEdit><border presence="hidden"/>${zero}</textEdit></ui><value><text>${text}</text></value>${font(6, false, "120,120,120")}${zero}<para hAlign="right"/>`
+        + `<event activity="initialize">${script}</event></field>`);
+      line("XfaStatus", 2, "Form checks (JavaScript): not running", `<script contentType="application/x-javascript">this.rawValue = "Form checks (JavaScript): running";</script>`);
+      line("XfaStatusFC", 10, "Form checks (FormCalc): not running", `<script contentType="application/x-formcalc">$ = "Form checks (FormCalc): running"</script>`);
       continue;
     }
     if (id === "__hint" && field instanceof PDFTextField) {

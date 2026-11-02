@@ -18,7 +18,7 @@ function mockForm(template: string) {
   const pages = template.split('<subform x="0pt" y="0pt"').slice(1), nodes = new Map<string, any>();
   const field = () => {
     const edges = [0, 1, 2, 3].map(() => ({ presence: "visible", color: { value: "0,0,0" }, thickness: "0.6pt" }));
-    return { rawValue: null as string | null, className: "field", validate: { nullTest: "disabled" },
+    return { rawValue: null as string | number | null, access: "open", className: "field", validate: { nullTest: "disabled" },
       border: { getElement: (_: string, i: number) => edges[i], fill: { presence: "visible", color: { value: "255,255,255" } } } };
   };
   pages.forEach((body, p) => {
@@ -69,11 +69,27 @@ describe.each([["original look", () => buildLcPdf()], ["new design", () => build
     at("doc_commercial_invoice").rawValue = "0"; at("invoice_originals").rawValue = null; rules.run();
     expect(at("invoice_originals").validate.nullTest).toBe("disabled");
 
-    at("drafts_at").rawValue = "Term"; rules.run(); // radio
+    at("drafts_at").rawValue = "Term"; rules.run(); // "Drafts" not ticked: the choice is locked and cleared
+    expect(at("drafts_at").rawValue).toBe(null);
+    at("drafts").rawValue = "1"; at("drafts_at").rawValue = "Term"; rules.run(); // radio
     expect(at("term_days").validate.nullTest).toBe("error");
     const insurance = "Insurance covered by applicant under open Cover No.";
     expect(rules.run("insurance_arrangement", insurance)).toContain("Open cover no"); // drop-down, before its value is set
     expect(red(at("insurance_cover_no"))).toBe(true);
+  });
+
+  it("keeps a row's boxes locked (read-only, cleared) until its box is ticked, as the bank's form does", async () => {
+    const { rules, at } = mockForm((await packets(await make())).out.template);
+    rules.run();
+    expect(at("invoice_originals").access).toBe("readOnly");
+    expect(at("bl_made_out_to").kids.map((k: any) => k.access)).toEqual(["readOnly", "readOnly", "readOnly"]);
+    at("doc_bill_of_lading").rawValue = "1"; rules.run();
+    expect(at("bl_made_out_to").access).toBe("open");
+    at("bl_made_out_to").rawValue = "other (specify)"; rules.run();
+    expect(at("bl_made_out_to_other").access).toBe("open");
+    at("bl_made_out_to_other").rawValue = "XYZ";
+    at("doc_bill_of_lading").rawValue = "0"; rules.run(); // unticked: its answers go, and what they opened locks too
+    expect([at("bl_made_out_to").rawValue, at("bl_made_out_to_other").rawValue, at("bl_made_out_to_other").access]).toEqual([null, null, "readOnly"]);
   });
 
   it("reads answers Acrobat saved in the XFA layer", async () => {
