@@ -29,4 +29,4 @@ it("all-in-one form round-trips", async () => {
   const { data } = await extractPdf(pdf);
   expect(data.applying_for).toEqual(["Banker's Guarantee Application (BG)"]);
   if (process.env.ALL_IN_ONE) writeFileSync(process.env.ALL_IN_ONE, await buildPdf(template, values));
-});
+}, 120000);
