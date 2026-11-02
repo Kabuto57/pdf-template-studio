@@ -4,14 +4,10 @@ The smart form makes fields mandatory with scripts such as
     if (this.rawValue == "Term") { controlScript.mandatoryChange(txtTerm, 1); }
 This reads the decrypted XFA template and writes one rule per (trigger field, values, target field):
     python3 scripts/xfa-rules.py template.xml rules.json
-With --open, it instead lists what each choice unlocks (accessChange(field, "open"): read-only until then).
 Get template.xml from the PDF with pypdf + cryptography (see README). Only simple conditions
 (this.rawValue == "a" || ...) and their else-branches are understood; anything else is skipped.
 """
 import json, re, sys, xml.etree.ElementTree as ET
-
-OPEN = "--open" in sys.argv
-if OPEN: sys.argv.remove("--open")
 
 root = ET.parse(sys.argv[1]).getroot()
 NS = root.tag.split("}")[0] + "}"
@@ -99,7 +95,6 @@ def targets(body):
             d += {"{": 1, "}": -1}.get(flat[k2], 0)
             if d == 0: break
         flat = flat[:m.start()] + flat[k2 + 1:]
-    if OPEN: return [t for t in re.findall(r"accessChange(?:BE)?\(\s*([\w.\[\]]+)\s*,\s*\"open\"\s*\)", flat) if t != "this"]
     on = re.findall(r"mandatoryChange\(\s*([\w.\[\]]+)\s*,\s*1\s*\)", flat) + re.findall(r"([\w.\[\]]+)\.validate\.nullTest\s*=\s*\"error\"", flat)
     return [t for t in on if t != "this"]
 

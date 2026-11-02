@@ -169,26 +169,6 @@ const sections: Section[] = [
   ] },
 ];
 
-// Read-only until unlocked, as on the bank's form: the fields it starts read-only and opens with accessChange(..., "open")
-// (scripts/xfa-rules.py --open lists them). Unticking clears them again.
-const OPEN: Record<string, Rule[]> = {
-  tolerance_plus: ticked("tolerance"), tolerance_minus: ticked("tolerance"), price_basis_other: when("price_basis", "Others"),
-  drafts_at: ticked("drafts"), term_days: when("drafts_at", "Term"), term_after: when("drafts_at", "Term"), term_prepay: when("drafts_at", "Term"), draft_date: when("drafts_at", "Date"),
-  bl_made_out_to: ticked("doc_bill_of_lading"), bl_freight: ticked("doc_bill_of_lading"), bl_notify_party: ticked("doc_bill_of_lading"),
-  bl_made_out_to_other: when("bl_made_out_to", "other (specify)"),
-  awb_freight: ticked("doc_air_waybill"), awb_notify_party: ticked("doc_air_waybill"),
-  do_originals: ticked("doc_delivery_order"), do_copies: ticked("doc_delivery_order"), do_countersigned_by: ticked("doc_delivery_order"), do_signature_verified: ticked("doc_delivery_order"),
-  bencert_sent_by: ticked("doc_beneficiary_certificate"), bencert_days: ticked("doc_beneficiary_certificate"),
-  invoice_originals: ticked("doc_commercial_invoice"), invoice_copies: ticked("doc_commercial_invoice"),
-  packing_list_originals: ticked("doc_packing_list"), packing_list_copies: ticked("doc_packing_list"),
-  weight_note_originals: ticked("doc_weight_note"), weight_note_copies: ticked("doc_weight_note"),
-  origin_originals: ticked("doc_certificate_of_origin"), origin_copies: ticked("doc_certificate_of_origin"), origin_country: ticked("doc_certificate_of_origin"),
-  other_documents_1: ticked("doc_other"), other_documents_2: ticked("doc_other"),
-  bank_charges_for: ticked("bank_charges"), confirmation_charges: ticked("confirmation"),
-  financing_currency: when("financing_type", "Foreign Currency Financing"), forward_contract_no: when("financing_type", "Apply Forward Contract"),
-};
-for (const f of sections.flatMap(s => s.fields)) if (OPEN[f.id]) f.openIf = OPEN[f.id];
-
 export const LC: { code: string; template: Template; defaults: Values } = {
   code: "LC",
   template: { title: "Irrevocable Documentary Credit (LC)", note: "Please complete in block letters. Dates are DD/MM/YYYY.", sections },
