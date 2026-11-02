@@ -31,7 +31,7 @@ function page() {
       h("div", { className: "what" }, h("b", {}, t), h("small", {}, "Not part of this demo")),
       h("button", { type: "button", disabled: true }, "Download PDF"))),
     h("h2", { id: "send", className: "gap-top" }, "Send your completed form"),
-    h("p", { className: "muted" }, "In this demo, email is simulated: the message goes straight to the Trade Operations workbench in this browser."),
+    h("p", { className: "muted" }, "Attach the completed PDF and send it to our Trade Services team."),
     composer(),
   );
   if (location.hash === "#send") $("#send").scrollIntoView();
@@ -61,7 +61,7 @@ function composer() {
         box.replaceChildren(h("div", { className: "sent" },
           h("div", { className: "tick" }, "✓"), h("h3", {}, "Sent to Trade Services"),
           h("p", { className: "muted" }, `${f.name} was emailed to ${OPS_ADDRESS}. We will contact you if anything is missing.`),
-          h("p", {}, h("a", { className: "btn primary", href: "ops.html" }, "Switch to the Trade Ops workbench (demo) →"))));
+          h("p", { className: "muted small" }, `Reference ${Date.now().toString(36).toUpperCase()}`)));
       } }, "Send"))));
   return box;
 }

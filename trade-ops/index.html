@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trade Ops Workbench</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Internal workbench (demo): open emailed trade application PDFs and read their data.">
+</head>
+<body class="ops">
+  <nav class="rail" aria-label="Workbench"><div class="mark">TO</div><span class="on">Inbox</span><span>Cases</span><span>Reports</span></nav>
+  <div class="app">
+    <header class="ops-head"><b>Trade Operations Workbench</b><span class="crumb">Import · Documentary Credit · Intake</span><span class="who"><span class="badge">Demo</span>Ops officer<i>OP</i></span></header>
+    <div class="ops-main">
+      <aside class="inbox">
+        <div class="inbox-head"><span>Trade Ops mailbox</span><span id="count"></span></div>
+        <div class="inbox-list" id="inbox"></div>
+        <label class="drop" id="drop" for="pdfIn">PDF received by other email?<br><b>Drop it here</b> or click to choose<input type="file" id="pdfIn" accept="application/pdf,.pdf" class="sr"></label>
+      </aside>
+      <main class="work" id="work"><div class="empty-state"><h2>No application open</h2><p>Select an email in the mailbox, or drop a PDF.</p></div></main>
+    </div>
+  </div>
+  <script type="module" src="/src/ops.ts"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // Trade Ops workbench (demo): open an emailed application PDF, read every answer exactly, check it, show it.
-import "./site.css";
+import "./ops.css";
 import { $, download, h } from "./dom";
 import { extractPdf, isRequired, slug, type Extracted, type Row, type Template, type Value } from "./pdf";
 import { inbox, saveMail, type Mail } from "./mailbox";
@@ -21,7 +21,7 @@ async function renderInbox() {
     h("div", { className: "from" }, h("span", {}, m.from), h("span", { className: `badge ${m.status === "new" ? "new" : "ok"}` }, m.status === "new" ? "New" : "Processed")),
     h("div", { className: "subj" }, m.subject),
     h("div", { className: "meta" }, h("span", {}, `📎 ${m.file.name}`), h("span", {}, when(m.sent))))) :
-    [h("p", { className: "muted small pad" }, "No emails yet. Send one from the bank's website (bank.html), or drop a PDF below.")]));
+    [h("p", { className: "muted small pad" }, "No emails yet. Applications emailed to Trade Ops appear here; you can also drop a PDF below.")]));
 }
 
 // ---- Reading ----

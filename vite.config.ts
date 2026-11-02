@@ -20,8 +20,8 @@ export default defineConfig({
   plugins: [csp()],
   build: {
     target: "es2022", chunkSizeWarningLimit: 1500,
-    // The demo: landing, the bank's website, the ops workbench; and the studio.
-    rollupOptions: { input: { index: page("index.html"), bank: page("bank.html"), ops: page("ops.html"), studio: page("studio.html") } },
+    // The demo guide, the bank's website (demo-bank/), the ops workbench (trade-ops/), and the studio.
+    rollupOptions: { input: { index: page("index.html"), bank: page("demo-bank/index.html"), ops: page("trade-ops/index.html"), studio: page("studio.html") } },
   }, // pdf.js is ~1 MB, loaded only when a PDF needs it
   test: { include: ["tests/**/*.test.ts", "scripts/**/*.test.ts"], alias: [{ find: /^pdfjs-dist$/, replacement: "pdfjs-dist/legacy/build/pdf.mjs" }] },
 });
