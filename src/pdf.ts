@@ -183,7 +183,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   if (t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
-  return doc.save();
+  return doc.save({ useObjectStreams: false }); // plain PDF structure: the most compatible with Acrobat
 }
 
 /**
@@ -231,7 +231,7 @@ for (id in M) {
 }
 d.missingQuestions = miss;`;
   const calc = form.createTextField("__checks");
-  calc.addToPage(page, { x: 0, y: 0, width: 0, height: 0, borderWidth: 0 });
+  calc.addToPage(page, { x: -20, y: -20, width: 1, height: 1, borderWidth: 0 }); // off the page
   calc.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(2)); // hidden
   calc.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ C: js(code) }));
   form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj([calc.ref])); // recalculated after every change
@@ -246,7 +246,6 @@ ${always ? 'else app.alert("All mandatory questions are answered. You can save t
   widget.set(PDFName.of("A"), js(report(true)));
   widget.set(PDFName.of("F"), PDFNumber.of(0)); // shown on screen, not printed
   doc.catalog.set(PDFName.of("AA"), doc.context.obj({ WS: js(report(false)), WP: js(report(false)) })); // before save / print
-  doc.catalog.set(PDFName.of("OpenAction"), js("this.calculateNow();"));
 }
 
 const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }, label: string) =>
@@ -282,7 +281,7 @@ async function fillBase(t: Template, values: Values): Promise<Uint8Array> {
   }
   stamp(doc, t);
   form.updateFieldAppearances(await doc.embedFont(StandardFonts.Helvetica));
-  return doc.save();
+  return doc.save({ useObjectStreams: false }); // plain PDF structure: the most compatible with Acrobat
 }
 
 const words = (name: string) => { const s = name.split(".").pop()!.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").trim(); return s.charAt(0).toUpperCase() + s.slice(1); };

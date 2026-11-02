@@ -3,21 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trade Finance Forms</title>
+  <title>Trade Application Form | Demo Bank</title>
   <link rel="icon" href="data:,">
-  <meta name="description" content="Demo Bank (fictional): download trade finance application forms.">
+  <meta name="description" content="Demo Bank (fictional): trade application forms for corporate customers.">
 </head>
 <body>
-  <div class="ribbon">Demonstration website. Demo Bank is fictional.</div>
-  <header class="site-head">
+  <div class="ribbon">Demonstration website. Demo Bank is a fictional bank.</div>
+  <div class="util"><div class="wrap"><a href="#">ATM &amp; Branch</a><a href="#">Help &amp; Support</a></div></div>
+  <header class="head">
     <div class="wrap">
       <a class="logo" href="./"><i></i>Demo Bank</a>
-      <nav class="site-nav"><a href="#">Personal</a><a href="#" class="on">Business</a><a href="#">Corporate</a><a href="#">Contact us</a></nav>
-      <button type="button" class="login" disabled>Log in</button>
+      <nav class="nav" aria-label="Main"><a href="#">Industries</a><a href="#">Solutions</a><a href="#">Why Us</a><a href="#">Insights</a><a href="#">Self-Service</a></nav>
+      <span class="segment">You are in <b>Corporate Banking</b></span>
+      <button type="button" class="login" disabled>Login</button>
     </div>
   </header>
   <main class="wrap" id="app"></main>
-  <footer class="site-foot"><div class="wrap">Demo Bank is a fictional bank for demonstration purposes. Trade Services · trade.ops@demobank.example</div></footer>
+  <footer class="foot">
+    <div class="wrap">
+      <div class="cols">
+        <div><h4>Corporate Banking</h4><a href="#">Solutions</a><a href="#">Insights</a><a href="#">Our Network</a></div>
+        <div><h4>Demo Bank Group</h4><a href="#">About us</a><a href="#">Careers</a></div>
+        <div><h4>Need help?</h4><span>Trade Services: 1800 000 0000<br>8.30am to 6.00pm, Monday to Friday</span></div>
+      </div>
+      <div class="legal"><span>© 2026 Demo Bank (fictional, for demonstration)</span><a href="#">Terms &amp; Conditions</a><a href="#">Privacy Policy</a><a href="#">Security</a></div>
+    </div>
+  </footer>
   <script type="module" src="/src/bank.ts"></script>
 </body>
 </html>
