@@ -16,7 +16,7 @@ Everything runs in your browser: no account, no server, and your files are never
 
 Demo script: open `bank.html`, **Download PDF**, fill it in Adobe Acrobat Reader (try ticking a document row: its boxes turn red), **Check form**, save, attach it in *Send your completed form*, **Send**, then open the Trade Ops workbench. The email is simulated inside the browser (IndexedDB), so the whole journey runs on one laptop.
 
-How the LC looks like the bank's form: `scripts/xfa-layout.py` copies its page layout (boxes, wording, field positions) from the smart form into `src/lc-layout.json`, 35% taller rows; `src/lc-pdf.ts` draws it with pdf-lib and puts our fields, rules and checks in it.
+How the LC looks like the bank's form: `scripts/xfa-layout.py` copies its page layout (boxes, wording, field positions) from the smart form into `src/lc-layout.json`, rows 70% taller (boxes 25% taller, so rows never touch), tall sections split across pages; `src/lc-pdf.ts` draws it with pdf-lib and puts our fields, rules and checks in it.
 
 ## The studio (`studio.html`)
 

@@ -14,7 +14,8 @@ NS = root.tag.split("}")[0] + "}"
 T = lambda e: e.tag.replace(NS, "")
 XH = "{http://www.w3.org/1999/xhtml}"
 PAGE_TOP, PAGE_LEFT, PAGE_H = 28.325, 12.0, 255.675  # content area of the bank's page (A4)
-S = 1.35  # rows are this much taller than on the bank's form: same layout, roomier boxes
+S = 1.7   # rows are this much taller than on the bank's form: same layout, more room
+FIELD = 1.25  # boxes grow less than rows and stay centred in them, so neighbouring rows never touch
 
 def mm(v, default=0.0):
     if v is None: return default
@@ -155,6 +156,10 @@ def field(f, x, y, h, stack, group=None):
         if place == "top":
             r = reserve or csize[0] * 1.4 * 25.4 / 72
             add("text", x, y, w=w, size=round(csize[0], 2), bold=csize[1], align="left", text=ctext); by, bh = y + r, h - r
+        elif place == "bottom":
+            r = reserve or csize[0] * 1.6 * 25.4 / 72; bh = h - r
+            add("text", x, y + h - r + 0.5, w=w, size=round(csize[0], 2), bold=csize[1], align="center", text=ctext)
+            add("line", x, y + h - r, x2=x + w, y2=y + h - r)
         elif place == "right" and kind != "checkButton":
             r = reserve or w / 2; bw = w - r
             add("text", x + bw + 1, y + (h - csize[0] * 25.4 / 72) / 2, w=r, size=round(csize[0], 2), bold=csize[1], align="left", text=ctext)
@@ -169,6 +174,37 @@ def field(f, x, y, h, stack, group=None):
         return
     multi = kind == "textEdit" and ui[0].get("multiLine") == "1"
     add("field", bx, by, w=bw, h=bh, key=path_of(stack, f.get("name")), ui=kind, multi=multi, size=round(size, 2))
+
+def move(items, dy):
+    for i in items:
+        i["y"] = round(i["y"] + dy, 2)
+        if "y2" in i: i["y2"] = round(i["y2"] + dy, 2)
+
+def bottom(i):
+    if i["k"] == "text": return i["y"] + i["size"] * 25.4 / 72 * 1.2 * (1 + i["text"].count("\n"))
+    if i["k"] == "line": return max(i["y"], i["y2"])
+    return i["y"] + i.get("h", 0)
+
+def cut_at(items, limit):
+    """The lowest section boundary (top of a box) above `limit` that no text, field or line crosses."""
+    tops = sorted({i["y"] for i in items if i["k"] == "box" and i["y"] < limit - 1}, reverse=True)
+    for c in tops:
+        if c <= min(i["y"] for i in items) + 1: continue
+        if not any(i["y"] < c - 0.3 and bottom(i) > c + 0.3 for i in items if i["k"] != "box"): return c
+    return None
+
+def split(items, c):
+    """Items above the cut stay; the rest go over the page. Boxes crossing the cut are split in two."""
+    here, rest = [], []
+    for i in items:
+        if i["k"] == "box" and i["y"] < c < i["y"] + i["h"]:
+            t, r, b, l = i["edges"]
+            here.append({**i, "h": round(c - i["y"], 2), "edges": [t, r, False, l]})
+            rest.append({**i, "y": c, "h": round(i["y"] + i["h"] - c, 2), "edges": [False, r, b, l]})
+        elif i["k"] == "line" and i["y"] < c < i["y2"]:
+            here.append({**i, "y2": c}); rest.append({**i, "y": c})
+        else: (here if i["y"] < c else rest).append(i)
+    return here, rest
 
 lc = next(s for s in root.iter(NS + "subform") if s.get("name") == "LC")
 # Header from the bank's page master: title, date, mandatory note (the bank's name, address and logo are left out).
@@ -205,6 +241,9 @@ for part in lc:
         def sy(v): return y + (v - y) * S
         for i in items:
             if i["k"] == "check": i["y"] = round(sy(i["y"] + i["h"] / 2) - i["h"] / 2, 2)
+            elif i["k"] == "field":
+                nh = i["h"] * FIELD if i["h"] < 10 else i["h"] * S  # big text areas grow with the page
+                i["y"] = round(sy(i["y"] + i["h"] / 2) - nh / 2, 2); i["h"] = round(nh, 2)
             elif i["k"] == "text":
                 th = i["size"] * 25.4 / 72
                 i["y"] = round(sy(i["y"] + th / 2) - th / 2, 2)
@@ -214,10 +253,15 @@ for part in lc:
                 i["y"] = round(sy(i["y"]), 2)
         h *= S
         if y + h > PAGE_TOP + PAGE_H and pages[-1]:  # no longer fits once stretched: start a new page
-            shift = PAGE_TOP - y; pages.append([]); y = PAGE_TOP
-            for i in items:
-                i["y"] = round(i["y"] + shift, 2)
-                if "y2" in i: i["y2"] = round(i["y2"] + shift, 2)
+            move(items, PAGE_TOP - y); pages.append([]); y = PAGE_TOP
+        # Taller than what is left of the page: cut it between sections and carry on over the page.
+        while y + h > PAGE_TOP + PAGE_H + 0.01:
+            cut = cut_at(items, PAGE_TOP + PAGE_H)
+            if cut is None: break
+            here, rest = split(items, cut)
+            pages[-1] += here; pages.append([])
+            move(rest, PAGE_TOP - cut); items = rest
+            h -= cut - y; y = PAGE_TOP
         pages[-1] += items; y += h
 
 # Where the bank's boxes overlap a little (invisible at its size), stop each box above the one below it.
@@ -227,6 +271,15 @@ for page in pages:
         for b in boxes:
             if a is not b and a["y"] < b["y"] < a["y"] + a["h"] and a["x"] < b["x"] + b["w"] and b["x"] < a["x"] + a["w"]:
                 a["h"] = round(b["y"] - a["y"] - 0.5, 2)
+
+# A box that runs into a label on its row (the bank's "Tel No" box covers the start of "Fax No:") stops before it.
+for page in pages:
+    labels = [i for i in page if i["k"] == "text"]
+    for f in (i for i in page if i["k"] == "field"):
+        for t in labels:
+            th = t["size"] * 25.4 / 72
+            if t["y"] < f["y"] + f["h"] and t["y"] + th > f["y"] and f["x"] + 3 < t["x"] < f["x"] + f["w"]:
+                f["w"] = round(t["x"] - f["x"] - 0.8, 2)
 
 json.dump({"header": header, "pages": pages}, open(sys.argv[2], "w"), indent=None, separators=(",", ":"))
 print(len(pages), "pages;", sum(len(p) for p in pages), "items;", sum(i["k"] in ("field", "check") for p in pages for i in p), "fields")
