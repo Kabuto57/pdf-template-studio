@@ -78,6 +78,30 @@ It reads any PDF:
 | Printed or flattened PDF | From the text: `Label: value`, a label then its value on the same line, ticked boxes. Check these |
 | Scanned PDF | Not readable: it has no text (would need OCR) |
 
+### 4. Review (for the ops team)
+
+This step follows how an application reaches operations today: the customer downloads the form, fills it in and emails it to the RM; the RM passes it to ops; ops print, scan and OCR it, check it in the workflow tool, then process it. With a fillable PDF there is no printing, scanning or OCR: ops open the PDF in **Extract** and every answer is read exactly. Then:
+
+1. Click **Review this application →** (or **4 Review**).
+2. Automatic checks run on the answers:
+
+| Check | What it looks for | Result if it finds something |
+|---|---|---|
+| Mandatory questions | Required answers left blank | FAIL |
+| Dates | Not DD/MM/YYYY, not a real date, expiry not after the effective date | FAIL |
+| Expiry | Expiry date already passed | CHECK |
+| Amounts | Amount is not a number above zero | FAIL |
+| Contact details | Email or phone number in the wrong format | FAIL |
+| Sanctions screening | A name (applicant, beneficiary, bank, party…) that matches the screening list, allowing for punctuation, company suffixes and small typos | CHECK: escalate to compliance |
+| High-risk countries | A sanctioned or high-risk country (North Korea, Iran, Myanmar, Syria, Cuba, Russia, Belarus, Crimea) anywhere in the answers | CHECK: enhanced due diligence |
+| Purpose and goods | Red-flag words (weapons, military, dual-use, nuclear, cash, crypto…) | CHECK: confirm the purpose |
+
+3. Pick a decision (**Accept**, **Return to customer** or **Escalate to compliance**), add your name and notes.
+4. **Download review report** saves a PDF with the decision, every check and every answer. The report is itself a fillable form, so it can be signed, filed and extracted like any other.
+5. **Copy for AI review** copies the answers, the checks and instructions to the clipboard. Paste them into the bank's approved AI assistant for a second opinion: inconsistencies, things that make no commercial sense, money-laundering red flags, and questions to ask the customer. The page itself sends nothing anywhere.
+
+The screening list is a **demo list of made-up names**. Real screening uses the bank's provider (e.g. World-Check, Dow Jones, the MAS, UN and OFAC lists). Under **Screening list**, paste an export, one name per line; it is kept in your browser only.
+
 ## How it's built
 
 ### The stack
@@ -101,7 +125,8 @@ visitor's browser, so a PDF someone opens is never uploaded anywhere.
 pdf-template-studio/
 ├── index.html                 the page: top bar (steps, Open a form, Download, Save), left panel, PDF preview
 ├── src/
-│   ├── main.ts                the app: three steps (Design / Fill / Extract), buttons, file upload, preview
+│   ├── main.ts                the app: four steps (Design / Fill / Extract / Review), buttons, file upload, preview
+│   ├── review.ts              ops review: automatic checks, name screening, AI prompt, review report
 │   ├── pdf.ts                 PDF engine (pdf-lib): template -> fillable PDF, fill, read answers, import PDFs
 │   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks, preview drawing
 │   ├── bank-forms.json        the 13 bank trade forms, as templates (generated, see below)
@@ -109,11 +134,13 @@ pdf-template-studio/
 │   ├── sample.ts              the simple banker's guarantee sample and its sample answers
 │   └── styles.css             black-and-white look
 ├── scripts/
-│   └── bank-forms.test.ts     rebuilds bank-forms.json from the bank's smart form PDF
+│   ├── bank-forms.test.ts     rebuilds bank-forms.json from the bank's smart form PDF
+│   └── all-in-one.test.ts     builds the all-in-one PDF holding every bank form
 ├── tests/                     automated checks (run with npm test)
 │   ├── pdf.test.ts            build -> fill -> extract gives back every answer
 │   ├── upload.test.ts         uploaded fillable / printed PDFs, text extraction
-│   └── xfa.test.ts            reading an XFA smart form
+│   ├── xfa.test.ts            reading an XFA smart form
+│   └── review.test.ts         checks pass a clean form and flag bad dates, listed names, risky countries
 ├── .github/workflows/pages.yml   test, build and publish on every push
 ├── vite.config.ts             build settings + Content Security Policy
 └── package.json               dependencies: pdf-lib, pdfjs-dist (dev: typescript, vite, vitest)
@@ -170,6 +197,12 @@ Answers are a flat object keyed by field id: `{ "applicant_name": "TAN ENG", "cu
                                           │
                                           ▼
                             table on screen + JSON (Download / Copy)
+                                          │
+                                          ▼
+ 4. Review   answers ──review()──▶ PASS / CHECK / FAIL per check
+                                          │
+                       ops decision ──────┼──▶ reportTemplate() ──buildPdf()──▶ review report PDF
+                                          └──▶ aiPrompt() ──▶ clipboard ──▶ bank's approved AI
 ```
 
 ### The key functions
@@ -181,6 +214,9 @@ Answers are a flat object keyed by field id: `{ "applicant_name": "TAN ENG", "cu
 | `importPdf(bytes)` | `pdf.ts` | Turns an uploaded PDF into a template: keeps a fillable PDF's fields, or adds fields over the blanks of a printed one |
 | `readXfa(bytes)` | `text.ts` | Uses pdf.js to open an Adobe smart form (even with an owner password) and walks its form tree: every field's subform path, type, choices, caption and value |
 | `renderPages(bytes, width)` | `text.ts` | Draws the preview pages on canvases with pdf.js. The browser's own PDF viewer is not used, because it counts every redrawn preview as a file download and company security software checks each one |
+| `review(rows, watchlist)` | `review.ts` | Runs the ops checks on the extracted answers and returns PASS / CHECK / FAIL with the reason for each |
+| `sameName(a, b)` | `review.ts` | Name matching for screening: ignores case, punctuation and suffixes like PTE LTD or FZE, and allows small typos (letter-pair similarity of 85% or more) |
+| `reportTemplate(...)` | `review.ts` | Turns the decision, checks and answers into a Template, so the review report is built by the same `buildPdf()` |
 | `xfaTemplate(xfa, code)` | `text.ts` | Turns one form from a smart-form bundle (e.g. `BG`) into a Template: sections from subforms, readable questions from captions or field names (`txtApplicantName` → "Applicant name"), drop-downs, dates |
 | `readText` / `pairs` / `blanks` | `text.ts` | For PDFs without fields: groups page text into lines, finds `Label: value` answers and ticked boxes, and finds `____` / `☐` blanks |
 

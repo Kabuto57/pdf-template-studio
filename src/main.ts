@@ -4,10 +4,11 @@ import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, SAMPLE } from "./sample";
 import BANK from "./bank-forms.json";
 import type { Line, Xfa } from "./text";
+import { DECISIONS, DEMO_WATCHLIST, aiPrompt, reportTemplate, review } from "./review";
 
 const text = () => import("./text"); // pdf.js is big: load it only when a PDF without fields needs reading
 
-type View = "design" | "fill" | "extract";
+type View = "design" | "fill" | "extract" | "review";
 const STORE = "pdf-template-studio";
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -20,6 +21,10 @@ let view: View = "design";
 let filled: Uint8Array | undefined; // the last "Save filled PDF", so Extract can use it straight away
 const auto = new WeakSet<Field>(); // fields whose key still follows their label
 let pristine = ""; // the form as opened, to tell whether switching forms would lose edits
+let lastRead: { result: Extracted; name: string } | undefined; // what Extract read last, for Review
+let decision: Values = {};
+let watchlist = DEMO_WATCHLIST;
+try { const w = localStorage.getItem(`${STORE}-watchlist`); if (w) watchlist = JSON.parse(w); } catch { /* demo list */ }
 try { const s = localStorage.getItem(STORE); if (s) t = JSON.parse(s); } catch { /* storage blocked: start from the sample */ }
 pristine = JSON.stringify(t);
 
@@ -46,6 +51,7 @@ function refresh(now = false) {
   try { localStorage.setItem(STORE, JSON.stringify(t)); } catch { /* fine: just not remembered */ }
   clearTimeout(timer);
   timer = window.setTimeout(async () => {
+    if (view === "review") return showPdf(await buildPdf(...report())); // the preview is the review report
     showPdf(await buildPdf(t, view === "fill" ? values : {}));
   }, now ? 0 : 450);
 }
@@ -205,6 +211,8 @@ function renderExtract(result?: Extracted, name?: string, lines?: Line[], note?:
     panel.append(h("p", { className: "error", role: "alert" }, `${name} has no form fields and no text. It looks like a scan, which would need OCR to read.`));
     return;
   }
+  lastRead = { result, name: name ?? "the PDF" };
+  decision = {};
   const json = JSON.stringify(result.data, null, 2);
   const bySection = new Map<string, Extracted["rows"]>();
   for (const r of result.rows) bySection.set(r.section, [...bySection.get(r.section) ?? [], r]);
@@ -217,7 +225,8 @@ function renderExtract(result?: Extracted, name?: string, lines?: Line[], note?:
       h("tbody", {}, ...rows.map(r => h("tr", {}, h("th", { scope: "row" }, r.label, r.required ? h("span", { className: "req" }, " *") : ""),
         h("td", { className: show(r.value) ? "" : r.required ? "empty req" : "empty" }, show(r.value) || (r.required ? "(blank: required)" : "(blank)"))))))),
     h("div", { className: "btns" },
-      h("button", { type: "button", className: "primary", onclick: () => download(json, `${slug(result.template?.title ?? "form")}-answers.json`, "application/json") }, "Download JSON"),
+      h("button", { type: "button", className: "primary", onclick: () => go("review") }, "Review this application →"),
+      h("button", { type: "button", onclick: () => download(json, `${slug(result.template?.title ?? "form")}-answers.json`, "application/json") }, "Download JSON"),
       h("button", { type: "button", onclick: (e: Event) => { navigator.clipboard.writeText(json); (e.target as HTMLElement).textContent = "Copied"; } }, "Copy JSON"),
     ),
     h("pre", { className: "json" }, json),
@@ -256,11 +265,63 @@ async function showPdf(bytes: Uint8Array) {
   if (mine === drawn) box.replaceChildren(...pages); // a newer edit may have drawn already
 }
 
+// ---- 4. Review (ops) ----
+const report = () => {
+  const { result, name } = lastRead!, rows = result.rows;
+  const r = reportTemplate(result.template?.title ?? name, name, rows, review(rows, watchlist), decision);
+  return [r.template, r.values] as const;
+};
+
+function renderReview() {
+  const panel = $("#panel");
+  if (!lastRead) {
+    panel.replaceChildren(h("p", { className: "lead" }, "Review is for the ops team: open the customer's filled PDF in Extract first, then come back here."),
+      h("div", { className: "btns" }, h("button", { type: "button", className: "primary", onclick: () => go("extract") }, "Go to Extract")));
+    return;
+  }
+  const { result, name } = lastRead, checks = review(result.rows, watchlist);
+  const count = (s: string) => checks.filter(c => c.status === s).length;
+  const setD = (k: string, v: Value) => { decision[k] = v; refresh(); };
+  panel.replaceChildren(
+    h("p", { className: "lead" }, `Checks on ${name}. They are a first pass to speed up the review; you make the decision. The preview is the review report.`),
+    h("p", { className: count("fail") ? "error" : count("check") ? "info" : "note", role: "status" },
+      `${count("fail")} failed, ${count("check")} to look at, ${count("pass")} passed.`),
+    h("table", { className: "result" }, h("caption", {}, "Automatic checks"), h("tbody", {}, ...checks.map(c =>
+      h("tr", {}, h("th", { scope: "row" }, c.name), h("td", {}, h("span", { className: `status ${c.status}` }, c.status.toUpperCase()), " ", c.detail))))),
+    h("fieldset", { className: "sec" }, h("legend", {}, "Decision"),
+      h("div", { className: "q full" }, ...DECISIONS.map(d => h("label", { className: "opt" },
+        h("input", { type: "radio", name: "decision", value: d, checked: decision.decision === d, onchange: () => setD("decision", d) }), " ", d))),
+      h("label", { className: "q full" }, h("span", { className: "q-label" }, "Reviewed by"),
+        h("input", { value: (decision.reviewer as string) ?? "", oninput: (e: Event) => setD("reviewer", (e.target as HTMLInputElement).value) })),
+      h("label", { className: "q full" }, h("span", { className: "q-label" }, "Notes and questions for the customer"),
+        h("textarea", { rows: 3, value: (decision.notes as string) ?? "", oninput: (e: Event) => setD("notes", (e.target as HTMLTextAreaElement).value) })),
+    ),
+    h("div", { className: "btns" },
+      h("button", { type: "button", className: "primary", onclick: async () => {
+        decision.review_date = new Date().toLocaleDateString("en-GB");
+        download(await buildPdf(...report()) as BlobPart, `${slug(result.template?.title ?? "form")}-review.pdf`, "application/pdf");
+      } }, "Download review report"),
+      h("button", { type: "button", onclick: (e: Event) => {
+        navigator.clipboard.writeText(aiPrompt(result.template?.title ?? name, result.rows, checks));
+        (e.target as HTMLElement).textContent = "Copied: paste into your approved AI assistant";
+      } }, "Copy for AI review"),
+    ),
+    h("p", { className: "note" }, "Nothing leaves this page. \u201cCopy for AI review\u201d puts the answers and checks on your clipboard, with instructions, for the bank's approved AI assistant."),
+    h("details", {}, h("summary", {}, `Screening list (${watchlist.length} names${watchlist === DEMO_WATCHLIST ? ", demo only" : ""})`),
+      h("p", { className: "note" }, "Demo names only. Paste the bank's list here, one name per line. It stays in this browser."),
+      h("textarea", { rows: 8, "aria-label": "Screening list", value: watchlist.join("\n"), onchange: (e: Event) => {
+        watchlist = (e.target as HTMLTextAreaElement).value.split("\n").map(x => x.trim()).filter(Boolean);
+        try { localStorage.setItem(`${STORE}-watchlist`, JSON.stringify(watchlist)); } catch { /* this visit only */ }
+        renderReview(); refresh(true);
+      } })),
+  );
+}
+
 // ---- Shell ----
 function go(v: View) {
   view = v;
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
-  ({ design: renderDesign, fill: renderFill, extract: () => renderExtract() })[v]();
+  ({ design: renderDesign, fill: renderFill, extract: () => renderExtract(), review: renderReview })[v]();
   $("#panel").scrollTop = 0;
   refresh(true);
 }

@@ -99,3 +99,8 @@ select { max-width: 100%; }
 .req { color: #c00; font-weight: 700; }
 td.req { font-style: normal; }
 input:invalid, select:invalid { box-shadow: none; }
+
+.status { display: inline-block; min-width: 52px; font-size: 11px; font-weight: 700; padding: 1px 4px; border: 1px solid currentColor; text-align: center; }
+.status.pass { color: var(--grey); }
+.status.fail { color: #c00; }
+.opt { display: inline-block; margin: 4px 16px 4px 0; }
