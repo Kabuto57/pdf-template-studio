@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PDFDict, PDFDocument, PDFHexString, PDFName, PDFTextField } from "pdf-lib";
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFTextField, decodePDFRawStream } from "pdf-lib";
 import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
 
@@ -67,17 +67,22 @@ describe("conditional mandatory questions", () => {
   });
 });
 
+// The rules engine: the document-level script (a stream in the /Names /JavaScript tree).
+const library = (doc: PDFDocument) => {
+  const names = ((doc.catalog.lookup(PDFName.of("Names")) as PDFDict).lookup(PDFName.of("JavaScript")) as PDFDict).lookup(PDFName.of("Names")) as PDFArray;
+  const stream = (names.lookup(1) as PDFDict).lookup(PDFName.of("JS")) as PDFRawStream;
+  return String.fromCharCode(...decodePDFRawStream(stream).decode());
+};
+
 describe("checks built into the PDF (Acrobat / Reader)", () => {
   // Runs the PDF's own recalculation script against a stand-in for Acrobat's document object.
   async function acrobat(values: Record<string, string>) {
     const { LC } = await import("../src/lc");
     const doc = await PDFDocument.load(await buildPdf(LC.template));
-    const aa = doc.getForm().getTextField("__checks").acroField.dict.lookup(PDFName.of("AA")) as PDFDict;
-    const code = ((aa.lookup(PDFName.of("C")) as PDFDict).lookup(PDFName.of("JS")) as PDFHexString).decodeText();
     const fields: Record<string, { value: string; required?: boolean; strokeColor?: string }> = {};
-    const acro = { getField: (n: string) => fields[n] ??= { value: values[n] ?? (doc.getForm().getFieldMaybe(n) instanceof PDFTextField ? "" : "Off") } } as Record<string, unknown>;
-    new Function("color", code).call(acro, { red: "red", black: "black" });
-    return { fields, missing: acro.missingQuestions as string[] };
+    const acro = { getField: (n: string) => fields[n] ??= { value: values[n] ?? (doc.getForm().getFieldMaybe(n) instanceof PDFTextField ? "" : "Off") } };
+    const missing = new Function("color", "console", `${library(doc)}; return lcRules(this);`).call(acro, { red: "red", black: "black", white: "white", transparent: "none" }, { println() {} });
+    return { fields, missing: missing as string[] };
   }
 
   it("a ticked document row turns its boxes red and required, as in the app", async () => {
@@ -88,6 +93,14 @@ describe("checks built into the PDF (Acrobat / Reader)", () => {
     expect(on.missing).toContain("Commercial invoice: originals");
     const filled = await acrobat({ doc_commercial_invoice: "Yes", invoice_originals: "3" });
     expect(filled.fields.invoice_originals).toMatchObject({ required: true, strokeColor: "black" });
+  });
+
+  it("ticking a box re-checks straight away (mouse-up action on the tick box)", async () => {
+    const { LC } = await import("../src/lc");
+    const doc = await PDFDocument.load(await buildPdf(LC.template));
+    const w = doc.getForm().getCheckBox("doc_commercial_invoice").acroField.getWidgets()[0].dict;
+    const up = ((w.lookup(PDFName.of("AA")) as PDFDict).lookup(PDFName.of("U")) as PDFDict).lookup(PDFName.of("JS")) as PDFHexString;
+    expect(up.decodeText()).toBe("lcRules(this);");
   });
 
   it("picking Term makes the term boxes mandatory", async () => {
@@ -104,6 +117,6 @@ it("the Check form button and the save / print warnings are valid scripts", asyn
   const aa = doc.catalog.lookup(PDFName.of("AA")) as PDFDict;
   for (const a of [btn, aa.lookup(PDFName.of("WS")) as PDFDict, aa.lookup(PDFName.of("WP")) as PDFDict]) expect(() => new Function("app", js(a))).not.toThrow();
   const alerts: string[] = [];
-  new Function("app", js(btn)).call({ calculateNow() {}, missingQuestions: ["Amount"] }, { alert: (m: string) => alerts.push(m) });
+  new Function("app", `var lcRules = function () { return ["Amount"]; }; ${js(btn)}`)({ alert: (m: string) => alerts.push(m) });
   expect(alerts[0]).toContain("1 mandatory question is still blank");
 });

@@ -1,6 +1,6 @@
 // Build a fillable PDF form from a template, and read the answers back out of a filled one.
 import {
-  PDFButton, PDFCheckBox, PDFRawStream, decodePDFRawStream, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
+  PDFButton, PDFCheckBox, PDFDict, PDFRawStream, decodePDFRawStream, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
   PDFRadioGroup, PDFString, PDFTextField, StandardFonts, TextAlignment, rgb,
 } from "pdf-lib";
 
@@ -200,7 +200,9 @@ export function addChecks(doc: PDFDocument, form: ReturnType<PDFDocument["getFor
     Object.assign(add(f), { c: 1 as const }, f.required ? { s: 1 as const } : {}, f.requiredIf ? { r: f.requiredIf.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]) } : {});
     for (const r of f.requiredIf ?? []) { const by = byId.get(r.field); if (by) add(by); }
   }
-  const code = `var d = this, M = ${JSON.stringify(model)};
+  // The rules engine lives once, as a document-level script; every field and button calls lcRules(this).
+  const lib = `function lcRules(d) {
+var M = ${JSON.stringify(model)};
 function has(a, x) { for (var i = 0; i < a.length; i++) if (a[i] == x) return true; return false; }
 function val(id) {
   var m = M[id], f, a = [], i;
@@ -221,6 +223,7 @@ function need(id) {
   return false;
 }
 var miss = [], id, m, q, b, names, i, f;
+try {
 for (id in M) {
   m = M[id]; if (!m.c) continue;
   q = need(id); b = q && (m.k == "check" ? val(id) != "true" : empty(val(id)));
@@ -229,14 +232,30 @@ for (id in M) {
   for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.k != "checks") f.required = q;
     f.lineWidth = b || !m.u ? 1 : 0; f.strokeColor = b ? color.red : m.u ? color.transparent : color.black; f.fillColor = b ? ["RGB", 1, 0.88, 0.88] : m.u ? color.transparent : color.white; }
 }
-d.missingQuestions = miss;`;
+} catch (e) { console.println("lcRules: " + e); }
+return miss;
+}`;
+  // A script stream, not a string: no 32,767-byte limit however many rules a form has.
+  const libRef = doc.context.register(doc.context.flateStream(Uint8Array.from(lib, c => c.charCodeAt(0) & 0xff)));
+  doc.catalog.set(PDFName.of("Names"), doc.context.obj({ JavaScript: doc.context.obj({ Names: [PDFHexString.fromText("lcRules"), doc.context.obj({ S: "JavaScript", JS: libRef })] }) }));
+  const run = () => js("lcRules(this);");
+  // Re-check the moment a box is ticked or an option picked (mouse up), and when leaving a text box or list (blur).
+  for (const [id, m] of Object.entries(model)) {
+    const names = m.k === "checks" ? (m.o ?? []).map((_, i) => subId(id, i)) : [id];
+    for (const n of names) for (const w of form.getFieldMaybe(n)?.acroField.getWidgets() ?? []) {
+      const aa = w.dict.lookupMaybe(PDFName.of("AA"), PDFDict) ?? doc.context.obj({});
+      aa.set(PDFName.of(m.k === "check" || m.k === "checks" || m.k === "radio" ? "U" : "Bl"), run());
+      w.dict.set(PDFName.of("AA"), aa);
+    }
+  }
+  // And after any value changes (Acrobat's recalculation), as a safety net.
   const calc = form.createTextField("__checks");
   calc.addToPage(page, { x: -20, y: -20, width: 1, height: 1, borderWidth: 0 }); // off the page
   calc.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(2)); // hidden
-  calc.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ C: js(code) }));
-  form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj([calc.ref])); // recalculated after every change
+  calc.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ C: run() }));
+  form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj([calc.ref]));
 
-  const report = (always: boolean) => `this.calculateNow(); var m = this.missingQuestions || [];
+  const report = (always: boolean) => `var m = typeof lcRules == "function" ? lcRules(this) : [];
 if (m.length) app.alert("This form is not complete: " + m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank (outlined in red):\\n\\n- " + m.slice(0, 20).join("\\n- ") + (m.length > 20 ? "\\n- ..." : "") + "\\n\\nPlease fill them in before you send the form.", 1);
 ${always ? 'else app.alert("All mandatory questions are answered. You can save the form and send it.", 3);' : ""}`;
   const btn = form.createButton("__check_form");
