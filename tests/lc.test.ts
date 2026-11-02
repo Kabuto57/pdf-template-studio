@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFString } from "pdf-lib";
 import { buildPdf, extractPdf } from "../src/pdf";
 import { LC, LC_SAMPLE } from "../src/lc";
 import { buildLcPdf } from "../src/lc-pdf";
@@ -26,5 +26,23 @@ describe("fields can be typed in, in Acrobat", () => {
       const name = /\/([\w-]+) [\d.]+ Tf/.exec(da)?.[1];
       if (name && name !== "dummy__noop") expect(fonts.has(PDFName.of(name)), `${f.getName()} uses /${name}`).toBe(true);
     }
+  });
+});
+
+describe("within Adobe's limits", () => {
+  // Acrobat refuses strings over 32,767 bytes (PDF architectural limit); pdf.js and Chrome/Edge don't mind.
+  const longest = (doc: PDFDocument) => {
+    let max = 0;
+    const walk = (o: unknown, seen = new Set<unknown>()): void => {
+      if (seen.has(o)) return; seen.add(o);
+      if (o instanceof PDFString || o instanceof PDFHexString) max = Math.max(max, o.asBytes().length);
+      else if (o instanceof PDFDict) for (const [, v] of o.entries()) walk(v, seen);
+      else if (o instanceof PDFArray) for (const v of o.asArray()) walk(v, seen);
+    };
+    for (const [, o] of doc.context.enumerateIndirectObjects()) walk(o instanceof PDFRawStream ? o.dict : o);
+    return max;
+  };
+  it.each([["original look", () => buildLcPdf(LC_SAMPLE)], ["new design", () => buildPdf(LC.template, LC_SAMPLE)]])("%s: no string over 32,767 bytes", async (_, make) => {
+    expect(longest(await PDFDocument.load(await make()))).toBeLessThanOrEqual(32767);
   });
 });

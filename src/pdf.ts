@@ -1,6 +1,6 @@
 // Build a fillable PDF form from a template, and read the answers back out of a filled one.
 import {
-  PDFButton, PDFCheckBox, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
+  PDFButton, PDFCheckBox, PDFRawStream, decodePDFRawStream, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
   PDFRadioGroup, PDFString, PDFTextField, StandardFonts, TextAlignment, rgb,
 } from "pdf-lib";
 
@@ -259,7 +259,15 @@ ${always ? 'else app.alert("All mandatory questions are answered. You can save t
 const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }, label: string) =>
   f.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(label));
 /** Stores the template (minus any uploaded PDF) inside the PDF, so extraction knows the questions and sections. */
-export const stamp = (doc: PDFDocument, t: Template) => doc.catalog.set(KEY, PDFHexString.fromText(JSON.stringify({ ...t, base: undefined, uploaded: !!t.base })));
+// Kept in a compressed stream: Adobe allows at most 32,767 bytes in one PDF string, and a big form's template is
+// larger (the LC's is ~33 KB); over the limit, Acrobat would not let anyone type in the form.
+export const stamp = (doc: PDFDocument, t: Template) =>
+  doc.catalog.set(KEY, doc.context.register(doc.context.flateStream(new TextEncoder().encode(JSON.stringify({ ...t, base: undefined, uploaded: !!t.base })))));
+/** The template stored by stamp(): a stream, or a string in PDFs made before. */
+const stamped = (doc: PDFDocument) => {
+  const o = doc.catalog.lookup(KEY);
+  return o instanceof PDFRawStream ? new TextDecoder().decode(decodePDFRawStream(o).decode()) : text(o);
+};
 
 /**
  * Acrobat looks up the font named in each field's /DA in the form's default resources (/DR). Without it, clicking a
@@ -304,7 +312,7 @@ export async function importPdf(bytes: Uint8Array, name: string,
   findBlanks: () => Promise<{ page: number; label: string; kind: "text" | "check"; x: number; y: number; w: number; h: number }[]>): Promise<Imported> {
   const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const title = doc.getTitle()?.trim() || words(name.replace(/\.pdf$/i, ""));
-  const embedded = text(doc.catalog.lookup(KEY));
+  const embedded = stamped(doc);
   const form = doc.getForm();
   let found: Imported["found"] = "fields";
   if (!form.getFields().length) {
@@ -379,7 +387,7 @@ async function extractFields(doc: PDFDocument): Promise<Extracted> {
     tips.set(name, text(f.acroField.dict.lookup(PDFName.of("TU"))) ?? name);
   }
   let template: Template | undefined;
-  try { const s = text(doc.catalog.lookup(KEY)); if (s) template = JSON.parse(s); } catch { /* not one of ours */ }
+  try { const s = stamped(doc); if (s) template = JSON.parse(s); } catch { /* not one of ours */ }
 
   const rows: Row[] = [], data: Values = {};
   if (template) {
