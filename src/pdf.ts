@@ -1,7 +1,7 @@
 // Build a fillable PDF form from a template, and read the answers back out of a filled one.
 import {
   PDFButton, PDFCheckBox, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
-  PDFRadioGroup, PDFString, PDFTextField, StandardFonts, rgb,
+  PDFRadioGroup, PDFString, PDFTextField, StandardFonts, TextAlignment, rgb,
 } from "pdf-lib";
 
 export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check" | "select";
@@ -246,6 +246,14 @@ ${always ? 'else app.alert("All mandatory questions are answered. You can save t
   widget.set(PDFName.of("A"), js(report(true)));
   widget.set(PDFName.of("F"), PDFNumber.of(0)); // shown on screen, not printed
   doc.catalog.set(PDFName.of("AA"), doc.context.obj({ WS: js(report(false)), WP: js(report(false)) })); // before save / print
+  // Downloaded PDFs open in Acrobat's Protected View, where nothing can be typed until "Enable All Features" is
+  // clicked. Scripts don't run there, so this note is a plain field: shown on screen, not printed.
+  const hint = form.createTextField("__hint");
+  hint.setText("Can't type in the fields? Click \"Enable All Features\" in Acrobat's yellow bar at the top.");
+  hint.enableReadOnly();
+  hint.addToPage(page, { x: W - M - 330, y: H - 22, width: 330, height: 11, font, borderWidth: 0 });
+  hint.setFontSize(7); hint.setAlignment(TextAlignment.Right);
+  hint.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(0)); // not printed
 }
 
 const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }, label: string) =>
