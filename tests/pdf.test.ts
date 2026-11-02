@@ -56,9 +56,13 @@ describe("conditional mandatory questions", () => {
     expect(rows.find(r => r.id === "plus")?.required).toBeFalsy();
   });
 
-  it("the bank LC carries the smart form's rules", async () => {
+  it("the bank LC: picking Term, or ticking a document row, makes that row's boxes mandatory", async () => {
     const lc = (await import("../src/bank-forms.json")).default.find(f => f.code === "LC")!;
-    const term = lc.template.sections.flatMap(s => s.fields).find(f => f.label === "Term") as Field;
-    expect(term.requiredIf?.[0].values).toEqual(["Term:"]);
+    const q = (id: string) => lc.template.sections.flatMap(s => s.fields).find(f => f.id === id) as Field;
+    expect(isRequired(q("term_days"), { drafts_at: "Term" })).toBe(true);
+    expect(isRequired(q("term_days"), { drafts_at: "Sight" })).toBe(false);
+    expect(isRequired(q("invoice_originals"), { doc_commercial_invoice: true })).toBe(true);
+    expect(isRequired(q("invoice_copies"), { doc_commercial_invoice: false })).toBe(false);
+    expect(lc.template.sections.find(s => s.title === "Documents Required")?.fields.length).toBe(36);
   });
 });

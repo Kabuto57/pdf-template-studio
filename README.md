@@ -127,6 +127,7 @@ pdf-template-studio/
 ├── index.html                 the page: top bar (steps, Open a form, Download, Save), left panel, PDF preview
 ├── src/
 │   ├── main.ts                the app: four steps (Design / Fill / Extract / Review), buttons, file upload, preview
+│   ├── lc.ts                  the LC application, rebuilt by hand to match the bank's form, plus its sample answers
 │   ├── review.ts              ops review: automatic checks, name screening, AI prompt, review report
 │   ├── pdf.ts                 PDF engine (pdf-lib): template -> fillable PDF, fill, read answers, import PDFs
 │   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks, preview drawing
@@ -237,6 +238,8 @@ fields at all fall back to reading the page text, and those results are marked "
 
 To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vitest run scripts`.
 
+
+**The LC is hand-built.** `src/lc.ts` holds the Irrevocable Documentary Credit application with the bank form's own 17 sections (Mode of Advising … Documents Required … Signature), its 103 fields and nothing else, its wording, its 16 always-mandatory fields and 42 "mandatory when …" rules. Ticking a row under Documents Required (or Back-to-back DC, Drafts, Confirmation, Financing, Advance payment) makes that row's boxes mandatory, so they turn red until filled. The smart form itself only unlocks some of them (e.g. invoice originals and copies) without requiring them. It includes the fields the smart form only shows after a choice (shipment places, open cover no., term LC prepayment). The generator copies it into `bank-forms.json`.
 
 **Conditional mandatory rules.** The smart form makes questions mandatory with scripts, e.g. `if (this.rawValue == "Term") controlScript.mandatoryChange(txtTerm, 1)`. `scripts/xfa-rules.py` reads those scripts from the decrypted form and writes one rule per trigger, value and target (99 rules over 10 forms, 22 on the LC); simple `==` / `||` conditions and their `else` branches are understood, anything more complex is skipped. The generator then stores them on each question as `requiredIf`:
 

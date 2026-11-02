@@ -5,6 +5,7 @@ import { it } from "vitest";
 import { readFileSync, writeFileSync } from "node:fs";
 import { readXfa, xfaForms, xfaTemplate } from "../src/text";
 import type { Field } from "../src/pdf";
+import { LC } from "../src/lc";
 
 interface XfaRule { trigger: string; values: string[]; options: number[] | null; not: boolean; target: string }
 
@@ -47,6 +48,8 @@ it.skipIf(!process.env.BANK_PDF)("bank forms", async () => {
     const defaults = Object.fromEntries(Object.entries(values).filter(([, v]) => v !== "" && v !== false));
     return { code: f.code, template, defaults };
   });
+  // The LC is maintained by hand in src/lc.ts so it matches the bank's form exactly (sections, fields, rules).
+  forms.splice(forms.findIndex(f => f.code === "LC"), 1, LC);
   writeFileSync("src/bank-forms.json", JSON.stringify(forms, null, 1));
   console.log(forms.map(f => `${f.code}: ${f.template.sections.reduce((a, s) => a + s.fields.length, 0)}`).join(", "));
 }, 60000);

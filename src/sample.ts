@@ -1,5 +1,7 @@
 import type { Template, Values } from "./pdf";
 import { COUNTRIES, CURRENCIES } from "./lists";
+import { LC, LC_SAMPLE } from "./lc";
+import { isRequired } from "./pdf";
 
 export const GUARANTEE: Template = {
   title: "Banker's Guarantee Application",
@@ -84,7 +86,7 @@ const TEXT: [RegExp, string][] = [
   [/swift/i, "EXBKSGSG"],
   [/cif|registration|ref|acc(ount)? ?no|account|\b(dc|cr|lc) no/i, "072-123456-7"],
   [/word/i, "Two hundred and fifty thousand only"],
-  [/plus|minus|%|rate/i, "5"],
+  [/plus|minus|%/i, "5"],
   [/amount|sum|value/i, "250,000.00"],
   [/currency/i, "SGD"],
   [/copies|originals/i, "2"],
@@ -101,12 +103,14 @@ const TEXT: [RegExp, string][] = [
   [/beneficiary|drawee|third party|3party|consignee|buyer|notify/i, "HARBOUR DEVELOPMENT AUTHORITY"],
   [/signat|contact|attention|person/i, "TAN WEI MING"],
   [/name|applicant|drawer|seller|shipper|company/i, "TAN ENGINEERING PTE LTD"],
+  [/\brate\b/i, "1.35"],
   [/\bno\b|number|code|\bid\b/i, "REF-2026-0114"],
 ];
 const STORY = "Steel fittings for Pier 3 refurbishment, contract HDA/2026/114";
 
 /** Plausible answers for any form, so every bank form can be tried end to end. The simple guarantee keeps its own. */
 export function sampleFor(t: Template): Values {
+  if (t.title === LC.template.title) return { ...LC_SAMPLE };
   const out: Values = {};
   for (const f of t.sections.flatMap(s => s.fields)) {
     const own = SAMPLE[f.id], opts = (f.options ?? []).filter(o => !o.startsWith("<"));
@@ -122,5 +126,7 @@ export function sampleFor(t: Template): Values {
       default: out[f.id] = guess ?? (/purpose|goods|descri|instruction|remark|service|detail/i.test(f.label) ? STORY : "SAMPLE");
     }
   }
+  // Answers that only apply after another choice stay blank unless that choice was made.
+  for (const f of t.sections.flatMap(s => s.fields)) if (f.requiredIf && !isRequired(f, out)) delete out[f.id];
   return out;
 }
