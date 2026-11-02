@@ -3,9 +3,22 @@
 Turn bank forms into clean, black-and-white fillable PDFs, fill them in, and pull the answers back out as data.
 Everything runs in your browser: no account, no server, and your files are never uploaded.
 
-**Live:** https://kabuto57.github.io/pdf-template-studio/
+**Live demo:** https://kabuto57.github.io/pdf-template-studio/ · **Studio:** https://kabuto57.github.io/pdf-template-studio/studio.html
 
-## How to use it
+## The demo: LC application, from download to data
+
+| Page | Who | What happens |
+|---|---|---|
+| `index.html` | presenter | The journey and a comparison with the current vendor (XFA) form |
+| `bank.html` | customer | A fictional "Demo Bank" website: **Download PDF** gives the LC application; the email form "sends" the filled PDF to Trade Ops |
+| (Adobe Acrobat Reader) | customer | Fill in the PDF. Same layout and wording as the bank's form, roomier boxes; mandatory and conditional fields outlined in red; **Check form** lists what is missing; a warning on save/print |
+| `ops.html` | Trade Ops | Inbox of emailed applications (or drop a PDF from real email). Every answer read exactly from the PDF's fields, checked (mandatory, conditional, dates, numbers, expiry after shipment), shown by section with the key facts on top. JSON / CSV, **Send to workflow** (simulated) |
+
+Demo script: open `bank.html`, **Download PDF**, fill it in Adobe Acrobat Reader (try ticking a document row: its boxes turn red), **Check form**, save, attach it in *Send your completed form*, **Send**, then open the Trade Ops workbench. The email is simulated inside the browser (IndexedDB), so the whole journey runs on one laptop.
+
+How the LC looks like the bank's form: `scripts/xfa-layout.py` copies its page layout (boxes, wording, field positions) from the smart form into `src/lc-layout.json`, 35% taller rows; `src/lc-pdf.ts` draws it with pdf-lib and puts our fields, rules and checks in it.
+
+## The studio (`studio.html`)
 
 The app has three steps along the top: **1 Design**, **2 Fill**, **3 Extract**.
 

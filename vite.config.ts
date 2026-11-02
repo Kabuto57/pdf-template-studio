@@ -1,5 +1,8 @@
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
+
+const page = (f: string) => fileURLToPath(new URL(f, import.meta.url));
 
 // Nothing loads or is sent anywhere except the site itself; the preview is drawn on canvases.
 const CSP = [
@@ -15,6 +18,10 @@ const csp = (): Plugin => ({
 export default defineConfig({
   base: "./",
   plugins: [csp()],
-  build: { target: "es2022", chunkSizeWarningLimit: 1500 }, // pdf.js is ~1 MB, loaded only when a PDF needs it
+  build: {
+    target: "es2022", chunkSizeWarningLimit: 1500,
+    // The demo: landing, the bank's website, the ops workbench; and the studio.
+    rollupOptions: { input: { index: page("index.html"), bank: page("bank.html"), ops: page("ops.html"), studio: page("studio.html") } },
+  }, // pdf.js is ~1 MB, loaded only when a PDF needs it
   test: { include: ["tests/**/*.test.ts", "scripts/**/*.test.ts"], alias: [{ find: /^pdfjs-dist$/, replacement: "pdfjs-dist/legacy/build/pdf.mjs" }] },
 });

@@ -3,37 +3,49 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PDF Template Studio</title>
+  <title>Trade Forms Demo</title>
   <link rel="icon" href="data:,">
-  <meta name="description" content="Design a fillable PDF form, fill it, and pull the answers back out as JSON. Your files never leave your browser.">
+  <meta name="description" content="Demo: a customer downloads the LC application, fills it in, emails it, and Trade Ops extracts the data in seconds.">
+  <link rel="stylesheet" href="/src/site.css">
 </head>
 <body>
-  <header class="top">
-    <div class="brand"><span class="mark" aria-hidden="true"></span>PDF Template Studio</div>
-    <nav class="steps" aria-label="Steps">
-      <button type="button" data-view="design" aria-selected="true"><span class="n">1</span>Design</button>
-      <button type="button" data-view="fill" aria-selected="false"><span class="n">2</span>Fill</button>
-      <button type="button" data-view="extract" aria-selected="false"><span class="n">3</span>Extract</button>
-    </nav>
-    <div class="actions">
-      <select id="templateSel" aria-label="Form">
-        <option value="">Open a form…</option>
-        <optgroup label="Bank trade forms" id="bankForms"></optgroup>
-        <optgroup label="Other">
-          <option value="guarantee">Simple banker's guarantee (sample)</option>
-          <option value="blank">Blank form</option>
-          <option value="open">Upload a PDF template…</option>
-        </optgroup>
-      </select>
-      <input type="file" id="templateIn" accept="application/pdf,.pdf" class="sr" tabindex="-1">
-      <button type="button" id="blankBtn">Download blank PDF</button>
-      <button type="button" id="saveBtn" class="primary">Save filled PDF</button>
+  <div class="ribbon">Demonstration only. "Demo Bank" is fictional; no data leaves your browser.</div>
+  <header class="hero">
+    <div class="wrap">
+      <h1>Trade forms: from download to structured data</h1>
+      <p>The Irrevocable Documentary Credit (LC) application, rebuilt to look like the form customers know, with the same checks, and read by Trade Operations without printing, scanning or OCR.</p>
     </div>
   </header>
-  <main class="main">
-    <div class="panel" id="panel"></div>
-    <div id="preview" role="img" aria-label="PDF preview"></div>
+  <main class="wrap">
+    <div class="journey">
+      <div class="step"><span class="n">1</span><h3>Download</h3><p>The customer gets the LC application from the bank's website.</p><a class="btn primary" href="bank.html">Open the bank's website</a></div>
+      <div class="step"><span class="n">2</span><h3>Fill in</h3><p>In Adobe Acrobat Reader. Mandatory and conditional fields turn red, drop-downs and number boxes guide entry, <b>Check form</b> lists anything missing.</p></div>
+      <div class="step"><span class="n">3</span><h3>Save and email</h3><p>The customer saves the PDF and emails it to Trade Operations (simulated on the website).</p><a class="btn" href="bank.html#send">Email the form</a></div>
+      <div class="step"><span class="n">4</span><h3>Ops extract</h3><p>Trade Ops open the email in their workbench: every answer read exactly, checked and laid out, ready for the workflow.</p><a class="btn primary" href="ops.html">Open the ops workbench</a></div>
+    </div>
+
+    <section>
+      <h2>Compared with the current vendor form</h2>
+      <div class="card">
+        <table class="compare">
+          <thead><tr><th></th><th>Current form (Adobe XFA smart form)</th><th>New form</th></tr></thead>
+          <tbody>
+            <tr><td>Look</td><td>Bank layout, small boxes</td><td>Same layout and wording, roomier boxes</td></tr>
+            <tr><td>Opens in</td><td>Adobe Reader / Acrobat only (browsers, Mac Preview and phones show "Please wait…")</td><td>Any PDF viewer; the live checks run in Adobe Reader / Acrobat</td></tr>
+            <tr><td>Mandatory and conditional fields</td><td>Yes, hidden scripts</td><td>Yes, the same rules; red outlines as you fill</td></tr>
+            <tr><td>Before sending</td><td>Confirm &amp; Print</td><td><b>Check form</b> button, plus a warning on save or print if anything is missing</td></tr>
+            <tr><td>Ops intake</td><td>Print, scan, OCR, correct by hand</td><td>Drop the PDF in: exact answers in seconds, no OCR</td></tr>
+            <tr><td>Data out</td><td>Retyped into the workflow</td><td>JSON / CSV, ready for the workflow (BPM) and IMEX</td></tr>
+            <tr><td>Old forms</td><td>—</td><td>The workbench also reads PDFs filled in the current smart form</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Behind the scenes</h2>
+      <p class="muted">The forms are built and maintained in <a href="studio.html">PDF Template Studio</a> (design, fill and extract any form).</p>
+    </section>
   </main>
-  <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 import "./styles.css";
+import { download, h } from "./dom";
 import { KINDS, buildPdf, extractPdf, hasOptions, importPdf, isRequired, slug } from "./pdf";
 import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
@@ -28,22 +29,6 @@ let pristine = ""; // the form as opened, to tell whether switching forms would 
 try { const s = localStorage.getItem(STORE); if (s) t = JSON.parse(s); } catch { /* storage blocked: start from the sample */ }
 pristine = JSON.stringify(t);
 
-function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, unknown> = {}, ...kids: (Node | string | false | undefined)[]) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k.startsWith("on")) el.addEventListener(k.slice(2), v as EventListener);
-    else if (k.includes("-") || k === "for") el.setAttribute(k, String(v));
-    else (el as unknown as Record<string, unknown>)[k] = v;
-  }
-  el.append(...kids.filter((k): k is Node | string => !!k));
-  return el;
-}
-
-function download(bytes: BlobPart, name: string, type: string) {
-  const a = h("a", { href: URL.createObjectURL(new Blob([bytes], { type })), download: name });
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
 
 // ---- Preview ----
 let timer = 0, drawn = 0;
