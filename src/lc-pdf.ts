@@ -167,7 +167,7 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
   addChecks(doc, form, pages[0], font, LC.template, js, underlined);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
-  return doc.save({ useObjectStreams: false }); // plain PDF structure: the most compatible with Acrobat
+  return doc.save();
 }
 
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {

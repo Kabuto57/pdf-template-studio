@@ -183,7 +183,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   if (t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
-  return doc.save({ useObjectStreams: false }); // plain PDF structure: the most compatible with Acrobat
+  return doc.save();
 }
 
 /**
@@ -297,7 +297,7 @@ async function fillBase(t: Template, values: Values): Promise<Uint8Array> {
   }
   stamp(doc, t);
   form.updateFieldAppearances(await doc.embedFont(StandardFonts.Helvetica));
-  return doc.save({ useObjectStreams: false }); // plain PDF structure: the most compatible with Acrobat
+  return doc.save();
 }
 
 const words = (name: string) => { const s = name.split(".").pop()!.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
