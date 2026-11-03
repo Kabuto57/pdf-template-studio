@@ -26,8 +26,8 @@ const sections: Section[] = [
     text("applicant_address_2", "Applicant address (line 2)", { half: false, max: 35 }),
     text("applicant_address_3", "Applicant address (line 3)", { half: false, max: 35 }),
     text("contact_name", "Contact party for this application & confirmation of FX rate: Name", { ...req, half: false, max: 35 }),
-    text("contact_tel", "Contact party: Tel no", { ...req, max: 15 }),
-    text("contact_fax", "Contact party: Fax no", { max: 15 }),
+    text("contact_tel", "Contact party: Tel no", { ...req, max: 15, format: "phone" }),
+    text("contact_fax", "Contact party: Fax no", { max: 15, format: "phone" }),
   ] },
   { title: "For Bank Use", fields: [
     text("dc_no", "DC no"),
@@ -51,8 +51,8 @@ const sections: Section[] = [
     text("beneficiary_address_2", "Beneficiary's address (line 2)", { half: false, max: 35 }),
     text("beneficiary_address_3", "Beneficiary's address (line 3)", { half: false, max: 35 }),
     text("beneficiary_contact", "Contact person", { half: false, max: 35 }),
-    text("beneficiary_tel", "Tel no", { max: 15 }),
-    text("beneficiary_fax", "Fax no", { max: 15 }),
+    text("beneficiary_tel", "Tel no", { max: 15, format: "phone" }),
+    text("beneficiary_fax", "Fax no", { max: 15, format: "phone" }),
   ] },
   { title: "Credit Amount (Currency & Figures)", fields: [
     { id: "currency", label: "Currency", kind: "select", options: CURRENCIES, half: true, ...req },
@@ -160,9 +160,9 @@ const sections: Section[] = [
     text("financing_currency", "Foreign currency financing in (type of currency)", { max: 20, requiredIf: when("financing_type", "Foreign Currency Financing") }),
     text("forward_contract_no", "Forward contract no", { max: 20, requiredIf: when("financing_type", "Apply Forward Contract") }),
     tick("advance_payment", "We authorise you to debit DC amount in full from our account for advance payment"),
-    text("advance_payment_account", "Account no for advance payment", { requiredIf: ticked("advance_payment"), max: 20 }),
+    text("advance_payment_account", "Account no for advance payment", { requiredIf: ticked("advance_payment"), max: 20, format: "account" }),
     tick("debit_issuance_charges", "Please debit all DC issuance charges to our account with you"),
-    text("issuance_charges_account", "Account no for DC issuance charges", { ...req, max: 17 }),
+    text("issuance_charges_account", "Account no for DC issuance charges", { ...req, max: 17, format: "account" }),
   ] },
   { title: "Signature", fields: [
     text("authorised_person", "Authorised person(s) & company stamp", { half: false }),

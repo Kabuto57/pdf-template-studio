@@ -2,7 +2,6 @@
 import "./bank.css";
 import { $, download, h } from "./dom";
 import { LC } from "./lc";
-import { buildLcPdf } from "./lc-pdf";
 import { buildPdf } from "./pdf";
 import { OPS_ADDRESS, sendMail } from "./mailbox";
 
@@ -16,10 +15,9 @@ const CATEGORIES: [string, string[]][] = [
 
 const lcRow = () => h("li", {},
   h("span", { className: "name" }, h("b", {}, "Irrevocable Documentary Credit (LC)"), h("span", { className: "tag" }, "UPDATED"),
-    h("small", {}, "Checks your entries as you fill it in. PDF, 3 pages.")),
+    h("small", {}, "Checks your entries as you fill it in. PDF, 6 pages.")),
   h("span", { className: "dl" },
-    h("button", { type: "button", className: "primary", onclick: async () => download(await buildLcPdf(LC.defaults) as BlobPart, FILE, "application/pdf") }, "Download Form"),
-    h("button", { type: "button", onclick: async () => download(await buildPdf(LC.template, LC.defaults) as BlobPart, FILE.replace(".pdf", "-new-design.pdf"), "application/pdf") }, "New design")));
+    h("button", { type: "button", className: "primary", onclick: async () => download(await buildPdf(LC.template, LC.defaults) as BlobPart, FILE, "application/pdf") }, "Download Form")));
 
 function page() {
   $("#app").replaceChildren(

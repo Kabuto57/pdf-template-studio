@@ -1,7 +1,7 @@
 // Trade Ops workbench (demo): open an emailed application PDF, read every answer exactly, check it, show it.
 import "./ops.css";
 import { $, download, h } from "./dom";
-import { extractPdf, isRequired, slug, type Extracted, type Row, type Template, type Value } from "./pdf";
+import { FORMATS, extractPdf, isRequired, slug, type Extracted, type Row, type Template, type Value } from "./pdf";
 import { inbox, saveMail, type Mail } from "./mailbox";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
@@ -55,8 +55,7 @@ function problems(t: Template | undefined, data: Record<string, unknown>) {
     const v = typeof data[f.id] === "string" ? data[f.id] as string : "";
     if (!v) continue;
     if (f.kind === "date" && !date(v)) out.push(`${f.label}: "${v}" is not a valid DD/MM/YYYY date`);
-    if (f.format === "number" && !/^\d+$/.test(v)) out.push(`${f.label}: "${v}" should be a whole number`);
-    if (f.format === "amount" && !/^\d{1,3}(,?\d{3})*(\.\d{1,2})?$/.test(v)) out.push(`${f.label}: "${v}" is not an amount`);
+    if (f.format && !FORMATS[f.format].ok.test(v)) out.push(`${f.label}: "${v}" ${FORMATS[f.format].say}`);
     if (f.max && v.length > f.max) out.push(`${f.label}: longer than ${f.max} characters`);
   }
   const ship = date(String(data.latest_shipment_date ?? "")), expiry = date(String(data.expiry_date ?? ""));

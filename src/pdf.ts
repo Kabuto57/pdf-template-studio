@@ -1,7 +1,7 @@
 // Build a fillable PDF form from a template, and read the answers back out of a filled one.
 import {
   AcroButtonFlags, PDFButton, PDFCheckBox, PDFDict, PDFRawStream, decodePDFRawStream, PDFDocument, PDFDropdown, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFOptionList, PDFPage,
-  PDFRadioGroup, PDFString, PDFTextField, StandardFonts, TextAlignment, rgb,
+  PDFRadioGroup, PDFString, PDFTextField, StandardFonts, rgb,
 } from "pdf-lib";
 
 export type Kind = "text" | "long" | "date" | "radio" | "checks" | "check" | "select";
@@ -9,7 +9,7 @@ export interface Field {
   id: string; label: string; kind: Kind; options?: string[]; half?: boolean; required?: boolean;
   requiredIf?: Rule[]; // mandatory only when another answer is picked (any rule matching is enough)
   max?: number; // most characters allowed, as on the bank's form
-  format?: "number" | "amount"; // digits only, or an amount (digits , .)
+  format?: Format; // which keys the box accepts, and what a whole answer must look like
 }
 /** Mandatory when `field` is one of `values` (or, with `not`, none of them). A tick box's values are "true" / "false". */
 export interface Rule { field: string; values: string[]; not?: boolean }
@@ -19,6 +19,14 @@ export interface Template {
   base?: string; // an uploaded PDF (base64) whose own fields are filled, instead of drawing a new layout
 }
 export type Value = string | string[] | boolean;
+// bad: keys refused while typing (same in the app and in Acrobat); ok: a whole answer; say: what's wrong otherwise.
+export const FORMATS = {
+  number: { bad: "[^0-9]", ok: /^\d+$/, say: "should be a whole number" },
+  amount: { bad: "[^0-9.,]", ok: /^\d{1,3}(,?\d{3})*(\.\d{1,2})?$/, say: "is not an amount" },
+  phone: { bad: "[^0-9+() -]", ok: /^\+?[\d ()-]*\d[\d ()-]*$/, say: "is not a phone number (digits, spaces, + - ( ) only)" },
+  account: { bad: "[^0-9-]", ok: /^\d[\d-]*\d$|^\d$/, say: "is not an account number (digits and - only)" },
+};
+export type Format = keyof typeof FORMATS;
 export type Values = Record<string, Value>;
 
 export const isRequired = (f: Field, v: Values) => !!f.required || !!f.requiredIf?.some(r => {
@@ -150,7 +158,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
       tf.setFontSize(10);
       // Acrobat / Reader: a calendar picker and format check for dates; number boxes refuse other keys.
       if (f.kind === "date") tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ F: js('AFDate_FormatEx("dd/mm/yyyy");'), K: js('AFDate_KeystrokeEx("dd/mm/yyyy");') }));
-      else if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${f.format === "number" ? "[^0-9]" : "[^0-9.,]"}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
+      else if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${FORMATS[f.format].bad}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
       if (f.kind === "date" && !v) page.drawText("DD/MM/YYYY", { x: x + w - 58, y: y - h + 6.5, size: 7, font, color: RULE });
     }
     return 13 + h;
@@ -330,14 +338,6 @@ ${always ? 'else app.alert("All mandatory questions are answered. You can save t
   widget.set(PDFName.of("A"), js(report(true)));
   widget.set(PDFName.of("F"), PDFNumber.of(0)); // shown on screen, not printed
   doc.catalog.set(PDFName.of("AA"), doc.context.obj({ WS: js(report(false)), WP: js(report(false)) })); // before save / print
-  // Downloaded PDFs open in Acrobat's Protected View, where nothing can be typed until "Enable All Features" is
-  // clicked. Scripts don't run there, so this note is a plain field: shown on screen, not printed.
-  const hint = form.createTextField("__hint");
-  hint.setText("Can't type in the fields? Click \"Enable All Features\" in Acrobat's yellow bar at the top.");
-  hint.enableReadOnly();
-  hint.addToPage(page, { x: W - M - 330, y: H - 22, width: 330, height: 11, font, borderWidth: 0 });
-  hint.setFontSize(7); hint.setAlignment(TextAlignment.Right);
-  hint.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(0)); // not printed
 }
 
 const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): void } } }, label: string) =>

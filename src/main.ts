@@ -1,6 +1,6 @@
 import "./styles.css";
 import { download, h } from "./dom";
-import { KINDS, buildPdf, extractPdf, hasOptions, importPdf, isRequired, slug } from "./pdf";
+import { FORMATS, KINDS, buildPdf, extractPdf, hasOptions, importPdf, isRequired, slug } from "./pdf";
 import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
 import { LC } from "./lc";
@@ -150,10 +150,10 @@ function input(f: Field): HTMLElement {
           onchange: () => set(f.kind === "radio" ? o : (f.options ?? []).filter((_, i) =>
             document.querySelectorAll<HTMLInputElement>(`input[name="${f.id}"]`)[i].checked)) }), " ", o)));
     default: return h("input", { id: f.id, type: f.id.includes("email") ? "email" : "text", value: (v as string) ?? "",
-      ...(f.max ? { maxLength: f.max } : {}), ...(f.format ? { inputMode: f.format === "number" ? "numeric" : "decimal" } : {}),
+      ...(f.max ? { maxLength: f.max } : {}), ...(f.format ? { inputMode: f.format === "amount" ? "decimal" : f.format === "phone" ? "tel" : "numeric" } : {}),
       oninput: (e: Event) => {
         const el = e.target as HTMLInputElement;
-        if (f.format) el.value = el.value.replace(f.format === "number" ? /[^0-9]/g : /[^0-9.,]/g, ""); // same keys the bank's form accepts
+        if (f.format) el.value = el.value.replace(new RegExp(FORMATS[f.format].bad, "g"), ""); // same keys the bank's form accepts
         set(el.value);
       } });
   }

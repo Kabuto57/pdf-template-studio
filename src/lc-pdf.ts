@@ -3,7 +3,7 @@
 import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFPage, PDFRadioGroup, StandardFonts, rgb } from "pdf-lib";
 import layout from "./lc-layout.json";
 import { LC } from "./lc";
-import { addChecks, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
+import { FORMATS, addChecks, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
 
 type Item = { k: string; line?: string; x: number; y: number; w?: number; h?: number; x2?: number; y2?: number; size?: number; bold?: boolean;
   align?: string; text?: string; edges?: boolean[]; key?: string; option?: string | null; round?: boolean; multi?: boolean };
@@ -153,7 +153,7 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
       if (typeof v === "string" && v) tf.setText(safe(v).slice(0, f.max));
       tf.addToPage(page, { ...rect, font }); tf.setFontSize(8); tip(tf);
       if (f.kind === "date") tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ F: js('AFDate_FormatEx("dd/mm/yyyy");'), K: js('AFDate_KeystrokeEx("dd/mm/yyyy");') }));
-      else if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${f.format === "number" ? "[^0-9]" : "[^0-9.,]"}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
+      else if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${FORMATS[f.format].bad}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
     }
   };
 

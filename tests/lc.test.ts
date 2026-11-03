@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFString } from "pdf-lib";
-import { buildPdf, extractPdf } from "../src/pdf";
+import { FORMATS, buildPdf, extractPdf } from "../src/pdf";
 import { LC, LC_SAMPLE } from "../src/lc";
 import { buildLcPdf } from "../src/lc-pdf";
 
@@ -56,5 +56,19 @@ describe("red frames without JavaScript", () => {
   ] as const)("%s: ticking Bill of lading frames its 3 questions", async (_, make, n) => {
     const form = (await PDFDocument.load(await make())).getForm();
     expect(form.getCheckBox("doc_bill_of_lading").acroField.getWidgets().length).toBe(n);
+  });
+});
+
+describe("formats", () => {
+  it("phone and account numbers: right keys, right shape", () => {
+    expect(["+65 6123 4567", "(021) 5888-1234"].every(v => FORMATS.phone.ok.test(v))).toBe(true);
+    expect(["abc", "6123 ext 4", "+"].some(v => FORMATS.phone.ok.test(v))).toBe(false);
+    expect(new RegExp(FORMATS.phone.bad).test("a")).toBe(true);
+    expect(["072-123456-7", "0721234567"].every(v => FORMATS.account.ok.test(v))).toBe(true);
+    expect(["072 123", "ABC123", "-12"].some(v => FORMATS.account.ok.test(v))).toBe(false);
+  });
+  it("the sample answers pass their own formats", () => {
+    for (const f of LC.template.sections.flatMap(s => s.fields))
+      if (f.format && typeof LC_SAMPLE[f.id] === "string") expect(FORMATS[f.format].ok.test(LC_SAMPLE[f.id] as string), f.id).toBe(true);
   });
 });
