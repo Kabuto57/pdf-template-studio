@@ -27,7 +27,7 @@ async function fieldBoxes(bytes: Uint8Array) {
 interface Opened { result: Extracted; name: string; bytes: Uint8Array; mail?: Mail; vendor?: string }
 let current: Opened | undefined, showEmpty = false, showPdf = innerWidth >= 1200; // wide screens: the PDF beside the data
 let pane: { el: HTMLElement; pages: HTMLElement[] } | undefined; // the rendered PDF, kept while the same application is open
-let boxes = new Map<string, Box[]>(), sel = ""; // where each answer sits in the PDF; the row being shown
+let boxes = new Map<string, Box[]>(), sel = "", nums = new Map<string, number>(); // nums: the answer numbers pinned on the PDF // where each answer sits in the PDF; the row being shown
 let checked = new Set<string>(); // rows the ops officer has ticked as checked
 
 const show = (v: Value | undefined) => v === true ? "Yes" : v === false || v === undefined ? "" : Array.isArray(v) ? v.join(", ") : v;
@@ -119,9 +119,22 @@ function render() {
     ["Documents", `${rows.filter(r => r.id.startsWith("doc_") && r.value === true).length} required`],
   ] : rows.filter(r => r.required && show(r.value)).slice(0, 6).map(r => [r.label, show(r.value)]);
 
+  // With the PDF beside it, list the answers in the PDF's own order (page, then top to bottom, left to right) and number
+  // them; the same numbers are pinned on the PDF. Otherwise, by the form's sections.
+  const visible = (r: Row) => showEmpty || !!show(r.value) || !!r.required;
   const sections = new Map<string, Row[]>();
-  for (const r of rows) sections.set(r.section || "Answers", [...sections.get(r.section || "Answers") ?? [], r]);
+  nums = new Map();
+  if (showPdf && boxes.size) {
+    const at = (r: Row) => { const b = where(r.id)[0]; return b ? [b.page, Math.round((b.ph - b.y - b.h) / 6), b.x] : [Infinity, 0, 0]; };
+    const sorted = rows.filter(visible).map(r => ({ r, k: at(r) })).sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2]);
+    for (const { r, k } of sorted) {
+      if (k[0] !== Infinity) nums.set(r.id, nums.size + 1);
+      const title = k[0] === Infinity ? "Not found in the PDF's boxes" : `Page ${k[0] + 1}`;
+      sections.set(title, [...sections.get(title) ?? [], r]);
+    }
+  } else for (const r of rows) sections.set(r.section || "Answers", [...sections.get(r.section || "Answers") ?? [], r]);
 
+  const pdfTop = pane?.el.scrollTop ?? 0; // moving the PDF pane into the new layout would reset its scroll
   $("#work").replaceChildren(
     h("div", { className: "app-head" },
       h("div", { className: "t" },
@@ -152,14 +165,15 @@ function render() {
       h("span", { className: "muted small" }, `${rows.filter(r => checked.has(r.id) && show(r.value)).length} of ${rows.filter(r => show(r.value)).length} answers checked by you`),
       h("button", { type: "button", onclick: () => { rows.filter(r => show(r.value) && !flags(r.id).length).forEach(r => checked.add(r.id)); render(); } }, "Tick all with no flags")),
     ...[...sections].map(([title, rs]) => {
-      const shown = rs.filter(r => showEmpty || show(r.value) || r.required);
+      const shown = rs.filter(visible);
       return shown.length ? h("div", { className: "sec" }, h("h3", {}, title), h("table", {}, h("tbody", {}, ...shown.map(r => {
         const val = show(r.value), blank = !val && r.required;
         const why = flags(r.id);
         const at = where(r.id);
         return h("tr", { className: `${blank || why.length ? "missing" : ""}${at.length ? " findable" : ""}${sel === r.id ? " sel" : ""}`, title: at.length ? "Click to show it in the PDF" : "",
           onclick: (e: Event) => { if (at.length && !(e.target as HTMLElement).matches("input")) locate(r.id); } },
-          h("th", { scope: "row" }, r.label, r.required ? " *" : ""),
+          h("th", { scope: "row" }, nums.has(r.id) ? h("span", { className: "num" }, String(nums.get(r.id))) : "", r.label, r.required ? " *" : "",
+            nums.size && r.section ? h("span", { className: "in-sec" }, r.section) : ""),
           h("td", {}, blank ? "Missing" : r.value === true ? "Yes" : val || h("span", { className: "muted" }, "—"),
             ...why.map(w => h("div", { className: "flag" }, w))),
           h("td", { className: "tick" }, val ? h("input", { type: "checkbox", title: "Checked", "aria-label": `${r.label} checked`, checked: checked.has(r.id),
@@ -168,12 +182,15 @@ function render() {
     })),
     showPdf ? pdfPane() : ""),
   );
+  if (pane) pane.el.scrollTop = pdfTop;
+  if (showPdf) pins();
   if (showPdf && !pane!.pages.length) {
     const open = current!;
     text().then(m => m.renderPages(open.bytes, Math.min(pane!.el.clientWidth - 24, 860))).then(cs => {
       if (current !== open || !pane) return;
       pane.pages = cs.map((c, i) => h("div", { className: "pg", "aria-label": `Page ${i + 1}` }, c));
       pane.el.replaceChildren(...pane.pages);
+      pins();
       if (sel) locate(sel);
     });
   }
@@ -185,7 +202,19 @@ function pdfPane() {
   pane ??= { el: h("div", { className: "pdf-view", role: "region", "aria-label": "The PDF as received" }, h("p", { className: "muted" }, "Loading the PDF…")), pages: [] };
   return pane.el;
 }
-function locate(id: string) {
+/** Numbered pins on the PDF, one per listed answer; clicking one finds its row. */
+function pins() {
+  if (!pane?.pages.length) return;
+  pane.el.querySelectorAll(".pin").forEach(e => e.remove());
+  for (const [id, n] of nums) {
+    const b = where(id)[0];
+    if (!b) continue;
+    pane.pages[b.page]?.append(h("button", { type: "button", className: `pin${id === sel ? " on" : ""}`, title: `Answer ${n}: show it in the list`, "aria-label": `Answer ${n}`,
+      style: `left:${(b.x / b.pw) * 100}%;top:${((b.ph - b.y - b.h) / b.ph) * 100}%`,
+      onclick: () => { locate(id, false); document.querySelector(".sec tr.sel")?.scrollIntoView({ block: "center", behavior: "smooth" }); } }, String(n)));
+  }
+}
+function locate(id: string, scrollPdf = true) {
   sel = id;
   if (!showPdf) { showPdf = true; render(); return; }
   document.querySelectorAll(".sec tr.sel").forEach(e => e.classList.remove("sel"));
@@ -198,7 +227,7 @@ function locate(id: string) {
     return m;
   });
   const first = marks[0];
-  if (first) pane.el.scrollTo({ top: first.offsetTop + (first.parentElement as HTMLElement).offsetTop - pane.el.clientHeight / 3, behavior: "smooth" });
+  if (first && scrollPdf) pane.el.scrollTo({ top: first.offsetTop + (first.parentElement as HTMLElement).offsetTop - pane.el.clientHeight / 3, behavior: "smooth" });
 }
 
 // ---- Submit to workflow (simulated: the real one would create an iBPM case) ----
