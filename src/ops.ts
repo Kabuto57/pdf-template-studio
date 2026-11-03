@@ -1,7 +1,7 @@
 // Trade Ops workbench (demo): open an emailed application PDF, read every answer exactly, check it, show it.
 import "./ops.css";
 import { $, download, h } from "./dom";
-import { FORMATS, extractPdf, isRequired, slug, type Extracted, type Row, type Template, type Value } from "./pdf";
+import { BAD_CHARS, FORMATS, extractPdf, isRequired, slug, type Extracted, type Row, type Template, type Value } from "./pdf";
 import { inbox, saveMail, type Mail } from "./mailbox";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
@@ -56,6 +56,8 @@ function problems(t: Template | undefined, data: Record<string, unknown>) {
     if (!v) continue;
     if (f.kind === "date" && !date(v)) out.push(`${f.label}: "${v}" is not a valid DD/MM/YYYY date`);
     if (f.format && !FORMATS[f.format].ok.test(v)) out.push(`${f.label}: "${v}" ${FORMATS[f.format].say}`);
+    const odd = [...new Set(v.match(new RegExp(BAD_CHARS, "g")))];
+    if (odd.length) out.push(`${f.label}: unusual characters ${odd.join(" ")}`);
     if (f.max && v.length > f.max) out.push(`${f.label}: longer than ${f.max} characters`);
   }
   const ship = date(String(data.latest_shipment_date ?? "")), expiry = date(String(data.expiry_date ?? ""));

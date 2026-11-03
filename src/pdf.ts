@@ -27,6 +27,8 @@ export const FORMATS = {
   account: { bad: "[^0-9-]", ok: /^\d[\d-]*\d$|^\d$/, say: "is not an account number (digits and - only)" },
 };
 export type Format = keyof typeof FORMATS;
+// "Funny characters": anything but what the bank's SWIFT messages carry, plus # & @ % (unit numbers, company names).
+export const BAD_CHARS = "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]";
 export type Values = Record<string, Value>;
 
 export const isRequired = (f: Field, v: Values) => !!f.required || !!f.requiredIf?.some(r => {
@@ -267,12 +269,15 @@ export function addRedFrames(doc: PDFDocument, form: ReturnType<PDFDocument["get
 export function addChecks(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, font: PDFFont, t: Template, js: (code: string) => PDFObject,
   underlined: Set<string> = new Set()) { // fields drawn as a bottom line: no outline once filled
   const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
-  const model: Record<string, { k: Kind; l: string; c?: 1; s?: 1; u?: 1; o?: string[]; r?: [string, string[], 0 | 1][] }> = {};
+  const model: Record<string, { k: Kind; l: string; c?: 1; s?: 1; u?: 1; o?: string[]; r?: [string, string[], 0 | 1][]; v?: [string, string] | 1 }> = {};
   const add = (f: Field) => model[f.id] ??= { k: f.kind, l: safe(f.label), ...(f.kind === "checks" ? { o: (f.options ?? []).map(safe) } : {}), ...(underlined.has(f.id) ? { u: 1 as const } : {}) };
   for (const f of all.filter(f => f.required || f.requiredIf)) {
     Object.assign(add(f), { c: 1 as const }, f.required ? { s: 1 as const } : {}, f.requiredIf ? { r: f.requiredIf.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]) } : {});
     for (const r of f.requiredIf ?? []) { const by = byId.get(r.field); if (by) add(by); }
   }
+  // Typed answers are checked too: ordinary characters only, and the box's format (phone, amount, ...).
+  for (const f of all.filter(f => f.kind === "text" || f.kind === "long" || f.kind === "date"))
+    add(f).v = f.format ? [FORMATS[f.format].ok.source, FORMATS[f.format].say] : 1;
   // The rules engine lives once, as a document-level script; every field and button calls lcRules(this).
   const lib = `function lcRules(d) {
 var M = ${JSON.stringify(model)};
@@ -295,17 +300,27 @@ function need(id) {
   }
   return false;
 }
-var miss = [], id, m, q, b, names, i, f;
+function wrong(id) { // what is wrong with a typed answer, or ""
+  var m = M[id], f = d.getField(id), s = f ? f.valueAsString : "", x, k;
+  if (!m.v || !s) return "";
+  x = s.match(new RegExp(${JSON.stringify(BAD_CHARS)}, "g"));
+  if (x) { k = []; for (var i = 0; i < x.length; i++) if (!has(k, x[i])) k.push(x[i]); return "remove " + k.join(" ") + " (letters, digits and . , - / ( ) ' : ? + # & @ % only)"; }
+  if (m.k == "date") { x = /^(\\d\\d)\\/(\\d\\d)\\/(\\d{4})$/.exec(s); k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? "" : "not a real date (DD/MM/YYYY)"; }
+  return m.v.length && !new RegExp(m.v[0]).test(s) ? m.v[1] : "";
+}
+var miss = [], bad = [], id, m, q, b, w, names, i, f;
 try {
 for (id in M) {
-  m = M[id]; if (!m.c) continue;
-  q = need(id); b = q && (m.k == "check" ? val(id) != "true" : empty(val(id)));
+  m = M[id]; if (!m.c && !m.v) continue;
+  q = m.c ? need(id) : false; b = q && (m.k == "check" ? val(id) != "true" : empty(val(id)));
   if (b) miss.push(m.l);
+  w = wrong(id); if (w) { bad.push(m.l + ": " + w); b = true; }
   names = [id]; if (m.k == "checks") { names = []; for (i = 0; i < m.o.length; i++) names.push(id + "__" + i); }
-  for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.k != "checks") f.required = q;
+  for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.c && m.k != "checks") f.required = q;
     f.lineWidth = b || !m.u ? 1 : 0; f.strokeColor = b ? color.red : m.u ? color.transparent : color.black; f.fillColor = b ? ["RGB", 1, 0.88, 0.88] : m.u ? color.transparent : color.white; }
 }
 } catch (e) { console.println("lcRules: " + e); }
+miss.bad = bad;
 return miss;
 }`;
   // A script stream, not a string: no 32,767-byte limit however many rules a form has.
@@ -328,9 +343,12 @@ return miss;
   calc.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ C: run() }));
   form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj([calc.ref]));
 
-  const report = (always: boolean) => `var m = typeof lcRules == "function" ? lcRules(this) : [];
-if (m.length) app.alert("This form is not complete: " + m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank (outlined in red):\\n\\n- " + m.slice(0, 20).join("\\n- ") + (m.length > 20 ? "\\n- ..." : "") + "\\n\\nPlease fill them in before you send the form.", 1);
-${always ? 'else app.alert("All mandatory questions are answered. You can save the form and send it.", 3);' : ""}`;
+  const report = (always: boolean) => `var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\\n- ") + (a.length > 15 ? "\\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\\n" + list(b));
+if (t.length) app.alert("This form is not ready to send. The boxes concerned are outlined in red.\\n\\n" + t.join("\\n\\n") + "\\n\\nPlease correct them before you send the form.", 1);
+${always ? 'else app.alert("All mandatory questions are answered and every answer is in the right format. You can save the form and send it.", 3);' : ""}`;
   const btn = form.createButton("__check_form");
   btn.addToPage("Check form", page, { x: W - M - 84, y: H - 44, width: 84, height: 18, font, textColor: WHITE, backgroundColor: INK, borderColor: INK });
   btn.setFontSize(9);
