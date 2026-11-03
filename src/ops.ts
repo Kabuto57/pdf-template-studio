@@ -3,11 +3,13 @@ import "./ops.css";
 import { $, download, h } from "./dom";
 import { BAD_CHARS, FORMATS, extractPdf, isRequired, slug, type Extracted, type Row, type Template, type Value } from "./pdf";
 import { inbox, saveMail, type Mail } from "./mailbox";
+import { compare, find } from "./customers";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
 
 interface Opened { result: Extracted; name: string; bytes: Uint8Array; mail?: Mail; vendor?: string }
 let current: Opened | undefined, showEmpty = false, showPdf = false;
+let checked = new Set<string>(); // rows the ops officer has ticked as checked
 
 const show = (v: Value | undefined) => v === true ? "Yes" : v === false || v === undefined ? "" : Array.isArray(v) ? v.join(", ") : v;
 const when = (t: number) => new Date(t).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -40,7 +42,7 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
       }
     }
     if (!result?.rows.length) throw new Error("this PDF has no form fields. A scanned form would need OCR.");
-    current = { result, name, bytes, mail, vendor };
+    current = { result, name, bytes, mail, vendor }; checked = new Set();
     render(); renderInbox();
   } catch (err) {
     $("#work").replaceChildren(h("div", { className: "banner bad", role: "alert" }, `Could not read ${name}: ${(err as Error).message}`));
@@ -50,18 +52,19 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
 // ---- Checks ----
 const date = (s: string) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s); const d = m && new Date(+m[3], +m[2] - 1, +m[1]); return d && d.getDate() === +m![1] ? d : undefined; };
 function problems(t: Template | undefined, data: Record<string, unknown>) {
-  const out: string[] = [];
+  const out: { id: string; msg: string }[] = [];
+  const push = (id: string, msg: string) => out.push({ id, msg });
   for (const f of t?.sections.flatMap(s => s.fields) ?? []) {
     const v = typeof data[f.id] === "string" ? data[f.id] as string : "";
     if (!v) continue;
-    if (f.kind === "date" && !date(v)) out.push(`${f.label}: "${v}" is not a valid DD/MM/YYYY date`);
-    if (f.format && !FORMATS[f.format].ok.test(v)) out.push(`${f.label}: "${v}" ${FORMATS[f.format].say}`);
+    if (f.kind === "date" && !date(v)) push(f.id, `"${v}" is not a valid DD/MM/YYYY date`);
+    if (f.format && !FORMATS[f.format].ok.test(v)) push(f.id, `"${v}" ${FORMATS[f.format].say}`);
     const odd = [...new Set(v.match(new RegExp(BAD_CHARS, "g")))];
-    if (odd.length) out.push(`${f.label}: unusual characters ${odd.join(" ")}`);
-    if (f.max && v.length > f.max) out.push(`${f.label}: longer than ${f.max} characters`);
+    if (odd.length) push(f.id, `unusual characters ${odd.join(" ")}`);
+    if (f.max && v.length > f.max) push(f.id, `longer than ${f.max} characters`);
   }
   const ship = date(String(data.latest_shipment_date ?? "")), expiry = date(String(data.expiry_date ?? ""));
-  if (ship && expiry && expiry < ship) out.push("Date of expiry is before the latest shipment date");
+  if (ship && expiry && expiry < ship) push("expiry_date", "before the latest shipment date");
   return out;
 }
 
@@ -70,6 +73,13 @@ function render() {
   const { result, name, mail, vendor } = current!, { rows, data, template } = result;
   const missing = rows.filter(r => r.required && !show(r.value));
   const issues = problems(template, data);
+  const label = (id: string) => rows.find(r => r.id === id)?.label ?? id;
+  // Applicant details against the bank's customer record.
+  const cust = "applicant_name" in data && v0(data.applicant_name) ? find(data.applicant_name) : undefined;
+  const matches = cust ? compare(cust, data) : [];
+  for (const m of matches) if (!m.ok) issues.push({ id: m.id, msg: `differs from customer record (${m.record})` });
+  const noRecord = "applicant_name" in data && v0(data.applicant_name) && !cust;
+  const flags = (id: string) => issues.filter(i => i.id === id).map(i => i.msg);
   const v = (id: string) => show(data[id] as Value);
   const isLc = "doc_bill_of_lading" in data;
   const facts: [string, string][] = isLc ? [
@@ -101,26 +111,38 @@ function render() {
           toast(`Sent to the workflow (BPM) as case ${caseId}.`); render(); renderInbox();
         } }, mail?.status === "processed" ? `In workflow: ${mail.caseId}` : "Send to workflow"))),
     missing.length || issues.length
-      ? h("div", { className: "banner bad", role: "alert" }, h("b", {}, `Needs attention: ${missing.length} mandatory field${missing.length === 1 ? "" : "s"} blank${issues.length ? `, ${issues.length} format issue${issues.length > 1 ? "s" : ""}` : ""}`),
-        h("ul", {}, ...missing.map(r => h("li", {}, `${r.section ? `${r.section}: ` : ""}${r.label} is blank`)), ...issues.map(i => h("li", {}, i))))
+      ? h("div", { className: "banner bad", role: "alert" }, h("b", {}, `Needs attention: ${missing.length} mandatory field${missing.length === 1 ? "" : "s"} blank${issues.length ? `, ${issues.length} issue${issues.length > 1 ? "s" : ""} to check` : ""}`),
+        h("ul", {}, ...missing.map(r => h("li", {}, `${r.section ? `${r.section}: ` : ""}${r.label} is blank`)), ...issues.map(i => h("li", {}, `${label(i.id)}: ${i.msg}`))))
       : h("div", { className: "banner ok", role: "status" }, h("b", {}, "Complete. "), `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. Read directly from the PDF's fields: no OCR, nothing retyped.`),
     pdfBox,
     h("div", { className: "facts" }, ...facts.map(([k, val]) => h("div", {}, h("span", {}, k), h("b", {}, val || "—")))),
+    cust ? h("div", { className: "sec cust" }, h("h3", {}, `Customer record · ${cust.cif} · ${cust.name}`),
+      h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "In the form"), h("th", {}, "Bank's record"), h("th", {}, ""))),
+        h("tbody", {}, ...matches.map(m => h("tr", { className: m.ok ? "" : "missing" }, h("th", { scope: "row" }, m.label), h("td", {}, m.form), h("td", {}, m.record),
+          h("td", {}, m.ok ? h("span", { className: "yes" }, "✓ Matches") : "✗ Differs"))))))
+      : noRecord ? h("div", { className: "banner bad", role: "alert" }, h("b", {}, "Not an existing customer. "), `No customer record for "${v("applicant_name")}": check the name, or start customer onboarding (KYC).`) : "",
     h("div", { className: "toggles" },
       h("label", {}, h("input", { type: "checkbox", checked: showEmpty, onchange: (e: Event) => { showEmpty = (e.target as HTMLInputElement).checked; render(); } }), "Show empty fields"),
-      h("span", { className: "muted small" }, `${rows.filter(r => show(r.value)).length} of ${rows.length} fields answered`)),
+      h("span", { className: "muted small" }, `${rows.filter(r => show(r.value)).length} of ${rows.length} fields answered`),
+      h("span", { className: "muted small" }, `${rows.filter(r => checked.has(r.id) && show(r.value)).length} of ${rows.filter(r => show(r.value)).length} answers checked by you`),
+      h("button", { type: "button", onclick: () => { rows.filter(r => show(r.value) && !flags(r.id).length).forEach(r => checked.add(r.id)); render(); } }, "Tick all with no flags")),
     ...[...sections].map(([title, rs]) => {
       const shown = rs.filter(r => showEmpty || show(r.value) || r.required);
       return shown.length ? h("div", { className: "sec" }, h("h3", {}, title), h("table", {}, h("tbody", {}, ...shown.map(r => {
         const val = show(r.value), blank = !val && r.required;
-        return h("tr", { className: blank ? "missing" : "" }, h("th", { scope: "row" }, r.label, r.required ? " *" : ""),
-          h("td", {}, blank ? "Missing" : r.value === true ? h("span", { className: "yes" }, "✓ Yes") : val || h("span", { className: "muted" }, "—")));
+        const why = flags(r.id);
+        return h("tr", { className: blank || why.length ? "missing" : "" }, h("th", { scope: "row" }, r.label, r.required ? " *" : ""),
+          h("td", {}, blank ? "Missing" : r.value === true ? h("span", { className: "yes" }, "✓ Yes") : val || h("span", { className: "muted" }, "—"),
+            ...why.map(w => h("div", { className: "flag" }, `⚠ ${w}`))),
+          h("td", { className: "tick" }, val ? h("input", { type: "checkbox", title: "Checked", "aria-label": `${r.label} checked`, checked: checked.has(r.id),
+            onchange: (e: Event) => { (e.target as HTMLInputElement).checked ? checked.add(r.id) : checked.delete(r.id); render(); } }) : ""));
       })))) : "";
     }),
   );
   if (showPdf) text().then(m => m.renderPages(current!.bytes, Math.min(pdfBox.clientWidth - 28, 860))).then(pages => pdfBox.replaceChildren(...pages));
 }
 
+const v0 = (x: unknown) => typeof x === "string" && x.trim() !== "";
 const csv = (rows: Row[]) => ["section,question,key,value", ...rows.map(r => [r.section, r.label, r.id, show(r.value)].map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
 
 // ---- Upload ----

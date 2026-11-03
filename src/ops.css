@@ -80,3 +80,7 @@ th, td { text-align: left; vertical-align: top; padding: 5px 12px; border-bottom
   .ops-main { grid-template-columns: 1fr; } .inbox { max-height: 40vh; }
   .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .banner ul { columns: 1; }
 }
+.flag { font-size: 12px; font-weight: 600; color: var(--bad); margin-top: 2px; }
+.sec td.tick { width: 34px; text-align: center; }
+.cust th { width: 22%; }
+.cust thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--grey); }
