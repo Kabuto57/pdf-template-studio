@@ -2,7 +2,7 @@
 import "./ops.css";
 import { $, download, h } from "./dom";
 import { BAD_CHARS, FORMATS, extractPdf, isRequired, slug, type Extracted, type Row, type Template, type Value } from "./pdf";
-import { inbox, saveMail, type Mail } from "./mailbox";
+import { STAGES, deleteMail, inbox, saveMail, type Mail } from "./mailbox";
 import { compare, find } from "./customers";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
@@ -75,6 +75,7 @@ function problems(t: Template | undefined, data: Record<string, unknown>) {
 
 // ---- The application ----
 function render() {
+  nav("inbox");
   const { result, name, mail, vendor } = current!, { rows, data, template } = result;
   const missing = rows.filter(r => r.required && !show(r.value));
   const issues = problems(template, data);
@@ -110,11 +111,9 @@ function render() {
         h("button", { type: "button", onclick: () => download(JSON.stringify(data, null, 2), `${slug(template?.title ?? name)}.json`, "application/json") }, "JSON"),
         h("button", { type: "button", onclick: () => download(csv(rows), `${slug(template?.title ?? name)}.csv`, "text/csv") }, "CSV"),
         missing.length ? h("button", { type: "button", onclick: () => toast(`Email to ${mail?.from ?? "the customer"} drafted, listing ${missing.length} missing item${missing.length > 1 ? "s" : ""}.`) }, "Return to customer") : "",
-        h("button", { type: "button", className: "primary", disabled: mail?.status === "processed", onclick: async () => {
-          const caseId = `TS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
-          if (mail) { mail.status = "processed"; mail.caseId = caseId; await saveMail(mail); }
-          toast(`Sent to the workflow (BPM) as case ${caseId}.`); render(); renderInbox();
-        } }, mail?.status === "processed" ? `In workflow: ${mail.caseId}` : "Send to workflow"))),
+        h("button", { type: "button", className: "danger", onclick: () => remove() }, "Delete"),
+        mail?.caseId ? h("button", { type: "button", onclick: () => showCase(mail) }, `Case ${mail.caseId}`)
+          : h("button", { type: "button", className: "primary", onclick: () => submit({ cust, amount: [v("currency"), v("amount")].filter(Boolean).join(" "), issues: missing.length + issues.length }) }, "Submit to workflow"))),
     missing.length || issues.length
       ? h("div", { className: "banner bad", role: "alert" }, h("b", {}, `Needs attention: ${missing.length} mandatory field${missing.length === 1 ? "" : "s"} blank${issues.length ? `, ${issues.length} issue${issues.length > 1 ? "s" : ""} to check` : ""}`),
         h("ul", {}, ...missing.map(r => h("li", {}, `${r.section ? `${r.section}: ` : ""}${r.label} is blank`)), ...issues.map(i => h("li", {}, `${label(i.id)}: ${i.msg}`))))
@@ -146,6 +145,92 @@ function render() {
   );
   if (showPdf) text().then(m => m.renderPages(current!.bytes, Math.min(pdfBox.clientWidth - 28, 860))).then(pages => pdfBox.replaceChildren(...pages));
 }
+
+// ---- Delete ----
+async function remove() {
+  const { name, mail } = current!;
+  if (!await ask("Delete this application?", `${mail ? `The email from ${mail.from} and its case, if any, will be removed from the mailbox` : `${name} will be closed`}. This cannot be undone.`, "Delete", "danger")) return;
+  if (mail) await deleteMail(mail.id);
+  current = undefined;
+  $("#work").replaceChildren(h("div", { className: "empty-state" }, h("h2", {}, "Application deleted"), h("p", {}, "Select another email in the mailbox, or drop a PDF.")));
+  renderInbox(); toast(`${name} deleted.`);
+}
+
+/** A small modal (native <dialog>): resolves true when the main button is pressed. */
+function ask(title: string, text: string | Node, ok: string, cls = "primary", body: Node[] = []) {
+  return new Promise<boolean>(done => {
+    const d = h("dialog", { className: "modal" }, h("form", { method: "dialog" },
+      h("h2", {}, title), typeof text === "string" ? h("p", {}, text) : text, ...body,
+      h("div", { className: "modal-btns" }, h("button", { value: "cancel", formNoValidate: true }, "Cancel"), h("button", { value: "ok", className: cls }, ok)))) as HTMLDialogElement;
+    d.onclose = () => { done(d.returnValue === "ok"); d.remove(); };
+    document.body.append(d); d.showModal();
+  });
+}
+
+// ---- Submit to workflow (an iBPM-style case) ----
+const CASE_TYPES = ["Import LC: Issuance", "Import LC: Amendment", "Standby LC", "Banker's Guarantee", "Export LC: Documents", "Export Collection", "Trade Financing"];
+const QUEUES = ["Trade Ops Import: Maker", "Trade Ops Import: Checker", "Trade Ops Guarantees: Maker", "Trade Ops Export: Maker"];
+async function submit(info: { cust?: { cif: string; name: string }; amount: string; issues: number }) {
+  const o = current!, title = o.result.template?.title ?? o.name;
+  const type = /amendment/i.test(title) && /credit|LC/.test(title) ? CASE_TYPES[1] : /standby/i.test(title) ? CASE_TYPES[2] : /guarantee/i.test(title) ? CASE_TYPES[3]
+    : /export documentary credit|EBLC/i.test(title) ? CASE_TYPES[4] : /collection/i.test(title) ? CASE_TYPES[5] : /financing/i.test(title) ? CASE_TYPES[6] : CASE_TYPES[0];
+  const name = String(o.result.data.applicant_name ?? "");
+  const field = (label: string, el: HTMLElement) => h("label", { className: "fld" }, h("span", {}, label), el);
+  const sel = (opts: string[], v: string) => h("select", {}, ...opts.map(x => h("option", { selected: x === v }, x))) as HTMLSelectElement;
+  const typeEl = sel(CASE_TYPES, type), prio = sel(["Normal", "Urgent"], "Normal"), queue = sel(QUEUES, type === CASE_TYPES[3] ? QUEUES[2] : /Export/.test(type) ? QUEUES[3] : QUEUES[0]);
+  const remarks = h("textarea", { rows: 3, required: info.issues > 0, placeholder: info.issues ? "Required: why it can go ahead with outstanding issues" : "Optional" }) as HTMLTextAreaElement;
+  const grid = h("div", { className: "fld-grid" },
+    field("Case type", typeEl), field("Priority", prio),
+    field("Customer", h("input", { value: info.cust ? `${info.cust.name} (${info.cust.cif})` : `${name || "Unknown"} (no customer record)`, readOnly: true })),
+    field("Amount", h("input", { value: info.amount || "—", readOnly: true })),
+    field("Route to queue", queue), field("Attachments", h("input", { value: `${o.name}, extracted data (JSON)`, readOnly: true })));
+  const warn = info.issues ? h("p", { className: "modal-warn" }, `This application has ${info.issues} outstanding item${info.issues > 1 ? "s" : ""}. Add a remark to submit anyway, or Cancel and return it to the customer.`) : "";
+  if (!await ask("Submit to workflow", h("p", { className: "muted" }, "Creates a case in the workflow (iBPM) with this application and its extracted data. Intake is completed by you."), "Submit case", "primary",
+    [grid, warn || h("span"), field("Remarks", remarks)])) return;
+  const mail = o.mail ?? { id: crypto.randomUUID(), from: "Uploaded file", to: "", subject: title, body: "", sent: Date.now(), file: { name: o.name, bytes: o.bytes }, status: "new" as const };
+  mail.caseId = `TS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
+  mail.status = "processed";
+  mail.case = { type: typeEl.value, priority: prio.value as "Normal" | "Urgent", queue: queue.value, remarks: remarks.value.trim(), stage: 1, submitted: Date.now(),
+    customer: info.cust?.name ?? name, cif: info.cust?.cif ?? "", amount: info.amount, issues: info.issues };
+  await saveMail(mail); o.mail = mail; renderInbox();
+  toast(`Case ${mail.caseId} created and routed to ${queue.value}.`);
+  showCase(mail);
+}
+
+// ---- Cases ----
+function nav(on: "inbox" | "cases") { $("#navInbox").classList.toggle("on", on === "inbox"); $("#navCases").classList.toggle("on", on === "cases"); }
+async function renderCases() {
+  nav("cases");
+  const cases = (await inbox().catch(() => [] as Mail[])).filter(m => m.case);
+  $("#work").replaceChildren(h("div", { className: "app-head" }, h("div", { className: "t" }, h("h2", {}, "Cases"), h("div", { className: "src" }, `${cases.length} case${cases.length === 1 ? "" : "s"} submitted to the workflow`))),
+    cases.length ? h("div", { className: "sec" }, h("table", { className: "cases" },
+      h("thead", {}, h("tr", {}, ...["Case ID", "Type", "Customer", "Amount", "Stage", "Queue", "Priority", "Submitted"].map(x => h("th", {}, x)))),
+      h("tbody", {}, ...cases.map(m => h("tr", { tabIndex: 0, onclick: () => showCase(m), onkeydown: (e: KeyboardEvent) => e.key === "Enter" && showCase(m) },
+        h("td", {}, h("b", {}, m.caseId!)), h("td", {}, m.case!.type), h("td", {}, m.case!.customer), h("td", {}, m.case!.amount || "—"),
+        h("td", {}, h("span", { className: "chip" }, `Pending ${STAGES[m.case!.stage].toLowerCase()}`)), h("td", {}, m.case!.queue),
+        h("td", {}, m.case!.priority === "Urgent" ? h("span", { className: "chip bad" }, "Urgent") : "Normal"), h("td", {}, when(m.case!.submitted)))))))
+      : h("div", { className: "empty-state" }, h("h2", {}, "No cases yet"), h("p", {}, "Open an application and press Submit to workflow.")));
+}
+function showCase(m: Mail) {
+  nav("cases");
+  const c = m.case!;
+  const rows: [string, string][] = [["Case type", c.type], ["Customer", c.cif ? `${c.customer} (${c.cif})` : `${c.customer} (no customer record)`], ["Amount", c.amount || "—"],
+    ["Priority", c.priority], ["Current queue", c.queue], ["Outstanding items at intake", String(c.issues)], ["Remarks", c.remarks || "—"], ["Attachments", `${m.file.name}, extracted data (JSON)`]];
+  $("#work").replaceChildren(
+    h("div", { className: "app-head" },
+      h("div", { className: "t" }, h("h2", {}, `Case ${m.caseId}`), h("div", { className: "src" }, `Created ${when(c.submitted)} by Ops officer · from ${m.from}`)),
+      h("div", { className: "actions" },
+        h("button", { type: "button", onclick: () => renderCases() }, "All cases"),
+        h("button", { type: "button", onclick: () => { nav("inbox"); open(m.file.bytes, m.file.name, m); } }, "Open application"))),
+    h("ol", { className: "stages" }, ...STAGES.map((s, i) => h("li", { className: i < c.stage ? "done" : i === c.stage ? "now" : "" }, h("b", {}, s), h("span", {}, i < c.stage ? "Completed" : i === c.stage ? "Pending" : "")))),
+    h("div", { className: "sec" }, h("h3", {}, "Case details"), h("table", {}, h("tbody", {}, ...rows.map(([k, val]) => h("tr", {}, h("th", { scope: "row" }, k), h("td", {}, val)))))),
+    h("div", { className: "sec" }, h("h3", {}, "History"), h("table", {}, h("tbody", {},
+      h("tr", {}, h("th", { scope: "row" }, when(m.sent)), h("td", {}, `Application received from ${m.from}`)),
+      h("tr", {}, h("th", { scope: "row" }, when(c.submitted)), h("td", {}, `Intake completed by Ops officer; case created and routed to ${c.queue}`))))),
+  );
+}
+$("#navInbox").onclick = () => { nav("inbox"); current ? render() : $("#work").replaceChildren(h("div", { className: "empty-state" }, h("h2", {}, "No application open"), h("p", {}, "Select an email in the mailbox, or drop a PDF."))); };
+$("#navCases").onclick = () => renderCases();
 
 const v0 = (x: unknown) => typeof x === "string" && x.trim() !== "";
 const csv = (rows: Row[]) => ["section,question,key,value", ...rows.map(r => [r.section, r.label, r.id, show(r.value)].map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");

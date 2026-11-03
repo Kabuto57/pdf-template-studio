@@ -3,8 +3,14 @@
 // by real email can still be dropped into the workbench.
 export interface Mail {
   id: string; from: string; to: string; subject: string; body: string; sent: number;
-  file: { name: string; bytes: Uint8Array }; status: "new" | "processed"; caseId?: string;
+  file: { name: string; bytes: Uint8Array }; status: "new" | "processed"; caseId?: string; case?: Case;
 }
+/** A workflow case (like iBPM): created when Ops submits an application. */
+export interface Case {
+  type: string; priority: "Normal" | "Urgent"; queue: string; remarks: string; stage: number; submitted: number;
+  customer: string; cif: string; amount: string; issues: number;
+}
+export const STAGES = ["Intake", "Maker", "Checker", "Approval", "Completed"];
 export const OPS_ADDRESS = "trade.ops@demobank.example";
 
 function store(mode: IDBTransactionMode): Promise<IDBObjectStore> {
@@ -21,4 +27,5 @@ export const sendMail = async (m: Omit<Mail, "id" | "sent" | "status">) =>
   run((await store("readwrite")).put({ ...m, id: crypto.randomUUID(), sent: Date.now(), status: "new" }));
 export const saveMail = async (m: Mail) => run((await store("readwrite")).put(m));
 export const inbox = async () => (await run((await store("readonly")).getAll() as IDBRequest<Mail[]>)).sort((a, b) => b.sent - a.sent);
+export const deleteMail = async (id: string) => run((await store("readwrite")).delete(id));
 export const clearInbox = async () => run((await store("readwrite")).clear());
