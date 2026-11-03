@@ -41,7 +41,12 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
         result = { template, rows, data: values }; vendor = forms[0].title;
       }
     }
-    if (!result?.rows.length) throw new Error("this PDF has no form fields. A scanned form would need OCR.");
+    if (!result?.rows.length) {
+      const lines = await text().then(m => m.readText(bytes)).catch(() => []);
+      throw new Error(lines.length
+        ? "its form fields were removed. This happens when a form is printed or \"Saved as PDF\" (for example from Chrome or Edge). Ask the customer to save the form with Save in Acrobat or Preview, not Print, and send that file."
+        : "this PDF has no form fields and no text. It looks like a scan, which would need OCR.");
+    }
     current = { result, name, bytes, mail, vendor }; checked = new Set();
     render(); renderInbox();
   } catch (err) {
@@ -147,7 +152,7 @@ const csv = (rows: Row[]) => ["section,question,key,value", ...rows.map(r => [r.
 
 // ---- Upload ----
 const take = async (f?: File) => { if (f) open(new Uint8Array(await f.arrayBuffer()), f.name); };
-$<HTMLInputElement>("#pdfIn").onchange = e => take((e.target as HTMLInputElement).files?.[0]);
+$<HTMLInputElement>("#pdfIn").onchange = e => { const el = e.target as HTMLInputElement; take(el.files?.[0]); el.value = ""; }; // so the same file can be chosen again
 const drop = $("#drop");
 addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
 addEventListener("dragleave", () => drop.classList.remove("over"));
