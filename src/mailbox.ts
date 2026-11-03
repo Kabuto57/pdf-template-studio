@@ -3,14 +3,8 @@
 // by real email can still be dropped into the workbench.
 export interface Mail {
   id: string; from: string; to: string; subject: string; body: string; sent: number;
-  file: { name: string; bytes: Uint8Array }; status: "new" | "processed"; caseId?: string; case?: Case;
+  file: { name: string; bytes: Uint8Array }; status: "new" | "processed"; caseId?: string;
 }
-/** A workflow case (like iBPM): created when Ops submits an application. */
-export interface Case {
-  type: string; priority: "Normal" | "Urgent"; queue: string; remarks: string; stage: number; submitted: number;
-  customer: string; cif: string; amount: string; issues: number;
-}
-export const STAGES = ["Intake", "Maker", "Checker", "Approval", "Completed"];
 export const OPS_ADDRESS = "trade.ops@demobank.example";
 
 function store(mode: IDBTransactionMode): Promise<IDBObjectStore> {

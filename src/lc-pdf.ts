@@ -3,7 +3,7 @@
 import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFPage, PDFRadioGroup, StandardFonts, rgb } from "pdf-lib";
 import layout from "./lc-layout.json";
 import { LC } from "./lc";
-import { FORMATS, addChecks, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
+import { FORMATS, addChecks, addDateLists, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
 
 type Item = { k: string; line?: string; x: number; y: number; w?: number; h?: number; x2?: number; y2?: number; size?: number; bold?: boolean;
   align?: string; text?: string; edges?: boolean[]; key?: string; option?: string | null; round?: boolean; multi?: boolean };
@@ -146,14 +146,15 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
       dd.addOptions((f.options ?? []).map(safe)); tip(dd);
       if (typeof v === "string" && f.options?.includes(v)) dd.select(safe(v));
       dd.addToPage(page, { ...rect, font }); dd.setFontSize(8);
+    } else if (f.kind === "date") {
+      addDateLists(form, page, f.id, f.label, v, rect, font, 8, rect);
     } else {
       const tf = form.createTextField(f.id);
       if (f.kind === "long" || it.multi) tf.enableMultiline();
       if (f.max) tf.setMaxLength(f.max);
       if (typeof v === "string" && v) tf.setText(safe(v).slice(0, f.max));
       tf.addToPage(page, { ...rect, font }); tf.setFontSize(8); tip(tf);
-      if (f.kind === "date") tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ F: js('AFDate_FormatEx("dd/mm/yyyy");'), K: js('AFDate_KeystrokeEx("dd/mm/yyyy");') }));
-      else if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${FORMATS[f.format].bad}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
+      if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${FORMATS[f.format].bad}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
     }
   };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFTextField, decodePDFRawStream } from "pdf-lib";
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFDropdown, PDFTextField, decodePDFRawStream } from "pdf-lib";
 import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
 
@@ -68,6 +68,14 @@ describe("conditional mandatory questions", () => {
 });
 
 // The rules engine: the document-level script (a stream in the /Names /JavaScript tree).
+// A stand-in for one Acrobat field: null when the PDF has no such field, as in Acrobat.
+type Fake = { value: string; valueAsString: string; required?: boolean; strokeColor?: unknown; fillColor?: unknown } | null;
+const like = (doc: PDFDocument, n: string, v?: string): Fake => {
+  const f = doc.getForm().getFieldMaybe(n);
+  if (!f) return null;
+  const value = v ?? (f instanceof PDFTextField ? "" : f instanceof PDFDropdown ? f.getSelected()[0] ?? "" : "Off");
+  return { value, valueAsString: value };
+};
 const library = (doc: PDFDocument) => {
   const names = ((doc.catalog.lookup(PDFName.of("Names")) as PDFDict).lookup(PDFName.of("JavaScript")) as PDFDict).lookup(PDFName.of("Names")) as PDFArray;
   const stream = (names.lookup(1) as PDFDict).lookup(PDFName.of("JS")) as PDFRawStream;
@@ -79,8 +87,8 @@ describe("checks built into the PDF (Acrobat / Reader)", () => {
   async function acrobat(values: Record<string, string>) {
     const { LC } = await import("../src/lc");
     const doc = await PDFDocument.load(await buildPdf(LC.template));
-    const fields: Record<string, { value: string; required?: boolean; strokeColor?: string }> = {};
-    const acro = { getField: (n: string) => fields[n] ??= { value: values[n] ?? (doc.getForm().getFieldMaybe(n) instanceof PDFTextField ? "" : "Off") } };
+    const fields: Record<string, Fake> = {};
+    const acro = { getField: (n: string) => n in fields ? fields[n] : (fields[n] = like(doc, n, values[n])) };
     const missing = new Function("color", "console", `${library(doc)}; return lcRules(this);`).call(acro, { red: "red", black: "black", white: "white", transparent: "none" }, { println() {} });
     return { fields, missing: missing as string[] };
   }
@@ -131,10 +139,10 @@ describe("every conditional rule lights up its field (the PDF's own script)", as
   for (const [name, make] of [["new design", () => buildPdf(LC.template)], ["original look", () => buildLcPdf()]] as const) {
     const doc = await PDFDocument.load(await make()), lib = library(doc);
     it.each(cases)(`${name}: %s turns red when %s = %s`, (target, by, value) => {
-      const state: Record<string, { value: string; strokeColor?: unknown; fillColor?: unknown; required?: boolean }> = {};
-      const acro = { getField: (n: string) => state[n] ??= { value: n === by ? value : doc.getForm().getFieldMaybe(n) instanceof PDFTextField ? "" : "Off" } };
+      const state: Record<string, Fake> = {};
+      const acro = { getField: (n: string) => n in state ? state[n] : (state[n] = like(doc, n, n === by ? value : undefined)) };
       new Function("color", "console", `${lib}; lcRules(this);`).call(acro, { red: "red", black: "black", white: "white", transparent: "none" }, { println() {} });
-      const shown = byId.get(target)!.kind === "checks" ? state[`${target}__0`] : state[target];
+      const kind = byId.get(target)!.kind, shown = kind === "checks" ? state[`${target}__0`] : kind === "date" ? state[`${target}__dd`] : state[target];
       expect(shown?.strokeColor).toBe("red");
     });
   }

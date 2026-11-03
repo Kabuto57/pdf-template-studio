@@ -8,7 +8,7 @@ describe("LC in the bank's layout", () => {
   it("has a box for every question and gives every answer back", async () => {
     const pdf = await buildLcPdf(LC_SAMPLE);
     const names = new Set((await PDFDocument.load(pdf)).getForm().getFields().map(f => f.getName()));
-    const missing = LC.template.sections.flatMap(s => s.fields).filter(f => f.kind === "checks" ? !names.has(`${f.id}__0`) : !names.has(f.id)).map(f => f.id);
+    const missing = LC.template.sections.flatMap(s => s.fields).filter(f => !names.has(f.kind === "checks" ? `${f.id}__0` : f.kind === "date" ? `${f.id}__dd` : f.id)).map(f => f.id);
     expect(missing).toEqual([]);
     const { data } = await extractPdf(pdf);
     for (const [k, v] of Object.entries(LC_SAMPLE)) expect([k, data[k]]).toEqual([k, v]);
@@ -83,7 +83,10 @@ describe("Check form button: blanks, formats and funny characters", () => {
       const fields: Record<string, any> = {};
       for (const f of LC.template.sections.flatMap(s => s.fields)) {
         const v = values[f.id];
-        if (f.kind === "checks") (f.options ?? []).forEach((o, i) => { fields[`${f.id}__${i}`] = { value: Array.isArray(v) && v.includes(o) ? "Yes" : "Off" }; });
+        if (f.kind === "date") { // three drop-downs: DD, "MM Mon", YYYY
+          const [dd, mm, yy] = typeof v === "string" && v ? v.split("/") : ["DD", "MM", "YYYY"];
+          [dd, mm === "MM" ? mm : `${mm} Mon`, yy].forEach((p, i) => { fields[`${f.id}__${["dd", "mm", "yyyy"][i]}`] = { value: p, valueAsString: p }; });
+        } else if (f.kind === "checks") (f.options ?? []).forEach((o, i) => { fields[`${f.id}__${i}`] = { value: Array.isArray(v) && v.includes(o) ? "Yes" : "Off" }; });
         else fields[f.id] = { value: f.kind === "check" ? (v ? "Yes" : "Off") : v ?? (f.kind === "radio" ? "Off" : ""), valueAsString: String(v ?? "") };
       }
       const d = { getField: (n: string) => fields[n] ?? null };
@@ -101,6 +104,9 @@ describe("Check form button: blanks, formats and funny characters", () => {
     expect(r.bad.join("\n")).toMatch(/expiry.*not a real date/);
     expect(r.bad.join("\n")).toMatch(/Amount.*not an amount/);
     expect(r.red("contact_tel")).toBe(true);
+    expect(r.red("expiry_date__dd")).toBe(true);
+    expect(check({ ...LC_SAMPLE, expiry_date: "" }).miss.join()).toMatch(/expiry/i);
+    expect(check({ ...LC_SAMPLE, expiry_date: "15/MM/2026" }).bad.join()).toMatch(/expiry.*not a real date/i); // month not picked
     expect(check({ ...LC_SAMPLE, applicant_name: "" }).miss).toContain("Applicant name");
   });
 });
