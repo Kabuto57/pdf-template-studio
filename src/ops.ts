@@ -22,7 +22,7 @@ async function renderInbox() {
   $("#inbox").replaceChildren(...(mails.length ? mails.map(m => h("button", { type: "button", className: `mail-item${current?.mail?.id === m.id ? " on" : ""}`, onclick: () => open(m.file.bytes, m.file.name, m) },
     h("div", { className: "from" }, h("span", {}, m.from), h("span", { className: `badge ${m.status === "new" ? "new" : "ok"}` }, m.status === "new" ? "New" : "Processed")),
     h("div", { className: "subj" }, m.subject),
-    h("div", { className: "meta" }, h("span", {}, `📎 ${m.file.name}`), h("span", {}, when(m.sent))))) :
+    h("div", { className: "meta" }, h("span", {}, m.file.name), h("span", {}, when(m.sent))))) :
     [h("p", { className: "muted small pad" }, "No emails yet. Applications emailed to Trade Ops appear here; you can also drop a PDF below.")]));
 }
 
@@ -98,7 +98,7 @@ function render() {
     h("div", { className: "app-head" },
       h("div", { className: "t" },
         h("h2", {}, template?.title ?? name),
-        h("div", { className: "src" }, mail ? `From ${mail.from} · ${when(mail.sent)} · 📎 ${name}` : `Uploaded file · ${name}`,
+        h("div", { className: "src" }, mail ? `From ${mail.from} · Received ${when(mail.sent)} · Attachment: ${name}` : `Uploaded file · ${name}`,
           vendor ? ` · read from the current smart form (${vendor})` : "")),
       h("div", { className: "actions" },
         h("button", { type: "button", onclick: () => { showPdf = !showPdf; render(); } }, showPdf ? "Hide PDF" : "View PDF"),
@@ -116,10 +116,10 @@ function render() {
       : h("div", { className: "banner ok", role: "status" }, h("b", {}, "Complete. "), `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. Read directly from the PDF's fields: no OCR, nothing retyped.`),
     pdfBox,
     h("div", { className: "facts" }, ...facts.map(([k, val]) => h("div", {}, h("span", {}, k), h("b", {}, val || "—")))),
-    cust ? h("div", { className: "sec cust" }, h("h3", {}, `Customer record · ${cust.cif} · ${cust.name}`),
-      h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "In the form"), h("th", {}, "Bank's record"), h("th", {}, ""))),
+    cust ? h("div", { className: "sec cust" }, h("h3", {}, `Customer verification · ${cust.cif}`),
+      h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "Per application"), h("th", {}, "Per customer record"), h("th", {}, "Result"))),
         h("tbody", {}, ...matches.map(m => h("tr", { className: m.ok ? "" : "missing" }, h("th", { scope: "row" }, m.label), h("td", {}, m.form), h("td", {}, m.record),
-          h("td", {}, m.ok ? h("span", { className: "yes" }, "✓ Matches") : "✗ Differs"))))))
+          h("td", {}, h("span", { className: `chip ${m.ok ? "ok" : "bad"}` }, m.ok ? "Match" : "Differs")))))))
       : noRecord ? h("div", { className: "banner bad", role: "alert" }, h("b", {}, "Not an existing customer. "), `No customer record for "${v("applicant_name")}": check the name, or start customer onboarding (KYC).`) : "",
     h("div", { className: "toggles" },
       h("label", {}, h("input", { type: "checkbox", checked: showEmpty, onchange: (e: Event) => { showEmpty = (e.target as HTMLInputElement).checked; render(); } }), "Show empty fields"),
@@ -132,8 +132,8 @@ function render() {
         const val = show(r.value), blank = !val && r.required;
         const why = flags(r.id);
         return h("tr", { className: blank || why.length ? "missing" : "" }, h("th", { scope: "row" }, r.label, r.required ? " *" : ""),
-          h("td", {}, blank ? "Missing" : r.value === true ? h("span", { className: "yes" }, "✓ Yes") : val || h("span", { className: "muted" }, "—"),
-            ...why.map(w => h("div", { className: "flag" }, `⚠ ${w}`))),
+          h("td", {}, blank ? "Missing" : r.value === true ? "Yes" : val || h("span", { className: "muted" }, "—"),
+            ...why.map(w => h("div", { className: "flag" }, w))),
           h("td", { className: "tick" }, val ? h("input", { type: "checkbox", title: "Checked", "aria-label": `${r.label} checked`, checked: checked.has(r.id),
             onchange: (e: Event) => { (e.target as HTMLInputElement).checked ? checked.add(r.id) : checked.delete(r.id); render(); } }) : ""));
       })))) : "";
