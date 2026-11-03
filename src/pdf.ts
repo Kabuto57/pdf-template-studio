@@ -17,6 +17,7 @@ export interface Section { title: string; fields: Field[] }
 export interface Template {
   title: string; note: string; sections: Section[];
   base?: string; // an uploaded PDF (base64) whose own fields are filled, instead of drawing a new layout
+  design?: "new"; // the LC only: draw it in the new design instead of the bank's own layout
 }
 export type Value = string | string[] | boolean;
 // bad: keys refused while typing (same in the app and in Acrobat); ok: a whole answer; say: what's wrong otherwise.

@@ -7,7 +7,7 @@ import { LC } from "./lc";
 import { buildLcPdf } from "./lc-pdf";
 
 /** The LC is drawn in the bank's own layout; other forms in the standard one. */
-const pdfOf = (t: Template, v: Values = {}) => t.title === LC.template.title && !t.base ? buildLcPdf(v) : buildPdf(t, v);
+const pdfOf = (t: Template, v: Values = {}) => t.title === LC.template.title && !t.base && !t.design ? buildLcPdf(v) : buildPdf(t, v);
 import BANK from "./bank-forms.json";
 import type { Line, Xfa } from "./text";
 
@@ -283,7 +283,8 @@ document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAt
   refresh(true);
 }
 
-$("#bankForms").append(...BANK_FORMS.map(f => h("option", { value: `bank:${f.code}` }, f.template.title)));
+$("#bankForms").append(...BANK_FORMS.flatMap(f => [h("option", { value: `bank:${f.code}` }, f.template.title),
+  f.code === "LC" ? h("option", { value: "lc-new" }, `${f.template.title}: new design`) : ""]));
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.onclick = () => go(b.dataset.view as View));
 $("#blankBtn").onclick = async () => download(await pdfOf(t) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
@@ -310,6 +311,7 @@ $("#templateSel").onchange = async e => {
   values = {};
   if (v === "guarantee") t = clone(GUARANTEE);
   if (v === "blank") t = { title: "Untitled form", note: "", sections: [{ title: "Details", fields: [] }] };
+  if (v === "lc-new") { t = { ...clone(LC.template), design: "new" }; values = clone(LC.defaults); } // same as the bank site's download
   if (v.startsWith("bank:")) { const f = bankForm(v.slice(5)); t = clone(f.template); values = clone(f.defaults); }
   go("design");
   pristine = JSON.stringify(t);
