@@ -50,22 +50,13 @@ input, textarea { border: 1px solid #ccc; border-radius: 2px; padding: 8px 10px;
 .cat li .name small { display: block; color: var(--grey); font-size: 13px; }
 .tag { font-size: 11px; font-weight: 700; color: var(--ok); border: 1px solid currentColor; border-radius: 2px; padding: 0 5px; margin-left: 6px; vertical-align: 2px; }
 .dl { display: flex; gap: 8px; }
-.steps { background: var(--mist); padding: 22px 24px; margin: 26px 0; border-left: 3px solid var(--red); }
+.steps { background: var(--mist); padding: 22px 24px; margin: 0 0 26px; border-left: 3px solid var(--red); }
 .steps ol { margin: 0; padding-left: 20px; }
 .steps li { margin-bottom: 6px; }
 .side .box { border: 1px solid var(--rule); padding: 20px; margin-bottom: 20px; }
 .side h5 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
 
-.mail { border: 1px solid var(--rule); }
-.mail-bar { background: var(--mist); border-bottom: 1px solid var(--rule); padding: 10px 16px; font-weight: 600; display: flex; justify-content: space-between; }
-.mail-body { padding: 16px; }
-.mail-line { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; border-bottom: 1px solid var(--rule); padding: 6px 0; }
-.mail-line span { color: var(--grey); font-size: 13px; }
-.mail-line input { border: 0; padding: 4px 0; }
-.attach { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
-.gap-top-s { margin-top: 12px; }
-.sent { text-align: center; padding: 28px; }
-.sent .tick { width: 48px; height: 48px; border-radius: 50%; background: #e3f4ea; color: var(--ok); display: inline-grid; place-items: center; font-size: 26px; margin-bottom: 8px; }
+.addr { font-weight: 600; word-break: break-all; margin-bottom: 6px; }
 
 .foot { background: #333; color: #bbb; font-size: 13px; margin-top: 40px; }
 .foot .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; padding: 32px 0 20px; }

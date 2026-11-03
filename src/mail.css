@@ -1,0 +1,34 @@
+/* The customer's own webmail: deliberately not the bank's look, so it reads as a different place. */
+:root { --ink: #1f2937; --grey: #6b7280; --rule: #e5e7eb; --bg: #f3f4f6; --blue: #2563eb; --blue-2: #1d4ed8; --ok: #15803d; --red: #b91c1c;
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); }
+a { color: var(--blue); }
+button, input, textarea { font: inherit; color: inherit; }
+.ribbon { background: #fff8e1; color: #6b5300; font-size: 12px; text-align: center; padding: 5px 12px; }
+.top { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 20px; background: #fff; border-bottom: 1px solid var(--rule); font-size: 18px; }
+.top b { color: var(--blue); }
+.me { font-size: 13px; color: var(--grey); display: flex; align-items: center; gap: 10px; }
+.me i { font-style: normal; width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: 12px; }
+.shell { display: grid; grid-template-columns: 200px 1fr; gap: 24px; max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+.folders { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.folders span { padding: 8px 12px; border-radius: 8px; color: var(--grey); }
+.folders .compose { background: var(--blue); color: #fff; text-align: center; font-weight: 600; margin-bottom: 8px; }
+.mail { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 0 20px 20px; }
+.mail-bar { font-weight: 600; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.mail-line { display: grid; grid-template-columns: 70px 1fr; align-items: center; border-bottom: 1px solid var(--rule); padding: 6px 0; }
+.mail-line span { color: var(--grey); font-size: 13px; }
+.mail-line input { border: 0; padding: 6px 0; width: 100%; background: transparent; outline-offset: 2px; }
+.attach { display: flex; align-items: center; gap: 12px; margin: 14px 0; flex-wrap: wrap; }
+textarea { width: 100%; border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; resize: vertical; }
+button, .btn { border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-weight: 600; }
+.primary { background: var(--blue); border-color: var(--blue); color: #fff; padding: 9px 28px; }
+.primary:hover { background: var(--blue-2); }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.send { margin-top: 14px; }
+.sr { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.muted { color: var(--grey); } .small { font-size: 13px; } .err { color: var(--red); margin: 8px 0 0; }
+.sent { text-align: center; padding: 40px 12px; }
+.sent .tick { width: 52px; height: 52px; border-radius: 50%; background: #dcfce7; color: var(--ok); display: inline-grid; place-items: center; font-size: 26px; margin-bottom: 10px; }
+.next { margin-top: 18px; padding: 12px; background: #fff8e1; border-radius: 8px; font-size: 14px; }
+@media (max-width: 700px) { .shell { grid-template-columns: 1fr; } .folders { flex-direction: row; overflow-x: auto; } .folders .compose { margin: 0; } }
