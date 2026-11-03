@@ -64,15 +64,16 @@ export const safe = (s: string) => s.replace(/[^\n\x20-\x7e\xa0-\xff€]/g, c =>
 export const subId = (id: string, i: number) => `${id}__${i}`;
 
 /**
- * Dates as three drop-downs (day, month, year). A pop-up calendar needs Acrobat JavaScript, which work laptops
- * often have off; drop-downs need none, open on click, and only offer real days, months and years.
+ * Dates as three drop-downs (day, month, year): they need no JavaScript, open on click, and only offer real days,
+ * months and years. Under them sits a hidden date box with Acrobat's own pop-up calendar; when Acrobat runs the
+ * form's JavaScript (lcDates, at open) the box is shown and the drop-downs hidden. Whichever is shown is the answer.
  */
 export const dateIds = (id: string) => [`${id}__dd`, `${id}__mm`, `${id}__yyyy`];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DATE_BLANKS = ["DD", "MM", "YYYY"];
 const pad = (n: number) => String(n).padStart(2, "0");
 export function addDateLists(form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, id: string, label: string, v: unknown,
-  r: { x: number; y: number; width: number; height: number }, font: PDFFont, size: number, extra: object = {}) {
+  r: { x: number; y: number; width: number; height: number }, font: PDFFont, size: number, extra: object = {}, js?: (code: string) => PDFObject) {
   const [d, m, y] = typeof v === "string" ? v.split("/") : [];
   const now = new Date().getFullYear(); // ponytail: years offered are last year to five years ahead
   const years = [...new Set([...Array.from({ length: 7 }, (_, i) => now - 1 + i), ...(/^\d{4}$/.test(y ?? "") ? [+y] : [])])].sort();
@@ -89,6 +90,15 @@ export function addDateLists(form: ReturnType<PDFDocument["getForm"]>, page: PDF
     dd.setFontSize(size);
     x += inner * share[i] + gap;
   });
+  if (!js) return;
+  const tf = form.createTextField(id);
+  if (typeof v === "string" && v) tf.setText(v);
+  tf.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(`${safe(label)} (DD/MM/YYYY)`));
+  // Acrobat shows its calendar on boxes formatted as a date, and refuses dates that don't exist (31/02).
+  tf.acroField.dict.set(PDFName.of("AA"), form.doc.context.obj({ K: js('AFDate_KeystrokeEx("dd/mm/yyyy");'), F: js('AFDate_FormatEx("dd/mm/yyyy");') }));
+  tf.addToPage(page, { ...extra, ...r, font });
+  tf.setFontSize(size);
+  tf.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(2)); // hidden until Acrobat's JavaScript shows it
 }
 /** The three drop-downs back to DD/MM/YYYY; a part left unpicked stays empty, so the date reads as not valid. */
 export function joinDate(parts: string[]) {
@@ -195,7 +205,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
       return top - y + 14;
     }
     const h = f.kind === "long" ? 46 : 20;
-    if (draw && f.kind === "date") addDateLists(form, page, f.id, f.label, v, { x, y: y - h, width: Math.min(w, 200), height: h }, font, 10, opts);
+    if (draw && f.kind === "date") addDateLists(form, page, f.id, f.label, v, { x, y: y - h, width: Math.min(w, 200), height: h }, font, 10, opts, js);
     else if (draw) {
       const tf = form.createTextField(f.id);
       if (f.kind === "long") tf.enableMultiline();
@@ -361,12 +371,14 @@ function has(a, x) { for (var i = 0; i < a.length; i++) if (a[i] == x) return tr
 function val(id) {
   var m = M[id], f, a = [], i;
   if (m.k == "checks") { for (i = 0; i < m.o.length; i++) { f = d.getField(id + "__" + i); if (f && f.value != "Off") a.push(m.o[i]); } return a; }
+  if (m.k == "date" && shown(id)) return d.getField(id).valueAsString;
   if (m.k == "date" && d.getField(id + "__dd")) { a = [d.getField(id + "__dd").valueAsString, d.getField(id + "__mm").valueAsString.substr(0, 2), d.getField(id + "__yyyy").valueAsString];
     for (i = 0; i < 3; i++) if (/^(DD|MM|YYYY)$/.test(a[i])) a[i] = ""; return a.join("") ? a.join("/") : ""; }
   f = d.getField(id); if (!f) return "";
   if (m.k == "check") return f.value != "Off" ? "true" : "false";
   return f.value == "Off" ? "" : String(f.value);
 }
+function shown(id) { var f = d.getField(id); return !!f && f.display != 1; } // display.hidden
 function empty(x) { return typeof x == "object" ? !x.length : x === ""; }
 function any(r) { // does any rule hold?
   var i, j, x, hit;
@@ -395,7 +407,7 @@ for (id in M) {
   if (b) miss.push(m.l);
   w = on ? wrong(id) : ""; if (w) { bad.push(m.l + ": " + w); b = true; }
   names = [id]; if (m.k == "checks") { names = []; for (i = 0; i < m.o.length; i++) names.push(id + "__" + i); }
-  if (m.k == "date" && d.getField(id + "__dd")) names = [id + "__dd", id + "__mm", id + "__yyyy"];
+  if (m.k == "date" && !shown(id) && d.getField(id + "__dd")) names = [id + "__dd", id + "__mm", id + "__yyyy"];
   for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.c && m.k != "checks") f.required = q;
     if (m.a) f.readonly = !on;
     if (!on) { f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; }
@@ -404,17 +416,23 @@ for (id in M) {
 } catch (e) { console.println("lcRules: " + e); }
 miss.bad = bad;
 return miss;
-}`;
+}
+function lcDates(d) { // Acrobat: its calendar box replaces the drop-downs
+  var D = ${JSON.stringify(all.filter(f => f.kind === "date").map(f => f.id))}, i, j, t, p;
+  for (i = 0; i < D.length; i++) { t = d.getField(D[i]); if (!t) continue; t.display = display.visible;
+    for (j = 0; j < 3; j++) { p = d.getField(D[i] + "__" + ["dd", "mm", "yyyy"][j]); if (p) p.display = display.hidden; } }
+}
+if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) lcDates(this);`;
   // A script stream, not a string: no 32,767-byte limit however many rules a form has.
   const libRef = doc.context.register(doc.context.flateStream(Uint8Array.from(lib, c => c.charCodeAt(0) & 0xff)));
   doc.catalog.set(PDFName.of("Names"), doc.context.obj({ JavaScript: doc.context.obj({ Names: [PDFHexString.fromText("lcRules"), doc.context.obj({ S: "JavaScript", JS: libRef })] }) }));
   const run = () => js("lcRules(this);");
   // Re-check the moment a box is ticked or an option picked (mouse up), and when leaving a text box or list (blur).
   for (const [id, m] of Object.entries(model)) {
-    const names = m.k === "checks" ? (m.o ?? []).map((_, i) => subId(id, i)) : m.k === "date" && form.getFieldMaybe(dateIds(id)[0]) ? dateIds(id) : [id];
+    const names = m.k === "checks" ? (m.o ?? []).map((_, i) => subId(id, i)) : m.k === "date" && form.getFieldMaybe(dateIds(id)[0]) ? [...dateIds(id), id] : [id];
     for (const n of names) for (const w of form.getFieldMaybe(n)?.acroField.getWidgets() ?? []) {
       const aa = w.dict.lookupMaybe(PDFName.of("AA"), PDFDict) ?? doc.context.obj({});
-      aa.set(PDFName.of(m.k === "check" || m.k === "checks" || m.k === "radio" || m.k === "date" ? "U" : "Bl"), run());
+      aa.set(PDFName.of(m.k === "check" || m.k === "checks" || m.k === "radio" || (m.k === "date" && n !== id) ? "U" : "Bl"), run());
       w.dict.set(PDFName.of("AA"), aa);
     }
   }
@@ -558,7 +576,7 @@ export async function extractPdf(bytes: Uint8Array | ArrayBuffer): Promise<Extra
 }
 
 async function extractFields(doc: PDFDocument): Promise<Extracted> {
-  const raw = new Map<string, Value>(), tips = new Map<string, string>();
+  const raw = new Map<string, Value>(), tips = new Map<string, string>(), shown = new Set<string>();
   for (const f of doc.getForm().getFields()) {
     const name = f.getName();
     if (f instanceof PDFButton || name.startsWith("__")) continue; // the built-in checks, not answers
@@ -568,6 +586,7 @@ async function extractFields(doc: PDFDocument): Promise<Extracted> {
       f instanceof PDFCheckBox ? f.isChecked() :
       f instanceof PDFDropdown || f instanceof PDFOptionList ? f.getSelected().join(", ") : "";
     raw.set(name, v);
+    if (!(((f.acroField.getWidgets()[0]?.dict.lookup(PDFName.of("F")) as PDFNumber | undefined)?.asNumber() ?? 0) & 2)) shown.add(name); // not hidden
     tips.set(name, text(f.acroField.dict.lookup(PDFName.of("TU"))) ?? name);
   }
   let template: Template | undefined;
@@ -578,7 +597,7 @@ async function extractFields(doc: PDFDocument): Promise<Extracted> {
     for (const s of template.sections) for (const f of s.fields) {
       const value: Value = f.kind === "checks"
         ? (f.options ?? []).filter((_, i) => raw.get(subId(f.id, i)) === true)
-        : f.kind === "date" && raw.has(dateIds(f.id)[0]) ? joinDate(dateIds(f.id).map(n => String(raw.get(n) ?? "")))
+        : f.kind === "date" && raw.has(dateIds(f.id)[0]) && !(raw.has(f.id) && shown.has(f.id)) ? joinDate(dateIds(f.id).map(n => String(raw.get(n) ?? "")))
         : raw.get(f.id) ?? (f.kind === "check" ? false : "");
       rows.push({ section: s.title, id: f.id, label: f.label, value });
       data[f.id] = value;

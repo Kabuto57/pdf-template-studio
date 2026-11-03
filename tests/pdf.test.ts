@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFDropdown, PDFTextField, decodePDFRawStream } from "pdf-lib";
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRawStream, PDFDropdown, PDFTextField, decodePDFRawStream } from "pdf-lib";
 import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
 
@@ -69,12 +69,13 @@ describe("conditional mandatory questions", () => {
 
 // The rules engine: the document-level script (a stream in the /Names /JavaScript tree).
 // A stand-in for one Acrobat field: null when the PDF has no such field, as in Acrobat.
-type Fake = { value: string; valueAsString: string; required?: boolean; strokeColor?: unknown; fillColor?: unknown } | null;
+type Fake = { value: string; valueAsString: string; required?: boolean; strokeColor?: unknown; fillColor?: unknown; display?: number } | null;
 const like = (doc: PDFDocument, n: string, v?: string): Fake => {
   const f = doc.getForm().getFieldMaybe(n);
   if (!f) return null;
   const value = v ?? (f instanceof PDFTextField ? "" : f instanceof PDFDropdown ? f.getSelected()[0] ?? "" : "Off");
-  return { value, valueAsString: value };
+  const hidden = ((f.acroField.getWidgets()[0]?.dict.lookup(PDFName.of("F")) as PDFNumber | undefined)?.asNumber() ?? 0) & 2;
+  return { value, valueAsString: value, display: hidden ? 1 : 0 };
 };
 const library = (doc: PDFDocument) => {
   const names = ((doc.catalog.lookup(PDFName.of("Names")) as PDFDict).lookup(PDFName.of("JavaScript")) as PDFDict).lookup(PDFName.of("Names")) as PDFArray;

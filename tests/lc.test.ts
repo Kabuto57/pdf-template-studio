@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFString, decodePDFRawStream } from "pdf-lib";
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRawStream, PDFString, decodePDFRawStream } from "pdf-lib";
 import { FORMATS, buildPdf, extractPdf, isActive } from "../src/pdf";
 import { LC, LC_SAMPLE } from "../src/lc";
 import { buildLcPdf } from "../src/lc-pdf";
@@ -68,6 +68,32 @@ describe("questions that only apply once something is ticked", () => {
     const f = LC.template.sections.flatMap(s => s.fields).find(f => f.id === "bank_charges_for")!;
     expect(isActive(f, {})).toBe(false);
     expect(isActive(f, { bank_charges: true })).toBe(true);
+  });
+});
+
+describe("dates: Acrobat's calendar when its JavaScript runs, drop-downs otherwise", () => {
+  const script = async (pdf: Uint8Array) => {
+    const doc = await PDFDocument.load(pdf);
+    const names = doc.catalog.lookup(PDFName.of("Names"), PDFDict).lookup(PDFName.of("JavaScript"), PDFDict).lookup(PDFName.of("Names"), PDFArray);
+    return new TextDecoder().decode(decodePDFRawStream(names.lookup(1, PDFDict).lookup(PDFName.of("JS")) as PDFRawStream).decode());
+  };
+  it.each([["original look", () => buildLcPdf(LC_SAMPLE)], ["new design", () => buildPdf(LC.template, LC_SAMPLE)]])("%s", async (_, make) => {
+    const pdf = await make(), js = await script(pdf);
+    const fields: Record<string, any> = { expiry_date: { display: 1 } };
+    const d = { getField: (n: string) => fields[n] ??= { display: 0 } };
+    // In Acrobat the calendar box is shown and the drop-downs hidden; in other viewers (Chrome: "pdfium") nothing changes.
+    new Function("app", "display", js).call(d, { viewerType: "pdfium" }, { visible: 0, hidden: 1 });
+    expect(fields.expiry_date.display).toBe(1);
+    new Function("app", "display", js).call(d, { viewerType: "Exchange-Pro" }, { visible: 0, hidden: 1 });
+    expect([fields.expiry_date.display, fields.expiry_date__dd.display]).toEqual([0, 1]);
+    // The box has Acrobat's date format (which brings the calendar) and refuses dates that don't exist.
+    const form = (await PDFDocument.load(pdf)).getForm(), box = form.getTextField("expiry_date");
+    expect(box.acroField.dict.lookup(PDFName.of("AA"), PDFDict).toString()).toMatch(/AFDate_FormatEx|<FEFF0041/);
+    // Hidden box: the drop-downs are the answer. Shown box (Acrobat switched): the box is the answer.
+    box.setText("15/08/2027");
+    expect((await extractPdf(await form.doc.save())).data.expiry_date).toBe(LC_SAMPLE.expiry_date);
+    box.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(4));
+    expect((await extractPdf(await form.doc.save())).data.expiry_date).toBe("15/08/2027");
   });
 });
 

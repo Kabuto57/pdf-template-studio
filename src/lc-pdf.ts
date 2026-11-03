@@ -150,7 +150,7 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
       if (typeof v === "string" && f.options?.includes(v)) dd.select(safe(v));
       dd.addToPage(page, { ...rect, font }); dd.setFontSize(8);
     } else if (f.kind === "date") {
-      addDateLists(form, page, f.id, f.label, v, rect, font, 8, rect);
+      addDateLists(form, page, f.id, f.label, v, rect, font, 8, rect, js);
     } else {
       const tf = form.createTextField(f.id);
       if (f.kind === "long" || it.multi) tf.enableMultiline();
