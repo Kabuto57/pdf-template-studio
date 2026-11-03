@@ -10,6 +10,7 @@ export interface Field {
   requiredIf?: Rule[]; // mandatory only when another answer is picked (any rule matching is enough)
   max?: number; // most characters allowed, as on the bank's form
   format?: Format; // which keys the box accepts, and what a whole answer must look like
+  activeIf?: Rule[]; // answerable only when one of these holds (default: requiredIf's rules); greyed and locked otherwise
 }
 /** Mandatory when `field` is one of `values` (or, with `not`, none of them). A tick box's values are "true" / "false". */
 export interface Rule { field: string; values: string[]; not?: boolean }
@@ -32,9 +33,19 @@ export type Format = keyof typeof FORMATS;
 export const BAD_CHARS = "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]";
 export type Values = Record<string, Value>;
 
-export const isRequired = (f: Field, v: Values) => !!f.required || !!f.requiredIf?.some(r => {
+const holds = (v: Values) => (r: Rule) => {
   const x = v[r.field], hit = Array.isArray(x) ? x.some(o => r.values.includes(o)) : r.values.includes(String(x ?? ""));
   return r.not ? !hit && x !== undefined && x !== "" : hit;
+};
+export const isRequired = (f: Field, v: Values) => !!f.required || !!f.requiredIf?.some(holds(v));
+/** The rules that switch a question on: a box under "Bill of lading" is only answerable once that is ticked. */
+export const activeRules = (f: Field) => f.activeIf ?? (f.requiredIf ?? []).filter(r => !r.not);
+export const isActive = (f: Field, v: Values) => { const r = activeRules(f); return !r.length || r.some(holds(v)); };
+
+/** Acrobat (with JavaScript on): refuse wrong keys while typing, and a wrong whole answer when leaving the box. */
+export const formatActions = (doc: PDFDocument, js: (code: string) => PDFObject, f: Field) => doc.context.obj({
+  K: js(`if (!event.willCommit && /${FORMATS[f.format!].bad}/.test(event.change)) { event.rc = false; app.beep(0); }`),
+  V: js(`if (event.value !== "" && !/${FORMATS[f.format!].ok.source}/.test(event.value)) { app.alert(${JSON.stringify(`${safe(f.label)} ${FORMATS[f.format!].say}.`)}); event.rc = false; }`),
 });
 
 export const KINDS: Record<Kind, string> = {
@@ -123,7 +134,8 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   // Lays out a field at (x, top) in width w; draws it only when `draw`. Returns the height used.
   function place(f: Field, x: number, w: number, draw: boolean): number {
     const v = values[f.id], req = isRequired(f, values);
-    const opts = req && (v === undefined || v === "" || v === false || (Array.isArray(v) && !v.length)) ? mandatory : plain; // red = mandatory and still blank
+    const style = req && (v === undefined || v === "" || v === false || (Array.isArray(v) && !v.length)) ? mandatory : plain; // red = mandatory and still blank
+    const opts = activeRules(f).length ? { ...style, backgroundColor: undefined } : style; // see-through, so the grey "not yet" shade shows
     if (f.kind === "check") {
       const lines = wrap(f.label, font, 9, w - 16);
       if (draw) {
@@ -194,7 +206,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
       tf.addToPage(page, { x, y: y - h, width: w, height: h, font, ...opts });
       tf.setFontSize(10);
       // Acrobat / Reader: number boxes refuse other keys.
-      if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${FORMATS[f.format].bad}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
+      if (f.format) tf.acroField.dict.set(PDFName.of("AA"), formatActions(doc, js, f));
     }
     return 13 + h;
   }
@@ -249,8 +261,10 @@ export function addRedFrames(doc: PDFDocument, form: ReturnType<PDFDocument["get
   const ctx = doc.context, pages = doc.getPages(), GAP = 0.6, T = 1.6;
   const off = (w: number, h: number) => ctx.register(ctx.stream("", { Type: "XObject", Subtype: "Form", BBox: [0, 0, w, h] }));
   const on = (w: number, h: number) => ctx.register(ctx.stream(`0.85 0 0 rg 0 0 ${w} ${h} re f`, { Type: "XObject", Subtype: "Form", BBox: [0, 0, w, h] }));
-  for (const f of t.sections.flatMap(s => s.fields)) for (const r of f.requiredIf ?? []) {
-    if (r.not) continue;
+  const grey = (w: number, h: number) => ctx.register(ctx.stream(`0.86 g 0 0 ${w} ${h} re f`, { Type: "XObject", Subtype: "Form", BBox: [0, 0, w, h] }));
+  // The tick box or radio option a rule points at: its "on" state, and whether it is on now. Lists need JavaScript.
+  const triggerOf = (r: Rule) => {
+    if (r.not) return undefined;
     const trigger = form.getFieldMaybe(r.field);
     let state: PDFName | undefined;
     if (trigger instanceof PDFCheckBox) { if (r.values.includes("true")) state = trigger.acroField.getOnValue(); }
@@ -259,38 +273,61 @@ export function addRedFrames(doc: PDFDocument, form: ReturnType<PDFDocument["get
       state = i < 0 ? undefined : trigger.acroField.getOnValues()[i];
       trigger.acroField.setFlagTo(AcroButtonFlags.RadiosInUnison, true); // copies with the same option switch together
     }
-    if (!state) continue; // lists and "not" rules need JavaScript; the field still turns red where it runs
-    const owner = trigger as PDFCheckBox | PDFRadioGroup;
-    const isOn = trigger instanceof PDFCheckBox ? values[r.field] === true : values[r.field] === r.values[0];
-    // Acrobat ignores a tick box's own pictures and draws its tick symbol (MK CA) in the DA colour and size instead.
-    // So the symbol is a red square (ZapfDingbats "n") far bigger than the strip: cut to the strip, it fills it red.
-    const copy = (page: PDFPage, [sx, sy, sw, sh]: number[]) => {
-      const c = ctx.register(ctx.obj({
-        Type: "Annot", Subtype: "Widget", F: 64, // shown on screen, not printed; read-only, so clicks on it do nothing
-        Rect: [sx, sy, sx + sw, sy + sh], P: page.ref, Parent: owner.ref, AS: isOn ? state : PDFName.of("Off"),
-        MK: { CA: PDFString.of("n") }, DA: PDFString.of(`/ZaDb ${Math.ceil(2 * Math.max(sw, sh) + 10)} Tf 0.85 0 0 rg`), BS: { W: 0 },
-        AP: { N: { [state!.decodeText()]: on(sw, sh), Off: off(sw, sh) } }, // the same, for every other viewer
-      }));
-      owner.acroField.addWidget(c);
-      page.node.Annots()!.insert(0, c); // underneath the real boxes, so typing and clicking still go to those
-    };
+    if (!state) return undefined;
+    return { owner: trigger as PDFCheckBox | PDFRadioGroup, state, isOn: trigger instanceof PDFCheckBox ? values[r.field] === true : values[r.field] === r.values[0] };
+  };
+  // Acrobat ignores a tick box's own pictures and draws its tick symbol (MK CA) in the DA colour and size instead,
+  // over its background colour (MK BG), which it paints whether ticked or not.
+  //  red:   no background; the symbol is a red square (ZapfDingbats "n") far bigger than the strip: cut to it, it fills it red.
+  //  shade: a light grey background, and a white square when on: grey until the trigger is ticked, then nothing to see.
+  const copy = (tr: NonNullable<ReturnType<typeof triggerOf>>, page: PDFPage, [sx, sy, sw, sh]: number[], kind: "red" | "shade" = "red") => {
+    const big = Math.ceil(2 * Math.max(sw, sh) + 10), shade = kind === "shade";
+    const c = ctx.register(ctx.obj({
+      Type: "Annot", Subtype: "Widget", F: 64, // read-only: clicks on it do nothing
+      Rect: [sx, sy, sx + sw, sy + sh], P: page.ref, Parent: tr.owner.ref, AS: tr.isOn ? tr.state : PDFName.of("Off"),
+      MK: shade ? { BG: [0.86], CA: PDFString.of("n") } : { CA: PDFString.of("n") },
+      DA: PDFString.of(`/ZaDb ${big} Tf ${shade ? "1 g" : "0.85 0 0 rg"}`), BS: { W: 0 },
+      AP: { N: shade ? { [tr.state.decodeText()]: off(sw, sh), Off: grey(sw, sh) } : { [tr.state.decodeText()]: on(sw, sh), Off: off(sw, sh) } }, // the same, for every other viewer
+    }));
+    tr.owner.acroField.addWidget(c);
+    page.node.Annots()!.insert(0, c); // underneath the real boxes, so typing and clicking still go to those
+  };
+  const all = t.sections.flatMap(s => s.fields);
+  // Switchable questions' radio buttons see-through (pdf-lib paints them white), so the grey shade shows. Before any copies exist.
+  for (const f of all) {
+    const g = activeRules(f).length ? form.getFieldMaybe(f.id) : undefined;
+    if (!(g instanceof PDFRadioGroup)) continue;
+    for (const w of g.acroField.getWidgets()) w.dict.lookupMaybe(PDFName.of("MK"), PDFDict)?.delete(PDFName.of("BG"));
+    g.updateAppearances();
+  }
+  // Each question's own boxes, taken before any copies are added (a trigger's copies are widgets of it too).
+  const own = new Map(all.map(f => [f.id, (f.kind === "checks" ? (f.options ?? []).map((_, i) => subId(f.id, i)) : f.kind === "date" ? dateIds(f.id) : [f.id])
+    .flatMap(name => form.getFieldMaybe(name)?.acroField.getWidgets() ?? [])
+    .map(w => ({ w, page: pages.find(p => p.ref === w.P()) ?? pages[0], ...w.getRectangle() }))]));
+  const boxes = (f: Field) => own.get(f.id) ?? [];
+
+  for (const f of all) for (const r of f.requiredIf ?? []) {
+    const tr = triggerOf(r);
+    if (!tr) continue; // lists and "not" rules need JavaScript; the field still turns red where it runs
     // Four thin strips just outside the box, never over it: clicks inside the box still reach the box.
     const frame = (page: PDFPage, x: number, y: number, w0: number, h0: number) => {
       const o = GAP + T;
       for (const r of [[x - o, y + h0 + GAP, w0 + 2 * o, T], [x - o, y - o, w0 + 2 * o, T], [x - o, y - GAP, T, h0 + 2 * GAP], [x + w0 + GAP, y - GAP, T, h0 + 2 * GAP]])
-        copy(page, r);
+        copy(tr, page, r);
     };
     const block = look?.blocks.get(f.id);
     if (block?.box) frame(block.page, ...block.box);
-    else for (const name of f.kind === "checks" ? (f.options ?? []).map((_, i) => subId(f.id, i)) : f.kind === "date" ? dateIds(f.id) : [f.id])
-      for (const w of form.getFieldMaybe(name)?.acroField.getWidgets() ?? []) {
-        const { x, y, width, height } = w.getRectangle();
-        frame(pages.find(p => p.ref === w.P()) ?? pages[0], x, y, width, height);
-      }
+    else for (const b of boxes(f)) frame(b.page, b.x, b.y, b.width, b.height);
     if (block && look) { // a red line under the question's label
       const { x, y, text } = block.label;
-      copy(block.page, [x, y - 3.5, look.font.widthOfTextAtSize(text, 8), T]);
+      copy(tr, block.page, [x, y - 3.5, look.font.widthOfTextAtSize(text, 8), T]);
     }
+  }
+  // Questions that only apply once something is ticked: their boxes are grey until then.
+  // ponytail: with several switching rules, any one off shows grey; exact "any of" needs JavaScript (which also locks them).
+  for (const f of all) for (const r of activeRules(f)) {
+    const tr = triggerOf(r);
+    if (tr) for (const b of boxes(f)) copy(tr, b.page, [b.x - 0.5, b.y - 0.5, b.width + 1, b.height + 1], "shade");
   }
 }
 
@@ -302,11 +339,17 @@ export function addRedFrames(doc: PDFDocument, form: ReturnType<PDFDocument["get
 export function addChecks(doc: PDFDocument, form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, font: PDFFont, t: Template, js: (code: string) => PDFObject,
   underlined: Set<string> = new Set()) { // fields drawn as a bottom line: no outline once filled
   const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
-  const model: Record<string, { k: Kind; l: string; c?: 1; s?: 1; u?: 1; o?: string[]; r?: [string, string[], 0 | 1][]; v?: [string, string] | 1 }> = {};
+  const model: Record<string, { k: Kind; l: string; c?: 1; s?: 1; u?: 1; o?: string[]; r?: [string, string[], 0 | 1][]; a?: [string, string[], 0 | 1][]; v?: [string, string] | 1 }> = {};
   const add = (f: Field) => model[f.id] ??= { k: f.kind, l: safe(f.label), ...(f.kind === "checks" ? { o: (f.options ?? []).map(safe) } : {}), ...(underlined.has(f.id) ? { u: 1 as const } : {}) };
   for (const f of all.filter(f => f.required || f.requiredIf)) {
     Object.assign(add(f), { c: 1 as const }, f.required ? { s: 1 as const } : {}, f.requiredIf ? { r: f.requiredIf.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]) } : {});
     for (const r of f.requiredIf ?? []) { const by = byId.get(r.field); if (by) add(by); }
+  }
+  // Questions that only apply once something is ticked or picked: locked (read-only) and grey until then.
+  const rules = (rs: Rule[]) => rs.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]);
+  for (const f of all.filter(f => activeRules(f).length)) {
+    add(f).a = rules(activeRules(f));
+    for (const r of activeRules(f)) { const by = byId.get(r.field); if (by) add(by); }
   }
   // Typed answers are checked too: ordinary characters only, and the box's format (phone, amount, ...).
   for (const f of all.filter(f => f.kind === "text" || f.kind === "long" || f.kind === "date"))
@@ -325,9 +368,8 @@ function val(id) {
   return f.value == "Off" ? "" : String(f.value);
 }
 function empty(x) { return typeof x == "object" ? !x.length : x === ""; }
-function need(id) {
-  var m = M[id], r = m.r || [], i, j, x, hit;
-  if (m.s) return true;
+function any(r) { // does any rule hold?
+  var i, j, x, hit;
   for (i = 0; i < r.length; i++) {
     x = val(r[i][0]); hit = false;
     if (typeof x == "object") { for (j = 0; j < x.length; j++) if (has(r[i][1], x[j])) hit = true; } else hit = has(r[i][1], x);
@@ -335,6 +377,7 @@ function need(id) {
   }
   return false;
 }
+function need(id) { var m = M[id]; return m.s ? true : any(m.r || []); }
 function wrong(id) { // what is wrong with a typed answer, or ""
   var m = M[id], f = d.getField(id), s = m.k == "date" ? val(id) : f ? f.valueAsString : "", x, k;
   if (!m.v || !s) return "";
@@ -343,16 +386,19 @@ function wrong(id) { // what is wrong with a typed answer, or ""
   if (m.k == "date") { x = /^(\\d\\d)\\/(\\d\\d)\\/(\\d{4})$/.exec(s); k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? "" : "not a real date (DD/MM/YYYY)"; }
   return m.v.length && !new RegExp(m.v[0]).test(s) ? m.v[1] : "";
 }
-var miss = [], bad = [], id, m, q, b, w, names, i, f;
+var miss = [], bad = [], id, m, q, b, w, names, i, f, on;
 try {
 for (id in M) {
-  m = M[id]; if (!m.c && !m.v) continue;
-  q = m.c ? need(id) : false; b = q && (m.k == "check" ? val(id) != "true" : empty(val(id)));
+  m = M[id]; if (!m.c && !m.v && !m.a) continue;
+  on = !m.a || any(m.a);
+  q = m.c && on ? need(id) : false; b = q && (m.k == "check" ? val(id) != "true" : empty(val(id)));
   if (b) miss.push(m.l);
-  w = wrong(id); if (w) { bad.push(m.l + ": " + w); b = true; }
+  w = on ? wrong(id) : ""; if (w) { bad.push(m.l + ": " + w); b = true; }
   names = [id]; if (m.k == "checks") { names = []; for (i = 0; i < m.o.length; i++) names.push(id + "__" + i); }
   if (m.k == "date" && d.getField(id + "__dd")) names = [id + "__dd", id + "__mm", id + "__yyyy"];
   for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.c && m.k != "checks") f.required = q;
+    if (m.a) f.readonly = !on;
+    if (!on) { f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; }
     f.lineWidth = b || !m.u ? 1 : 0; f.strokeColor = b ? color.red : m.u ? color.transparent : color.black; f.fillColor = b ? ["RGB", 1, 0.88, 0.88] : m.u ? color.transparent : color.white; }
 }
 } catch (e) { console.println("lcRules: " + e); }

@@ -3,7 +3,7 @@
 import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFPage, PDFRadioGroup, StandardFonts, rgb } from "pdf-lib";
 import layout from "./lc-layout.json";
 import { LC } from "./lc";
-import { FORMATS, addChecks, addDateLists, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
+import { activeRules, formatActions, addChecks, addDateLists, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
 
 type Item = { k: string; line?: string; x: number; y: number; w?: number; h?: number; x2?: number; y2?: number; size?: number; bold?: boolean;
   align?: string; text?: string; edges?: boolean[]; key?: string; option?: string | null; round?: boolean; multi?: boolean };
@@ -99,8 +99,11 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
   };
   // As on the bank's form: text boxes are a bottom line, tick boxes a plain box. Mandatory and still blank: red.
   const underlined = new Set<string>();
-  const look = (f: Field, line?: string) => isRequired(f, values) && blank(values[f.id]) ? { borderColor: RED, borderWidth: 1, backgroundColor: PINK }
-    : line === "under" ? { borderWidth: 0 } : { borderColor: INK, borderWidth: 0.6, backgroundColor: WHITE };
+  const look = (f: Field, line?: string) => {
+    const s = isRequired(f, values) && blank(values[f.id]) ? { borderColor: RED, borderWidth: 1, backgroundColor: PINK }
+      : line === "under" ? { borderWidth: 0 } : { borderColor: INK, borderWidth: 0.6, backgroundColor: WHITE };
+    return activeRules(f).length ? { ...s, backgroundColor: undefined } : s; // see-through, so the grey "not yet" shade shows
+  };
 
   const draw = (page: PDFPage, it: Item) => {
     const f: PDFFont = it.bold ? bold : font, size = Math.min(it.size ?? 8, 11);
@@ -154,7 +157,7 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
       if (f.max) tf.setMaxLength(f.max);
       if (typeof v === "string" && v) tf.setText(safe(v).slice(0, f.max));
       tf.addToPage(page, { ...rect, font }); tf.setFontSize(8); tip(tf);
-      if (f.format) tf.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ K: js(`if (!event.willCommit && /${FORMATS[f.format].bad}/.test(event.change)) { event.rc = false; app.beep(0); }`) }));
+      if (f.format) tf.acroField.dict.set(PDFName.of("AA"), formatActions(doc, js, f));
     }
   };
 

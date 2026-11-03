@@ -111,3 +111,4 @@ input:invalid, select:invalid { box-shadow: none; }
 .when { flex-basis: 100%; color: #c00; font-size: 12px; }
 #gaps button { margin-left: 8px; }
 .row.small { flex-wrap: wrap; }
+.inactive { opacity: .45; } /* only answerable once what it depends on is ticked or picked */

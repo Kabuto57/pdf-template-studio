@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFString, decodePDFRawStream } from "pdf-lib";
-import { FORMATS, buildPdf, extractPdf } from "../src/pdf";
+import { FORMATS, buildPdf, extractPdf, isActive } from "../src/pdf";
 import { LC, LC_SAMPLE } from "../src/lc";
 import { buildLcPdf } from "../src/lc-pdf";
 
@@ -49,13 +49,25 @@ describe("within Adobe's limits", () => {
 
 describe("red frames without JavaScript", () => {
   it.each([
-    // the tick box itself + 4 strips around each of the 6 boxes: made out to (3 options), freight (2), notify party (1)
-    ["original look", () => buildLcPdf(), 1 + 4 * 6],
-    // the tick box + per question: 4 strips around all its options + its label in red
-    ["new design", () => buildPdf(LC.template), 1 + 3 * (4 + 1)],
+    // the tick box itself + 4 strips around each of the 6 boxes: made out to (3 options), freight (2), notify party (1),
+    // + a grey "not yet" shade under each of those 6 boxes
+    ["original look", () => buildLcPdf(), 1 + 4 * 6 + 6],
+    // the tick box + per question: 4 strips around all its options + its label in red; + the 6 shades
+    ["new design", () => buildPdf(LC.template), 1 + 3 * (4 + 1) + 6],
   ] as const)("%s: ticking Bill of lading frames its 3 questions", async (_, make, n) => {
     const form = (await PDFDocument.load(await make())).getForm();
     expect(form.getCheckBox("doc_bill_of_lading").acroField.getWidgets().length).toBe(n);
+  });
+});
+
+describe("questions that only apply once something is ticked", () => {
+  it("the sample answers only questions that apply", () => {
+    for (const f of LC.template.sections.flatMap(s => s.fields)) if (LC_SAMPLE[f.id] !== undefined && LC_SAMPLE[f.id] !== false) expect(isActive(f, LC_SAMPLE), f.id).toBe(true);
+  });
+  it("bank charges options are locked until the box is ticked", async () => {
+    const f = LC.template.sections.flatMap(s => s.fields).find(f => f.id === "bank_charges_for")!;
+    expect(isActive(f, {})).toBe(false);
+    expect(isActive(f, { bank_charges: true })).toBe(true);
   });
 });
 
@@ -91,7 +103,7 @@ describe("Check form button: blanks, formats and funny characters", () => {
       }
       const d = { getField: (n: string) => fields[n] ?? null };
       const m = new Function("color", "console", `${js}; return lcRules;`)({ red: 1, black: 0, white: 0, transparent: 0 }, { println: (e: string) => { throw new Error(e); } })(d);
-      return { miss: [...m] as string[], bad: m.bad as string[], red: (id: string) => fields[id].strokeColor === 1 };
+      return { miss: [...m] as string[], bad: m.bad as string[], red: (id: string) => fields[id].strokeColor === 1, fields };
     };
   };
   it.each([["original look", () => buildLcPdf()], ["new design", () => buildPdf(LC.template)]])("%s", async (_, make) => {
@@ -108,5 +120,8 @@ describe("Check form button: blanks, formats and funny characters", () => {
     expect(check({ ...LC_SAMPLE, expiry_date: "" }).miss.join()).toMatch(/expiry/i);
     expect(check({ ...LC_SAMPLE, expiry_date: "15/MM/2026" }).bad.join()).toMatch(/expiry.*not a real date/i); // month not picked
     expect(check({ ...LC_SAMPLE, applicant_name: "" }).miss).toContain("Applicant name");
+    // unticking "All bank charges" locks its options; ticking unlocks them
+    expect(check({ ...LC_SAMPLE, bank_charges: false }).fields.bank_charges_for.readonly).toBe(true);
+    expect(check(LC_SAMPLE).fields.bank_charges_for.readonly).toBe(false);
   });
 });

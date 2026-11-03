@@ -114,7 +114,7 @@ const sections: Section[] = [
 
     tick("doc_insurance", "Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion"),
     { id: "insurance_arrangement", label: "For FOB/CFR/FCA/CPT", kind: "select", half: false,
-      options: ["Insurance cover note attached", "Covered by ultimate buyer", "Please arrange insurance on our behalf", "Insurance covered by applicant under open Cover No."] },
+      options: ["Insurance cover note attached", "Covered by ultimate buyer", "Please arrange insurance on our behalf", "Insurance covered by applicant under open Cover No."], activeIf: ticked("doc_insurance") },
     text("insurance_cover_no", "Open cover no", { max: 20, requiredIf: when("insurance_arrangement", "Insurance covered by applicant under open Cover No.") }),
     text("insurance_cover_with", "With", { max: 35, requiredIf: when("insurance_arrangement", "Insurance covered by applicant under open Cover No.") }),
 
@@ -141,7 +141,7 @@ const sections: Section[] = [
 
     tick("doc_other", "Other documents"),
     text("other_documents_1", "Other documents", { half: false, max: 70, requiredIf: ticked("doc_other") }),
-    text("other_documents_2", "Other documents (line 2)", { half: false, max: 70 }),
+    text("other_documents_2", "Other documents (line 2)", { half: false, max: 70, activeIf: ticked("doc_other") }),
   ] },
   { title: "Goods Description", fields: [
     { id: "goods_description", label: "Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)", kind: "long", max: 6500, ...req },
@@ -157,7 +157,7 @@ const sections: Section[] = [
     pick("confirmation_charges", "Confirmation charges", ["Applicant", "Beneficiary"], { requiredIf: ticked("confirmation") }),
     tick("post_shipment_financing", "Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies"),
     pick("financing_type", "Financing", ["SGD financing", "Foreign Currency Financing", "Apply Forward Contract"], { requiredIf: ticked("post_shipment_financing") }),
-    text("financing_currency", "Foreign currency financing in (type of currency)", { max: 20, requiredIf: when("financing_type", "Foreign Currency Financing") }),
+    { id: "financing_currency", label: "Foreign currency financing in (type of currency)", kind: "select", half: true, options: CURRENCIES, requiredIf: when("financing_type", "Foreign Currency Financing") },
     text("forward_contract_no", "Forward contract no", { max: 20, requiredIf: when("financing_type", "Apply Forward Contract") }),
     tick("advance_payment", "We authorise you to debit DC amount in full from our account for advance payment"),
     text("advance_payment_account", "Account no for advance payment", { requiredIf: ticked("advance_payment"), max: 20, format: "account" }),

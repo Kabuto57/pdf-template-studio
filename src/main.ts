@@ -1,6 +1,6 @@
 import "./styles.css";
 import { download, h } from "./dom";
-import { FORMATS, KINDS, buildPdf, extractPdf, hasOptions, importPdf, isRequired, slug } from "./pdf";
+import { FORMATS, KINDS, buildPdf, extractPdf, hasOptions, importPdf, isActive, isRequired, slug } from "./pdf";
 import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
 import { LC } from "./lc";
@@ -155,6 +155,13 @@ function input(f: Field): HTMLElement {
         const el = e.target as HTMLInputElement;
         if (f.format) el.value = el.value.replace(new RegExp(FORMATS[f.format].bad, "g"), ""); // same keys the bank's form accepts
         set(el.value);
+      },
+      // and a whole answer in the right shape (no "1..5" amounts), said when leaving the box
+      onblur: (e: Event) => {
+        const el = e.target as HTMLInputElement, wrong = !!f.format && el.value !== "" && !FORMATS[f.format].ok.test(el.value);
+        el.setCustomValidity(wrong ? `${f.label} ${FORMATS[f.format!].say}.` : "");
+        el.closest("[data-q]")?.classList.toggle("missing", wrong);
+        if (wrong) el.reportValidity();
       } });
   }
 }
@@ -194,6 +201,9 @@ function paint() {
     const el = document.querySelector(`[data-q="${CSS.escape(f.id)}"]`), req = isRequired(f, values);
     if (!el) continue;
     el.classList.toggle("missing", req && blank(f));
+    const on = isActive(f, values); // only answerable once what it depends on is ticked or picked
+    el.classList.toggle("inactive", !on);
+    el.querySelectorAll<HTMLInputElement>("input, select, textarea").forEach(i => i.disabled = !on);
     (el.querySelector(".req") as HTMLElement).hidden = !req;
     if (f.requiredIf) el.setAttribute("title", req ? `Mandatory because ${rule(f)}` : `Mandatory when ${rule(f)}`);
   }

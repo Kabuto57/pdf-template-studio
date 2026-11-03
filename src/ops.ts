@@ -1,14 +1,33 @@
 // Trade Ops workbench (demo): open an emailed application PDF, read every answer exactly, check it, show it.
 import "./ops.css";
+import { PDFDocument, PDFName, PDFNumber } from "pdf-lib";
 import { $, download, h } from "./dom";
-import { BAD_CHARS, FORMATS, extractPdf, isRequired, slug, type Extracted, type Row, type Template, type Value } from "./pdf";
+import { BAD_CHARS, FORMATS, activeRules, extractPdf, isActive, isRequired, slug, type Extracted, type Row, type Template, type Value, type Values } from "./pdf";
 import { deleteMail, inbox, saveMail, type Mail } from "./mailbox";
 import { compare, find } from "./customers";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
 
+interface Box { page: number; x: number; y: number; w: number; h: number; pw: number; ph: number }
+/** Where each field's boxes are on its page (PDF points), skipping the red-frame / shade copies (read-only widgets). */
+async function fieldBoxes(bytes: Uint8Array) {
+  const out = new Map<string, Box[]>();
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true }), pages = doc.getPages();
+  for (const f of doc.getForm().getFields()) for (const w of f.acroField.getWidgets()) {
+    const flags = w.dict.lookup(PDFName.of("F"));
+    if (flags instanceof PDFNumber && flags.asNumber() & 64) continue;
+    const page = pages.findIndex(p => p.ref === w.P());
+    if (page < 0) continue;
+    const { x, y, width, height } = w.getRectangle(), { width: pw, height: ph } = pages[page].getSize();
+    out.set(f.getName(), [...out.get(f.getName()) ?? [], { page, x, y, w: width, h: height, pw, ph }]);
+  }
+  return out;
+}
+
 interface Opened { result: Extracted; name: string; bytes: Uint8Array; mail?: Mail; vendor?: string }
-let current: Opened | undefined, showEmpty = false, showPdf = false;
+let current: Opened | undefined, showEmpty = false, showPdf = innerWidth >= 1200; // wide screens: the PDF beside the data
+let pane: { el: HTMLElement; pages: HTMLElement[] } | undefined; // the rendered PDF, kept while the same application is open
+let boxes = new Map<string, Box[]>(), sel = ""; // where each answer sits in the PDF; the row being shown
 let checked = new Set<string>(); // rows the ops officer has ticked as checked
 
 const show = (v: Value | undefined) => v === true ? "Yes" : v === false || v === undefined ? "" : Array.isArray(v) ? v.join(", ") : v;
@@ -47,7 +66,8 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
         ? "its form fields were removed. This happens when a form is printed or \"Saved as PDF\" (for example from Chrome or Edge). Ask the customer to save the form with Save in Acrobat or Preview, not Print, and send that file."
         : "this PDF has no form fields and no text. It looks like a scan, which would need OCR.");
     }
-    current = { result, name, bytes, mail, vendor }; checked = new Set();
+    current = { result, name, bytes, mail, vendor }; checked = new Set(); pane = undefined; sel = "";
+    boxes = await fieldBoxes(bytes).catch(() => new Map());
     render(); renderInbox();
   } catch (err) {
     $("#work").replaceChildren(h("div", { className: "banner bad", role: "alert" }, `Could not read ${name}: ${(err as Error).message}`));
@@ -60,6 +80,10 @@ function problems(t: Template | undefined, data: Record<string, unknown>) {
   const out: { id: string; msg: string }[] = [];
   const push = (id: string, msg: string) => out.push({ id, msg });
   for (const f of t?.sections.flatMap(s => s.fields) ?? []) {
+    if (!isActive(f, data as Values) && show(data[f.id] as Value)) {
+      const r = activeRules(f)[0], by = t!.sections.flatMap(s => s.fields).find(x => x.id === r.field);
+      push(f.id, `answered, but only applies when "${by?.label ?? r.field}" ${r.values[0] === "true" ? "is ticked" : `is "${r.values.join('" or "')}"`}`);
+    }
     const v = typeof data[f.id] === "string" ? data[f.id] as string : "";
     if (!v) continue;
     if (f.kind === "date" && !date(v)) push(f.id, `"${v}" is not a valid DD/MM/YYYY date`);
@@ -97,7 +121,6 @@ function render() {
 
   const sections = new Map<string, Row[]>();
   for (const r of rows) sections.set(r.section || "Answers", [...sections.get(r.section || "Answers") ?? [], r]);
-  const pdfBox = h("div", { className: "pdf-view", hidden: !showPdf });
 
   $("#work").replaceChildren(
     h("div", { className: "app-head" },
@@ -116,7 +139,7 @@ function render() {
       ? h("div", { className: "banner bad", role: "alert" }, h("b", {}, `Needs attention: ${missing.length} mandatory field${missing.length === 1 ? "" : "s"} blank${issues.length ? `, ${issues.length} issue${issues.length > 1 ? "s" : ""} to check` : ""}`),
         h("ul", {}, ...missing.map(r => h("li", {}, `${r.section ? `${r.section}: ` : ""}${r.label} is blank`)), ...issues.map(i => h("li", {}, `${label(i.id)}: ${i.msg}`))))
       : h("div", { className: "banner ok", role: "status" }, h("b", {}, "Complete. "), `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. Read directly from the PDF's fields: no OCR, nothing retyped.`),
-    pdfBox,
+    h("div", { className: showPdf ? "split" : "" }, h("div", { className: "data" },
     h("div", { className: "facts" }, ...facts.map(([k, val]) => h("div", {}, h("span", {}, k), h("b", {}, val || "—")))),
     cust ? h("div", { className: "sec cust" }, h("h3", {}, `Customer verification · ${cust.cif}`),
       h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, ""), h("th", {}, "Per application"), h("th", {}, "Per customer record"), h("th", {}, "Result"))),
@@ -133,15 +156,49 @@ function render() {
       return shown.length ? h("div", { className: "sec" }, h("h3", {}, title), h("table", {}, h("tbody", {}, ...shown.map(r => {
         const val = show(r.value), blank = !val && r.required;
         const why = flags(r.id);
-        return h("tr", { className: blank || why.length ? "missing" : "" }, h("th", { scope: "row" }, r.label, r.required ? " *" : ""),
+        const at = where(r.id);
+        return h("tr", { className: `${blank || why.length ? "missing" : ""}${at.length ? " findable" : ""}${sel === r.id ? " sel" : ""}`, title: at.length ? "Click to show it in the PDF" : "",
+          onclick: (e: Event) => { if (at.length && !(e.target as HTMLElement).matches("input")) locate(r.id); } },
+          h("th", { scope: "row" }, r.label, r.required ? " *" : ""),
           h("td", {}, blank ? "Missing" : r.value === true ? "Yes" : val || h("span", { className: "muted" }, "—"),
             ...why.map(w => h("div", { className: "flag" }, w))),
           h("td", { className: "tick" }, val ? h("input", { type: "checkbox", title: "Checked", "aria-label": `${r.label} checked`, checked: checked.has(r.id),
             onchange: (e: Event) => { (e.target as HTMLInputElement).checked ? checked.add(r.id) : checked.delete(r.id); render(); } }) : ""));
       })))) : "";
-    }),
+    })),
+    showPdf ? pdfPane() : ""),
   );
-  if (showPdf) text().then(m => m.renderPages(current!.bytes, Math.min(pdfBox.clientWidth - 28, 860))).then(pages => pdfBox.replaceChildren(...pages));
+  if (showPdf && !pane!.pages.length) {
+    const open = current!;
+    text().then(m => m.renderPages(open.bytes, Math.min(pane!.el.clientWidth - 24, 860))).then(cs => {
+      if (current !== open || !pane) return;
+      pane.pages = cs.map((c, i) => h("div", { className: "pg", "aria-label": `Page ${i + 1}` }, c));
+      pane.el.replaceChildren(...pane.pages);
+      if (sel) locate(sel);
+    });
+  }
+}
+
+// ---- The PDF beside the data: click an answer to see it in the PDF ----
+const where = (id: string) => [...boxes].filter(([n]) => n === id || n.startsWith(`${id}__`)).flatMap(([, b]) => b);
+function pdfPane() {
+  pane ??= { el: h("div", { className: "pdf-view", role: "region", "aria-label": "The PDF as received" }, h("p", { className: "muted" }, "Loading the PDF…")), pages: [] };
+  return pane.el;
+}
+function locate(id: string) {
+  sel = id;
+  if (!showPdf) { showPdf = true; render(); return; }
+  document.querySelectorAll(".sec tr.sel").forEach(e => e.classList.remove("sel"));
+  render(); // marks the row
+  if (!pane?.pages.length) return; // shown once the pages are drawn
+  pane.el.querySelectorAll(".hl").forEach(e => e.remove());
+  const marks = where(id).map(b => {
+    const m = h("div", { className: "hl", style: `left:${(b.x / b.pw) * 100}%;top:${((b.ph - b.y - b.h) / b.ph) * 100}%;width:${(b.w / b.pw) * 100}%;height:${(b.h / b.ph) * 100}%` });
+    pane!.pages[b.page]?.append(m);
+    return m;
+  });
+  const first = marks[0];
+  if (first) pane.el.scrollTo({ top: first.offsetTop + (first.parentElement as HTMLElement).offsetTop - pane.el.clientHeight / 3, behavior: "smooth" });
 }
 
 // ---- Submit to workflow (simulated: the real one would create an iBPM case) ----
