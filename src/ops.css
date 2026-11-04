@@ -134,3 +134,5 @@ button.danger.primary, .modal .danger { background: var(--bad); color: #fff; bor
 .did .q { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--grey); }
 .did ul { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--grey); }
 .did b { color: var(--ink); }
+.sample-files { padding: 6px 12px; border-bottom: 1px solid var(--rule); font-size: 13px; }
+.sample-files a { display: block; padding: 2px 0; }

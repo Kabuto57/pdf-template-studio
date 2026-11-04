@@ -88,16 +88,20 @@ export const SAMPLES: Sample[] = [
   },
 ];
 
+/** One sample's filled PDF. Also written to public/samples/ for download (scripts/lc-pdfs.test.ts). */
+export async function samplePdf(s: Sample) {
+  const bytes = await buildPdf(LC.template, s.answers);
+  if (!s.printed) return bytes;
+  const doc = await PDFDocument.load(bytes); // what "Print to PDF" does: the page looks the same, but the fields are gone
+  doc.getForm().flatten();
+  return doc.save();
+}
+
 /** Makes each sample's PDF and puts it in the mailbox, oldest first (the newest shows on top). */
 export async function loadSamples() {
   const start = Date.now() - SAMPLES.length * 7 * 60_000; // one email every 7 minutes, ending now
   for (const [i, s] of SAMPLES.entries()) {
-    let bytes = await buildPdf(LC.template, s.answers);
-    if (s.printed) { // what "Print to PDF" does: the page looks the same, but the fields are gone
-      const doc = await PDFDocument.load(bytes);
-      doc.getForm().flatten();
-      bytes = await doc.save();
-    }
+    const bytes = await samplePdf(s);
     const mail: Mail = {
       id: crypto.randomUUID(), from: s.from, to: "trade.ops@demobank.example", subject: s.subject,
       body: `${s.body}\n\n[Demo sample: ${s.shows}]`, sent: start + i * 7 * 60_000, file: { name: s.file, bytes }, status: "new",
