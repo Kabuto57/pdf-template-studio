@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRawStream, PDFString, decodePDFRawStream } from "pdf-lib";
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRawStream, PDFString, decodePDFRawStream } from "pdf-lib";
 import { FORMATS, buildPdf, extractPdf, isActive } from "../src/pdf";
 import { LC, LC_SAMPLE } from "../src/lc";
 import { buildLcPdf } from "../src/lc-pdf";
@@ -8,7 +8,7 @@ describe("LC in the bank's layout", () => {
   it("has a box for every question and gives every answer back", async () => {
     const pdf = await buildLcPdf(LC_SAMPLE);
     const names = new Set((await PDFDocument.load(pdf)).getForm().getFields().map(f => f.getName()));
-    const missing = LC.template.sections.flatMap(s => s.fields).filter(f => !names.has(f.kind === "checks" ? `${f.id}__0` : f.id)).map(f => f.id);
+    const missing = LC.template.sections.flatMap(s => s.fields).filter(f => !names.has(f.kind === "checks" ? `${f.id}__0` : f.kind === "date" ? `${f.id}__dd` : f.id)).map(f => f.id);
     expect(missing).toEqual([]);
     const { data } = await extractPdf(pdf);
     for (const [k, v] of Object.entries(LC_SAMPLE)) expect([k, data[k]]).toEqual([k, v]);
@@ -71,14 +71,29 @@ describe("questions that only apply once something is ticked", () => {
   });
 });
 
-describe("dates: one box with Acrobat's calendar", () => {
-  it.each([["original look", () => buildLcPdf()], ["new design", () => buildPdf(LC.template)]])("%s", async (_, make) => {
-    const form = (await PDFDocument.load(await make())).getForm();
-    for (const f of LC.template.sections.flatMap(s => s.fields).filter(f => f.kind === "date")) {
-      const aa = form.getTextField(f.id).acroField.dict.lookup(PDFName.of("AA"), PDFDict);
-      const js = (k: string) => (aa.lookup(PDFName.of(k), PDFDict).lookup(PDFName.of("JS")) as PDFHexString).decodeText();
-      expect([js("F"), js("K")]).toEqual(['AFDate_FormatEx("dd/mm/yyyy");', 'AFDate_KeystrokeEx("dd/mm/yyyy");']); // the format that brings the calendar
-    }
+describe("dates: Acrobat's calendar when its JavaScript runs, drop-downs otherwise", () => {
+  const script = async (pdf: Uint8Array) => {
+    const doc = await PDFDocument.load(pdf);
+    const names = doc.catalog.lookup(PDFName.of("Names"), PDFDict).lookup(PDFName.of("JavaScript"), PDFDict).lookup(PDFName.of("Names"), PDFArray);
+    return new TextDecoder().decode(decodePDFRawStream(names.lookup(1, PDFDict).lookup(PDFName.of("JS")) as PDFRawStream).decode());
+  };
+  it.each([["original look", () => buildLcPdf(LC_SAMPLE)], ["new design", () => buildPdf(LC.template, LC_SAMPLE)]])("%s", async (_, make) => {
+    const pdf = await make(), js = await script(pdf);
+    const fields: Record<string, any> = { expiry_date: { display: 1 } };
+    const d = { getField: (n: string) => fields[n] ??= { display: 0 } };
+    // In Acrobat the calendar box is shown and the drop-downs hidden; in other viewers (Chrome: "pdfium") nothing changes.
+    new Function("app", "display", js).call(d, { viewerType: "pdfium" }, { visible: 0, hidden: 1 });
+    expect(fields.expiry_date.display).toBe(1);
+    new Function("app", "display", js).call(d, { viewerType: "Exchange-Pro" }, { visible: 0, hidden: 1 });
+    expect([fields.expiry_date.display, fields.expiry_date__dd.display]).toEqual([0, 1]);
+    // The box has Acrobat's date format (which brings the calendar) and refuses dates that don't exist.
+    const form = (await PDFDocument.load(pdf)).getForm(), box = form.getTextField("expiry_date");
+    expect(box.acroField.dict.lookup(PDFName.of("AA"), PDFDict).toString()).toMatch(/AFDate_FormatEx|<FEFF0041/);
+    // Hidden box: the drop-downs are the answer. Shown box (Acrobat switched): the box is the answer.
+    box.setText("15/08/2027");
+    expect((await extractPdf(await form.doc.save())).data.expiry_date).toBe(LC_SAMPLE.expiry_date);
+    box.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(4));
+    expect((await extractPdf(await form.doc.save())).data.expiry_date).toBe("15/08/2027");
   });
 });
 
@@ -106,7 +121,10 @@ describe("Check form button: blanks, formats and funny characters", () => {
       const fields: Record<string, any> = {};
       for (const f of LC.template.sections.flatMap(s => s.fields)) {
         const v = values[f.id];
-        if (f.kind === "checks") (f.options ?? []).forEach((o, i) => { fields[`${f.id}__${i}`] = { value: Array.isArray(v) && v.includes(o) ? "Yes" : "Off" }; });
+        if (f.kind === "date") { // three drop-downs: DD, "MM Mon", YYYY
+          const [dd, mm, yy] = typeof v === "string" && v ? v.split("/") : ["DD", "MM", "YYYY"];
+          [dd, mm === "MM" ? mm : `${mm} Mon`, yy].forEach((p, i) => { fields[`${f.id}__${["dd", "mm", "yyyy"][i]}`] = { value: p, valueAsString: p }; });
+        } else if (f.kind === "checks") (f.options ?? []).forEach((o, i) => { fields[`${f.id}__${i}`] = { value: Array.isArray(v) && v.includes(o) ? "Yes" : "Off" }; });
         else fields[f.id] = { value: f.kind === "check" ? (v ? "Yes" : "Off") : v ?? (f.kind === "radio" ? "Off" : ""), valueAsString: String(v ?? "") };
       }
       const d = { getField: (n: string) => fields[n] ?? null };
@@ -124,9 +142,9 @@ describe("Check form button: blanks, formats and funny characters", () => {
     expect(r.bad.join("\n")).toMatch(/expiry.*not a real date/);
     expect(r.bad.join("\n")).toMatch(/Amount.*not an amount/);
     expect(r.red("contact_tel")).toBe(true);
-    expect(r.red("expiry_date")).toBe(true);
+    expect(r.red("expiry_date__dd")).toBe(true);
     expect(check({ ...LC_SAMPLE, expiry_date: "" }).miss.join()).toMatch(/expiry/i);
-    expect(check({ ...LC_SAMPLE, expiry_date: "15/13/2026" }).bad.join()).toMatch(/expiry.*not a real date/i); // typed with JavaScript off
+    expect(check({ ...LC_SAMPLE, expiry_date: "15/MM/2026" }).bad.join()).toMatch(/expiry.*not a real date/i); // month not picked
     expect(check({ ...LC_SAMPLE, applicant_name: "" }).miss).toContain("Applicant name");
     // unticking "All bank charges" locks its options; ticking unlocks them
     expect(check({ ...LC_SAMPLE, bank_charges: false }).fields.bank_charges_for.readonly).toBe(true);
