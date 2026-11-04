@@ -64,7 +64,6 @@ let boxes = new Map<string, Box[]>(),
   sel = "",
   nums = new Map<string, number>(); // nums: the answer numbers pinned on the PDF // where each answer sits in the PDF; the row being shown
 let checked = new Set<string>(); // rows the ops officer has ticked as checked
-let jsonOpen = false;                       // "Edit answers" on: every answer is a box the officer can correct
 let original: Values = {};                 // the answers as read from the PDF, to record what ops corrected
 let decision: "" | "approve" | "reject" = "",
   reason = ""; // the officer's decision, before it is submitted
@@ -232,17 +231,6 @@ function correct(id: string, value: Value) {
     saveMail(current!.mail);
   }
   render();
-}
-
-/** The answers as JSON, exactly what goes to the back end. */
-function jsonView(data: Values) {
-  return h(
-    "details",
-    { className: "sec json-view", open: jsonOpen, ontoggle: (e: Event) => (jsonOpen = (e.target as HTMLDetailsElement).open) },
-    h("summary", {}, "JSON sent to the back end"),
-    h("pre", {}, "{\n", ...Object.entries(data).map(([k, v], i, all) =>
-      h("span", {}, `  ${JSON.stringify(k)}: ${JSON.stringify(v)}${i < all.length - 1 ? "," : ""}\n`)), "}"),
-  );
 }
 
 /** The box for correcting one answer, matching its kind of question. */
@@ -493,7 +481,6 @@ function render() {
             "Tick all with no flags",
           ),
         ),
-        jsonView(data as Values),
         ...[...sections].map(([title, rs]) => {
           const shown = rs.filter(visible);
           return shown.length
@@ -654,10 +641,6 @@ function decide(open: number, items: string[]) {
       h("b", {}, mail.decision === "reject" ? "Rejected" : "Approved"),
       ` and submitted to the workflow as case ${mail.caseId}`,
       mail.reason ? h("span", {}, ` · Reason: ${mail.reason}`) : "",
-      mail.submitted
-        ? h("span", {}, ` · Sent ${Object.keys(mail.submitted).length} answers `,
-            h("button", { type: "button", onclick: () => download(JSON.stringify(mail.submitted, null, 2), `${mail.caseId}.json`, "application/json") }, "Download submitted JSON"))
-        : "",
     );
   const pick = (d: typeof decision, text: string) =>
     h(
