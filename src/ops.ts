@@ -108,7 +108,7 @@ async function renderInbox() {
           h(
             "p",
             { className: "muted small pad" },
-            "No emails yet. Applications emailed to Trade Ops appear here. Load the sample applications above, or drop PDFs below.",
+            "No emails yet. Applications emailed to Trade Ops appear here. Drop PDFs below (sample PDFs are in the Template Studio).",
           ),
         ]),
   );
@@ -802,18 +802,11 @@ $<HTMLInputElement>("#pdfIn").onchange = e => {
   el.value = ""; // so the same file can be chosen again
 };
 
-// ---- Sample applications (demo) ----
-$("#samples").onclick = async () => {
-  const { loadSamples, SAMPLES } = await import("./demo-applications");
-  await loadSamples();
-  await renderInbox();
-  toast(`${SAMPLES.length} sample applications added to the mailbox.`);
-};
 $("#clear").onclick = async () => {
   if (!(await ask("Empty the mailbox?", "Every email and its decision will be removed from this browser.", "Empty mailbox", "danger"))) return;
   await clearInbox();
   current = undefined;
-  $("#work").replaceChildren(h("div", { className: "empty-state" }, h("h2", {}, "No application open"), h("p", {}, "Load the sample applications, or drop PDFs.")));
+  $("#work").replaceChildren(h("div", { className: "empty-state" }, h("h2", {}, "No application open"), h("p", {}, "Drop PDFs into the mailbox.")));
   renderInbox();
 };
 const drop = $("#drop");

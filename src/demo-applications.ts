@@ -1,9 +1,8 @@
-// SAMPLE APPLICATIONS FOR THE WORKBENCH
-// "Load sample applications" puts these in the Trade Ops mailbox. Each one is a real LC application PDF, made by
+// SAMPLE FILLED APPLICATIONS
+// The "Sample filled PDFs" in the Template Studio (written to public/samples/ by scripts/lc-pdfs.test.ts). Each one is a real LC application PDF, made by
 // buildPdf from different answers, and each shows a different situation ops meets every day.
 import { PDFDocument } from "pdf-lib";
 import { LC, LC_SAMPLE } from "./lc";
-import { saveMail, type Mail } from "./mailbox";
 import { buildPdf, type Values } from "./pdf";
 
 interface Sample { from: string; subject: string; body: string; file: string; shows: string; answers: Values; printed?: boolean }
@@ -88,7 +87,7 @@ export const SAMPLES: Sample[] = [
   },
 ];
 
-/** One sample's filled PDF. Also written to public/samples/ for download (scripts/lc-pdfs.test.ts). */
+/** One sample's filled PDF. */
 export async function samplePdf(s: Sample) {
   const bytes = await buildPdf(LC.template, s.answers);
   if (!s.printed) return bytes;
@@ -97,15 +96,3 @@ export async function samplePdf(s: Sample) {
   return doc.save();
 }
 
-/** Makes each sample's PDF and puts it in the mailbox, oldest first (the newest shows on top). */
-export async function loadSamples() {
-  const start = Date.now() - SAMPLES.length * 7 * 60_000; // one email every 7 minutes, ending now
-  for (const [i, s] of SAMPLES.entries()) {
-    const bytes = await samplePdf(s);
-    const mail: Mail = {
-      id: crypto.randomUUID(), from: s.from, to: "trade.ops@demobank.example", subject: s.subject,
-      body: `${s.body}\n\n[Demo sample: ${s.shows}]`, sent: start + i * 7 * 60_000, file: { name: s.file, bytes }, status: "new",
-    };
-    await saveMail(mail);
-  }
-}
