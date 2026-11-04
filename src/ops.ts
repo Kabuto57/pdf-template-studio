@@ -29,6 +29,7 @@ let current: Opened | undefined, showEmpty = false, showPdf = innerWidth >= 1200
 let pane: { el: HTMLElement; pages: HTMLElement[] } | undefined; // the rendered PDF, kept while the same application is open
 let boxes = new Map<string, Box[]>(), sel = "", nums = new Map<string, number>(); // nums: the answer numbers pinned on the PDF // where each answer sits in the PDF; the row being shown
 let checked = new Set<string>(); // rows the ops officer has ticked as checked
+let decision: "" | "approve" | "reject" = "", reason = ""; // the officer's decision, before it is submitted
 
 const show = (v: Value | undefined) => v === true ? "Yes" : v === false || v === undefined ? "" : Array.isArray(v) ? v.join(", ") : v;
 const when = (t: number) => new Date(t).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -39,7 +40,7 @@ async function renderInbox() {
   const mails = await inbox().catch(() => [] as Mail[]);
   $("#count").textContent = `${mails.filter(m => m.status === "new").length} new`;
   $("#inbox").replaceChildren(...(mails.length ? mails.map(m => h("button", { type: "button", className: `mail-item${current?.mail?.id === m.id ? " on" : ""}`, onclick: () => open(m.file.bytes, m.file.name, m) },
-    h("div", { className: "from" }, h("span", {}, m.from), h("span", { className: `badge ${m.status === "new" ? "new" : "ok"}` }, m.status === "new" ? "New" : "Processed")),
+    h("div", { className: "from" }, h("span", {}, m.from), h("span", { className: `badge ${m.status === "new" ? "new" : m.decision === "reject" ? "bad" : "ok"}` }, m.status === "new" ? "New" : m.decision === "reject" ? "Rejected" : "Approved")),
     h("div", { className: "subj" }, m.subject),
     h("div", { className: "meta" }, h("span", {}, m.file.name), h("span", {}, when(m.sent))))) :
     [h("p", { className: "muted small pad" }, "No emails yet. Applications emailed to Trade Ops appear here; you can also drop a PDF below.")]));
@@ -66,7 +67,7 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
         ? "its form fields were removed. This happens when a form is printed or \"Saved as PDF\" (for example from Chrome or Edge). Ask the customer to save the form with Save in Acrobat or Preview, not Print, and send that file."
         : "this PDF has no form fields and no text. It looks like a scan, which would need OCR.");
     }
-    current = { result, name, bytes, mail, vendor }; checked = new Set(); pane = undefined; sel = "";
+    current = { result, name, bytes, mail, vendor }; checked = new Set(); pane = undefined; sel = ""; decision = ""; reason = "";
     boxes = await fieldBoxes(bytes).catch(() => new Map());
     render(); renderInbox();
   } catch (err) {
@@ -92,8 +93,17 @@ function problems(t: Template | undefined, data: Record<string, unknown>) {
     if (odd.length) push(f.id, `unusual characters ${odd.join(" ")}`);
     if (f.max && v.length > f.max) push(f.id, `longer than ${f.max} characters`);
   }
-  const ship = date(String(data.latest_shipment_date ?? "")), expiry = date(String(data.expiry_date ?? ""));
+  // Checks across answers, which a PDF can't make without JavaScript.
+  const ship = date(String(data.latest_shipment_date ?? "")), expiry = date(String(data.expiry_date ?? "")), applied = date(String(data.application_date ?? ""));
   if (ship && expiry && expiry < ship) push("expiry_date", "before the latest shipment date");
+  if (applied && ship && ship < applied) push("latest_shipment_date", "before the application date");
+  if (applied && expiry && expiry < applied) push("expiry_date", "before the application date");
+  if (applied && applied.getTime() > Date.now()) push("application_date", "in the future");
+  const amount = Number(String(data.amount ?? "").replace(/,/g, ""));
+  if (String(data.amount ?? "") && FORMATS.amount.ok.test(String(data.amount)) && !(amount > 0)) push("amount", "must be more than zero");
+  // The smart form only offers the insurance arrangement for FOB / CFR / FCA / CPT (seller doesn't insure).
+  if (show(data.insurance_arrangement as Value) && ["CIF", "CIP"].includes(String(data.price_basis)))
+    push("insurance_arrangement", `only for FOB/CFR/FCA/CPT, but price basis is ${data.price_basis} (the beneficiary insures)`);
   return out;
 }
 
@@ -145,9 +155,8 @@ function render() {
         h("button", { type: "button", onclick: () => { showPdf = !showPdf; render(); } }, showPdf ? "Hide PDF" : "View PDF"),
         h("button", { type: "button", onclick: () => download(JSON.stringify(data, null, 2), `${slug(template?.title ?? name)}.json`, "application/json") }, "JSON"),
         h("button", { type: "button", onclick: () => download(csv(rows), `${slug(template?.title ?? name)}.csv`, "text/csv") }, "CSV"),
-        missing.length ? h("button", { type: "button", onclick: () => toast(`Email to ${mail?.from ?? "the customer"} drafted, listing ${missing.length} missing item${missing.length > 1 ? "s" : ""}.`) }, "Return to customer") : "",
-        h("button", { type: "button", className: "danger", onclick: () => remove() }, "Delete"),
-        h("button", { type: "button", className: "primary", disabled: !!mail?.caseId, onclick: () => submit() }, mail?.caseId ? `Submitted: ${mail.caseId}` : "Submit to workflow"))),
+        h("button", { type: "button", className: "danger", onclick: () => remove() }, "Delete"))),
+    decide(missing.length + issues.length, missing.map(r => `${r.label} is blank`).concat(issues.map(i => `${label(i.id)}: ${i.msg}`))),
     missing.length || issues.length
       ? h("div", { className: "banner bad", role: "alert" }, h("b", {}, `Needs attention: ${missing.length} mandatory field${missing.length === 1 ? "" : "s"} blank${issues.length ? `, ${issues.length} issue${issues.length > 1 ? "s" : ""} to check` : ""}`),
         h("ul", {}, ...missing.map(r => h("li", {}, `${r.section ? `${r.section}: ` : ""}${r.label} is blank`)), ...issues.map(i => h("li", {}, `${label(i.id)}: ${i.msg}`))))
@@ -230,14 +239,34 @@ function locate(id: string, scrollPdf = true) {
   if (first && scrollPdf) pane.el.scrollTo({ top: first.offsetTop + (first.parentElement as HTMLElement).offsetTop - pane.el.clientHeight / 3, behavior: "smooth" });
 }
 
-// ---- Submit to workflow (simulated: the real one would create an iBPM case) ----
-async function submit() {
+// ---- Decision: approve or reject, then submit (simulated: the real one would create an iBPM case) ----
+function decide(open: number, items: string[]) {
+  const mail = current!.mail;
+  if (mail?.caseId) return h("div", { className: `decision done ${mail.decision ?? "approve"}` },
+    h("b", {}, mail.decision === "reject" ? "Rejected" : "Approved"), ` and submitted to the workflow as case ${mail.caseId}`,
+    mail.reason ? h("span", {}, ` · Reason: ${mail.reason}`) : "");
+  const pick = (d: typeof decision, text: string) => h("label", { className: `opt ${d}${decision === d ? " on" : ""}` },
+    h("input", { type: "radio", name: "decision", checked: decision === d, onchange: () => { decision = d; if (d === "reject" && !reason) reason = items.join("; "); render(); } }), text);
+  return h("div", { className: "decision" },
+    h("span", { className: "q" }, "Decision"),
+    pick("approve", "Approve"), pick("reject", "Reject"),
+    decision === "reject" ? h("input", { type: "text", className: "reason", placeholder: "Reason (sent to the customer)", value: reason, "aria-label": "Reason for rejecting",
+      oninput: (e: Event) => { reason = (e.target as HTMLInputElement).value; (document.querySelector("#submitBtn") as HTMLButtonElement).disabled = !reason.trim(); } }) : "",
+    decision === "approve" && open ? h("span", { className: "warn" }, `${open} open item${open > 1 ? "s" : ""} above`) : "",
+    h("button", { type: "button", id: "submitBtn", className: "primary", disabled: !decision || (decision === "reject" && !reason.trim()), onclick: () => submit(open) }, "Submit"));
+}
+
+async function submit(open: number) {
   const o = current!;
+  if (decision === "approve" && open && !await ask("Approve with open items?", `${open} item${open > 1 ? "s are" : " is"} still flagged on this application. Approve it anyway?`, "Approve and submit")) return;
   const mail = o.mail ?? { id: crypto.randomUUID(), from: "Uploaded file", to: "", subject: o.result.template?.title ?? o.name, body: "", sent: Date.now(), file: { name: o.name, bytes: o.bytes }, status: "new" as const };
   mail.caseId = `TS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
-  mail.status = "processed";
+  mail.status = "processed"; mail.decision = decision || "approve"; mail.reason = decision === "reject" ? reason.trim() : undefined;
   await saveMail(mail); o.mail = mail;
-  toast(`Submitted to the workflow (iBPM) as case ${mail.caseId}.`); render(); renderInbox();
+  toast(mail.decision === "reject"
+    ? `Rejected: case ${mail.caseId} submitted; the reason goes back to ${mail.from === "Uploaded file" ? "the customer" : mail.from}.`
+    : `Approved: submitted to the workflow (iBPM) as case ${mail.caseId}.`);
+  render(); renderInbox();
 }
 
 // ---- Delete ----

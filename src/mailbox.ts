@@ -4,6 +4,7 @@
 export interface Mail {
   id: string; from: string; to: string; subject: string; body: string; sent: number;
   file: { name: string; bytes: Uint8Array }; status: "new" | "processed"; caseId?: string;
+  decision?: "approve" | "reject"; reason?: string; // what Trade Ops decided when submitting
 }
 export const OPS_ADDRESS = "trade.ops@demobank.example";
 

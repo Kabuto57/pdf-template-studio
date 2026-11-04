@@ -112,3 +112,16 @@ button.danger.primary, .modal .danger { background: var(--bad); color: #fff; bor
 .in-sec { display: block; font-size: 10.5px; color: var(--grey); text-transform: uppercase; letter-spacing: .05em; margin-top: 1px; }
 .pin { position: absolute; transform: translateX(calc(-100% - 1px)); min-width: 12px; height: 11px; padding: 0 2px; border: 0; border-radius: 0; font: 700 8px/11px Arial, sans-serif; color: #fff; background: #1f4e8c; opacity: .8; z-index: 1; }
 .pin:hover, .pin.on { background: var(--teal); opacity: 1; z-index: 2; }
+
+/* Decision: approve or reject, then submit */
+.decision { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; margin-bottom: 14px; border: 1px solid var(--rule); background: var(--panel); }
+.decision .q { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--grey); }
+.decision .opt { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 1px solid var(--rule); cursor: pointer; }
+.decision .opt.approve.on { border-color: var(--ok); background: var(--ok-bg); color: var(--ok); font-weight: 600; }
+.decision .opt.reject.on { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); font-weight: 600; }
+.decision .reason { flex: 1 1 260px; min-width: 0; font: inherit; padding: 5px 8px; border: 1px solid var(--rule); }
+.decision .warn { color: var(--bad); font-size: 12px; }
+.decision #submitBtn { margin-left: auto; }
+.decision.done.approve { border-color: #b9d6c3; background: var(--ok-bg); } .decision.done.approve b { color: var(--ok); }
+.decision.done.reject { border-color: #f0c2bd; background: var(--bad-bg); } .decision.done.reject b { color: var(--bad); }
+.badge.bad { border-color: var(--bad); color: var(--bad); }
