@@ -16,7 +16,7 @@ import {
   type Value,
   type Values,
 } from "./pdf";
-import { deleteMail, inbox, saveMail, type Mail } from "./mailbox";
+import { clearInbox, deleteMail, inbox, saveMail, type Mail } from "./mailbox";
 import { compare, find } from "./customers";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
@@ -108,7 +108,7 @@ async function renderInbox() {
           h(
             "p",
             { className: "muted small pad" },
-            "No emails yet. Applications emailed to Trade Ops appear here; you can also drop a PDF below.",
+            "No emails yet. Applications emailed to Trade Ops appear here. Load the sample applications above, or drop PDFs below.",
           ),
         ]),
   );
@@ -348,6 +348,7 @@ function render() {
           h("b", {}, "Complete. "),
           `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. Read directly from the PDF's fields: no OCR, nothing retyped.`,
         ),
+    did(rows, template, matches.length, cust?.cif),
     h(
       "div",
       { className: showPdf ? "split" : "" },
@@ -592,6 +593,30 @@ function locate(id: string, scrollPdf = true) {
 }
 
 // ---- Decision: approve or reject, then submit (simulated: the real one would create an iBPM case) ----
+/** What the workbench did for this application, in numbers: the work an officer no longer does by hand. */
+function did(rows: Row[], template: Template | undefined, compared: number, cif?: string) {
+  const fields = template?.sections.flatMap(s => s.fields) ?? [];
+  const answered = rows.filter(r => !!show(r.value)).length;
+  const typed = fields.filter(f => typeof current!.result.data[f.id] === "string" && current!.result.data[f.id] !== "").length;
+  const conditional = fields.filter(f => f.requiredIf || f.activeIf).length;
+  const item = (n: number | string, what: string) => h("li", {}, h("b", {}, String(n)), ` ${what}`);
+  return h(
+    "div",
+    { className: "did" },
+    h("span", { className: "q" }, "Done automatically"),
+    h(
+      "ul",
+      {},
+      item(answered, "answers read from the PDF's fields: none retyped, no OCR"),
+      item(rows.filter(r => r.required).length, "mandatory questions checked"),
+      item(conditional, "conditional rules applied"),
+      item(typed, "typed answers checked for format, real dates, length and characters"),
+      "expiry_date" in current!.result.data ? item(6, "cross-answer checks (dates in order, date not in the future, amount, insurance vs price basis)") : "",
+      cif ? item(compared, `details compared with customer record ${cif}`) : item("KYC", "applicant not found in customer records"),
+    ),
+  );
+}
+
 function decide(open: number, items: string[]) {
   const mail = current!.mail;
   if (mail?.caseId)
@@ -755,15 +780,42 @@ const csv = (rows: Row[]) =>
     ),
   ].join("\n");
 
-// ---- Upload ----
-const take = async (f?: File) => {
-  if (f) open(new Uint8Array(await f.arrayBuffer()), f.name);
+// ---- Upload: one or many PDFs; each goes into the mailbox, and the first one opens ----
+const take = async (files: FileList | File[] | undefined) => {
+  const pdfs = [...(files ?? [])].filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+  if (!pdfs.length) return;
+  let first: Mail | undefined;
+  for (const [i, f] of pdfs.entries()) {
+    const mail: Mail = {
+      id: crypto.randomUUID(), from: "Uploaded file", to: "", subject: f.name.replace(/\.pdf$/i, ""), body: "",
+      sent: Date.now() + i, file: { name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }, status: "new",
+    };
+    await saveMail(mail);
+    first ??= mail;
+  }
+  if (pdfs.length > 1) toast(`${pdfs.length} PDFs added to the mailbox.`);
+  open(first!.file.bytes, first!.file.name, first);
 };
 $<HTMLInputElement>("#pdfIn").onchange = e => {
   const el = e.target as HTMLInputElement;
-  take(el.files?.[0]);
-  el.value = "";
-}; // so the same file can be chosen again
+  take(el.files ?? undefined);
+  el.value = ""; // so the same file can be chosen again
+};
+
+// ---- Sample applications (demo) ----
+$("#samples").onclick = async () => {
+  const { loadSamples, SAMPLES } = await import("./demo-applications");
+  await loadSamples();
+  await renderInbox();
+  toast(`${SAMPLES.length} sample applications added to the mailbox.`);
+};
+$("#clear").onclick = async () => {
+  if (!(await ask("Empty the mailbox?", "Every email and its decision will be removed from this browser.", "Empty mailbox", "danger"))) return;
+  await clearInbox();
+  current = undefined;
+  $("#work").replaceChildren(h("div", { className: "empty-state" }, h("h2", {}, "No application open"), h("p", {}, "Load the sample applications, or drop PDFs.")));
+  renderInbox();
+};
 const drop = $("#drop");
 addEventListener("dragover", e => {
   e.preventDefault();
@@ -773,7 +825,7 @@ addEventListener("dragleave", () => drop.classList.remove("over"));
 addEventListener("drop", e => {
   e.preventDefault();
   drop.classList.remove("over");
-  take(e.dataTransfer?.files[0]);
+  take(e.dataTransfer?.files);
 });
 
 renderInbox();

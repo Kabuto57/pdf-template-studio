@@ -39,6 +39,8 @@ export async function extractFields(doc: PDFDocument): Promise<Extracted> {
 
   // 3. One row per question.
   const rows: Row[] = [], data: Values = {};
+  // Our form, but with no fields left: it was printed or "Saved as PDF". Nothing to read (the caller says why).
+  if (template && !raw.size) return { template, rows, data };
   if (template) {
     for (const s of template.sections) for (const f of s.fields) {
       rows.push({ section: s.title, id: f.id, label: f.label, value: answerOf(f, raw, shown) });

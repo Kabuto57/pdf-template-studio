@@ -1,5 +1,5 @@
 // The bank's customer records (demo stand-in for the core banking / KYC system), and the check of an application against them.
-// ponytail: one hard-coded record; swap `find` for a call to the real customer system.
+// ponytail: a few hard-coded records; swap `find` for a call to the real customer system.
 export interface Customer {
   cif: string;
   name: string;
@@ -17,6 +17,30 @@ export const CUSTOMERS: Customer[] = [
     tel: "+65 6123 4567",
     accounts: ["072-123456-7", "072-765432-1"],
     signatories: ["TAN WEI MING", "LIM SU LIN"],
+  },
+  {
+    cif: "CIF 0051776",
+    name: "LIM BROTHERS TRADING PTE LTD",
+    address: ["8 Jurong Port Road", "#03-12", "Singapore 619093"],
+    tel: "+65 6265 8800",
+    accounts: ["072-334455-6"],
+    signatories: ["LIM KOK HUA"],
+  },
+  {
+    cif: "CIF 0062140",
+    name: "OCEANIC FOODS PTE LTD",
+    address: ["21 Fishery Port Road", "Singapore 619742"],
+    tel: "+65 6898 2211",
+    accounts: ["072-889900-1", "072-889900-2"],
+    signatories: ["NG MEI LING", "RAJ KUMAR"],
+  },
+  {
+    cif: "CIF 0039905",
+    name: "SUNRISE ELECTRONICS PTE LTD",
+    address: ["3 Changi Business Park Vista", "#05-01", "Singapore 486051"],
+    tel: "+65 6545 3030",
+    accounts: ["072-556677-8"],
+    signatories: ["CHEN JIA HUI"],
   },
 ];
 

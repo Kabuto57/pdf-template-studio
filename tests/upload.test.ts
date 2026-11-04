@@ -47,3 +47,13 @@ describe("uploaded PDFs", () => {
     expect(out.rows.map(x => [x.label, x.value])).toEqual([["Company", "NEW CO"], ["Agree", true]]);
   });
 });
+
+it("a printed copy of our form (fields gone) reads as having no answers, not as all blank", async () => {
+  const { PDFDocument } = await import("pdf-lib");
+  const { LC, LC_SAMPLE } = await import("../src/lc");
+  const doc = await PDFDocument.load(await buildPdf(LC.template, LC_SAMPLE));
+  doc.getForm().flatten();
+  const read = await extractPdf(await doc.save());
+  expect(read.template?.title).toBe(LC.template.title);
+  expect(read.rows).toEqual([]);
+});

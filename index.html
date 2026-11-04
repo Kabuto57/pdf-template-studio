@@ -21,8 +21,39 @@
       <div class="step"><span class="n">1</span><h3>Download</h3><p>The customer gets the LC application from the bank's website.<br><span class="small">…/demo-bank/</span></p><a class="btn primary" href="demo-bank/">Open the bank's website</a></div>
       <div class="step"><span class="n">2</span><h3>Fill in</h3><p>In Adobe Acrobat Reader. Mandatory and conditional fields turn red, drop-downs and number boxes guide entry, <b>Check form</b> lists anything missing.</p></div>
       <div class="step"><span class="n">3</span><h3>Email</h3><p>The customer saves the PDF and emails it to Trade Operations from their own email (simulated).<br><span class="small">…/customer-mail/</span></p><a class="btn primary" href="customer-mail/">Open the customer's email</a></div>
-      <div class="step"><span class="n">4</span><h3>Ops extract</h3><p>Trade Ops open the email in their internal workbench: every answer read exactly, checked and laid out, ready for the workflow.<br><span class="small">…/trade-ops/</span></p><a class="btn primary" href="trade-ops/">Open the ops workbench</a></div>
+      <div class="step"><span class="n">4</span><h3>Ops extract</h3><p>Trade Ops open the email in their internal workbench: every answer read exactly, checked against the rules and the customer record, then approved or rejected. Click <b>Load sample applications</b> for eight realistic cases.<br><span class="small">…/trade-ops/</span></p><a class="btn primary" href="trade-ops/">Open the ops workbench</a></div>
     </div>
+
+    <section>
+      <h2>The problems, and what changes</h2>
+      <div class="card">
+        <table class="compare problems">
+          <thead><tr><th>Problem today</th><th>What happens now</th><th>With this demo</th></tr></thead>
+          <tbody>
+            <tr><td><b>1. The form is hard to change</b></td><td>Built in a legacy Adobe tool (LiveCycle). Every change waits on a specialist and the file must be re-signed with Adobe's server.</td><td>Each question is one line of text. Change it, the tests check it, and it is live in about 2 minutes.</td></tr>
+            <tr><td><b>2. Only works in Adobe</b></td><td>Edge, Chrome, Mac Preview and phones show "Please wait…". Its checks need JavaScript, which many laptops have off.</td><td>A standard PDF that opens in every viewer. Red frames, date lists and drop-downs guide the customer even with JavaScript off.</td></tr>
+            <tr><td><b>3. Forms arrive incomplete or wrong</b></td><td>Checks only run when the customer presses Print. Ops finds the problems after it arrives, then goes back and forth.</td><td>Problems are caught while filling in. Whatever slips through is flagged the moment ops opens it, with a ready-made reason to send back.</td></tr>
+            <tr><td><b>4. Ops reads, checks and retypes by hand</b></td><td>Print, scan (barcodes or OCR), check against the customer's records by eye, retype into the system.</td><td>Every answer read exactly from the PDF in seconds. Rules, cross-checks and the customer record checked automatically. Approve or reject, and submit.</td></tr>
+            <tr><td><b>5. OCR / AI cost and data leaving the bank</b></td><td>Every page goes through outsourced OCR.</td><td>Filled PDFs need no OCR at all, and everything stays in the browser. OCR or AI is only needed for paper and scans.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>What it saves, per application</h2>
+      <div class="card">
+        <p>Open any application in the workbench. The <b>Done automatically</b> bar counts the work an officer no longer does by hand. For the sample LC:</p>
+        <ul class="saves">
+          <li><b>~50 answers</b> read from the PDF's fields, with none retyped and no OCR</li>
+          <li><b>~35 mandatory questions</b> and <b>44 conditional rules</b> checked</li>
+          <li><b>~45 typed answers</b> checked for format, real dates, length and characters</li>
+          <li><b>6 cross-answer checks</b>: dates in order, amount, insurance against price basis</li>
+          <li><b>5 details</b> compared with the customer record (name, address, tel, account, signatory)</li>
+        </ul>
+        <p class="muted">Try the eight sample applications: complete, missing answers, wrong formats, differs from the customer record, unknown customer (KYC), contradicting answers, and a printed copy whose fields were lost.</p>
+      </div>
+    </section>
 
     <section>
       <h2>Compared with the current vendor form</h2>

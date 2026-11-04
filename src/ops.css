@@ -125,3 +125,12 @@ button.danger.primary, .modal .danger { background: var(--bad); color: #fff; bor
 .decision.done.approve { border-color: #b9d6c3; background: var(--ok-bg); } .decision.done.approve b { color: var(--ok); }
 .decision.done.reject { border-color: #f0c2bd; background: var(--bad-bg); } .decision.done.reject b { color: var(--bad); }
 .badge.bad { border-color: var(--bad); color: var(--bad); }
+
+/* Inbox tools: sample applications, empty the mailbox */
+.inbox-tools { display: flex; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.inbox-tools #samples { flex: 1; }
+/* "Done automatically": what the workbench did for this application */
+.did { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 10px 16px; margin-bottom: 14px; border: 1px solid var(--rule); background: var(--panel); }
+.did .q { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--grey); }
+.did ul { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--grey); }
+.did b { color: var(--ink); }
