@@ -1,0 +1,3855 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kabuto57.github.io/pdf-template-studio/lc-application.schema.json",
+  "title": "Irrevocable Documentary Credit (LC)",
+  "type": "object",
+  "required": [
+    "application_date",
+    "mode_of_advising",
+    "applicant_name",
+    "applicant_address_1",
+    "contact_name",
+    "contact_tel",
+    "beneficiary_name",
+    "beneficiary_address_1",
+    "currency",
+    "amount",
+    "price_basis",
+    "partial_shipment",
+    "transhipment",
+    "expiry_date",
+    "goods_description",
+    "bank_charges",
+    "issuance_charges_account"
+  ],
+  "properties": {
+    "application_date": {
+      "title": "Date",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^(0[1-9]|1\\d|2[0-9])/(0[1-9]|1[0-2])/\\d{4}$|^30/(0[13-9]|1[0-2])/\\d{4}$|^31/(0[13578]|1[02])/\\d{4}$",
+          "description": "is not a real DD/MM/YYYY date"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "mode_of_advising": {
+      "title": "Mode of advising",
+      "enum": [
+        "",
+        "Full Swift",
+        "Registered Airmail",
+        "Airmail with Brief Swift",
+        "Courier Service",
+        "Courier Service with Brief Swift"
+      ],
+      "description": "is not one of the options",
+      "allOf": [
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "applicant_name": {
+      "title": "Applicant name",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "applicant_address_1": {
+      "title": "Applicant address",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "applicant_address_2": {
+      "title": "Applicant address (line 2)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "applicant_address_3": {
+      "title": "Applicant address (line 3)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "contact_name": {
+      "title": "Contact party for this application & confirmation of FX rate: Name",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "contact_tel": {
+      "title": "Contact party: Tel no",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\+?[\\d ()-]*\\d[\\d ()-]*$",
+          "description": "is not a phone number (digits, spaces, + - ( ) only)"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 15,
+          "description": "is longer than 15 characters"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "contact_fax": {
+      "title": "Contact party: Fax no",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\+?[\\d ()-]*\\d[\\d ()-]*$",
+          "description": "is not a phone number (digits, spaces, + - ( ) only)"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 15,
+          "description": "is longer than 15 characters"
+        }
+      ]
+    },
+    "dc_no": {
+      "title": "DC no",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "bank_code": {
+      "title": "Bank code",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "advising_bank_name": {
+      "title": "Name",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "advising_bank_address_1": {
+      "title": "Address",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "advising_bank_address_2": {
+      "title": "Address (line 2)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "advising_bank_address_3": {
+      "title": "Address (line 3)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "third_party_name": {
+      "title": "Name",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "third_party_address_1": {
+      "title": "Address",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "third_party_address_2": {
+      "title": "Address (line 2)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "third_party_address_3": {
+      "title": "Address (line 3)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "beneficiary_name": {
+      "title": "Beneficiary's name",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "beneficiary_address_1": {
+      "title": "Beneficiary's address",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "beneficiary_address_2": {
+      "title": "Beneficiary's address (line 2)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "beneficiary_address_3": {
+      "title": "Beneficiary's address (line 3)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "beneficiary_contact": {
+      "title": "Contact person",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "beneficiary_tel": {
+      "title": "Tel no",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\+?[\\d ()-]*\\d[\\d ()-]*$",
+          "description": "is not a phone number (digits, spaces, + - ( ) only)"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 15,
+          "description": "is longer than 15 characters"
+        }
+      ]
+    },
+    "beneficiary_fax": {
+      "title": "Fax no",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\+?[\\d ()-]*\\d[\\d ()-]*$",
+          "description": "is not a phone number (digits, spaces, + - ( ) only)"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 15,
+          "description": "is longer than 15 characters"
+        }
+      ]
+    },
+    "currency": {
+      "title": "Currency",
+      "enum": [
+        "",
+        "SGD",
+        "USD",
+        "EUR",
+        "GBP",
+        "JPY",
+        "CNY",
+        "HKD",
+        "AUD",
+        "NZD",
+        "CAD",
+        "CHF",
+        "MYR",
+        "IDR",
+        "THB",
+        "INR",
+        "KRW",
+        "TWD",
+        "PHP",
+        "VND",
+        "AED",
+        "SAR",
+        "AFN",
+        "ALL",
+        "AMD",
+        "ANG",
+        "AOA",
+        "ARS",
+        "AWG",
+        "AZN",
+        "BAM",
+        "BBD",
+        "BDT",
+        "BGN",
+        "BHD",
+        "BIF",
+        "BMD",
+        "BND",
+        "BOB",
+        "BRL",
+        "BSD",
+        "BTN",
+        "BWP",
+        "BYN",
+        "BZD",
+        "CDF",
+        "CLP",
+        "COP",
+        "CRC",
+        "CUC",
+        "CUP",
+        "CVE",
+        "CZK",
+        "DJF",
+        "DKK",
+        "DOP",
+        "DZD",
+        "EGP",
+        "ERN",
+        "ETB",
+        "FJD",
+        "FKP",
+        "GEL",
+        "GHS",
+        "GIP",
+        "GMD",
+        "GNF",
+        "GTQ",
+        "GYD",
+        "HNL",
+        "HRK",
+        "HTG",
+        "HUF",
+        "ILS",
+        "IQD",
+        "IRR",
+        "ISK",
+        "JMD",
+        "JOD",
+        "KES",
+        "KGS",
+        "KHR",
+        "KMF",
+        "KPW",
+        "KWD",
+        "KYD",
+        "KZT",
+        "LAK",
+        "LBP",
+        "LKR",
+        "LRD",
+        "LSL",
+        "LYD",
+        "MAD",
+        "MDL",
+        "MGA",
+        "MKD",
+        "MMK",
+        "MNT",
+        "MOP",
+        "MRU",
+        "MUR",
+        "MVR",
+        "MWK",
+        "MXN",
+        "MZN",
+        "NAD",
+        "NGN",
+        "NIO",
+        "NOK",
+        "NPR",
+        "OMR",
+        "PAB",
+        "PEN",
+        "PGK",
+        "PKR",
+        "PLN",
+        "PYG",
+        "QAR",
+        "RON",
+        "RSD",
+        "RUB",
+        "RWF",
+        "SBD",
+        "SCR",
+        "SDG",
+        "SEK",
+        "SHP",
+        "SLE",
+        "SOS",
+        "SRD",
+        "SSP",
+        "STN",
+        "SVC",
+        "SYP",
+        "SZL",
+        "TJS",
+        "TMT",
+        "TND",
+        "TOP",
+        "TRY",
+        "TTD",
+        "TZS",
+        "UAH",
+        "UGX",
+        "UYU",
+        "UZS",
+        "VES",
+        "VUV",
+        "WST",
+        "XAF",
+        "XCD",
+        "XCG",
+        "XDR",
+        "XOF",
+        "XPF",
+        "XSU",
+        "YER",
+        "ZAR",
+        "ZMW",
+        "ZWG"
+      ],
+      "description": "is not one of the options",
+      "allOf": [
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "amount": {
+      "title": "Amount",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d{1,3}(,?\\d{3})*(\\.\\d{1,2})?$",
+          "description": "is not an amount"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "gst": {
+      "title": "For local DCs, amount is (if not checked, it will be inclusive of GST)",
+      "enum": [
+        "",
+        "inclusive of GST",
+        "No GST"
+      ],
+      "description": "is not one of the options"
+    },
+    "tolerance": {
+      "title": "Tolerance on credit amount & goods quantity",
+      "type": "boolean"
+    },
+    "tolerance_plus": {
+      "title": "Tolerance + (%)",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "tolerance_minus": {
+      "title": "Tolerance - (%)",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "price_basis": {
+      "title": "Price basis",
+      "enum": [
+        "",
+        "FOB",
+        "CFR",
+        "CIF",
+        "Local Delivery",
+        "FCA",
+        "CIP",
+        "CPT",
+        "Others"
+      ],
+      "description": "is not one of the options",
+      "allOf": [
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "price_basis_other": {
+      "title": "Others (please specify)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "partial_shipment": {
+      "title": "Partial shipment",
+      "enum": [
+        "",
+        "allowed",
+        "not allowed"
+      ],
+      "description": "is not one of the options",
+      "allOf": [
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "transhipment": {
+      "title": "Transhipment",
+      "enum": [
+        "",
+        "allowed",
+        "not allowed"
+      ],
+      "description": "is not one of the options",
+      "allOf": [
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "shipment_from": {
+      "title": "Shipment from",
+      "enum": [
+        "",
+        "Port of Loading / Airport of Departure",
+        "Dispatch from",
+        "Place of Taking in charge",
+        "Place of Receipt"
+      ],
+      "description": "is not one of the options"
+    },
+    "shipment_from_place": {
+      "title": "Shipment from: place",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "shipment_from_place_2": {
+      "title": "Shipment from: place (line 2)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "shipment_to": {
+      "title": "Shipment to",
+      "enum": [
+        "",
+        "Port of Discharge / Airport of Destination",
+        "For Transportation to",
+        "Place of Final Destination",
+        "Place of Delivery"
+      ],
+      "description": "is not one of the options"
+    },
+    "shipment_to_place": {
+      "title": "Shipment to: place",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "shipment_to_place_2": {
+      "title": "Shipment to: place (line 2)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "latest_shipment_date": {
+      "title": "Latest shipment date",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^(0[1-9]|1\\d|2[0-9])/(0[1-9]|1[0-2])/\\d{4}$|^30/(0[13-9]|1[0-2])/\\d{4}$|^31/(0[13578]|1[02])/\\d{4}$",
+          "description": "is not a real DD/MM/YYYY date"
+        }
+      ]
+    },
+    "expiry_date": {
+      "title": "Date of expiry (in beneficiary's country)",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^(0[1-9]|1\\d|2[0-9])/(0[1-9]|1[0-2])/\\d{4}$|^30/(0[13-9]|1[0-2])/\\d{4}$|^31/(0[13578]|1[02])/\\d{4}$",
+          "description": "is not a real DD/MM/YYYY date"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "presentation_days": {
+      "title": "Presentation period (days after shipment)",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "back_to_back": {
+      "title": "This is a back-to-back DC to be issued against the master credit (the \"Master DC\")",
+      "type": "boolean"
+    },
+    "master_dc_no": {
+      "title": "Master credit no",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 20,
+          "description": "is longer than 20 characters"
+        }
+      ]
+    },
+    "master_dc_issued_by": {
+      "title": "Issued by",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "drafts": {
+      "title": "Drafts for 100% invoice value at",
+      "type": "boolean"
+    },
+    "drafts_at": {
+      "title": "Drafts at",
+      "enum": [
+        "",
+        "Sight",
+        "Term",
+        "Date"
+      ],
+      "description": "is not one of the options"
+    },
+    "term_days": {
+      "title": "Term: days",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "term_after": {
+      "title": "days after",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "draft_date": {
+      "title": "Date",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^(0[1-9]|1\\d|2[0-9])/(0[1-9]|1[0-2])/\\d{4}$|^30/(0[13-9]|1[0-2])/\\d{4}$|^31/(0[13578]|1[02])/\\d{4}$",
+          "description": "is not a real DD/MM/YYYY date"
+        }
+      ]
+    },
+    "term_prepay": {
+      "title": "If it is a term LC, please select one",
+      "enum": [
+        "",
+        "You may prepay the acceptance of this term LC at the cost of beneficiary",
+        "You may not prepay the acceptance of this term LC"
+      ],
+      "description": "is not one of the options"
+    },
+    "doc_bill_of_lading": {
+      "title": "Full set of Clean on Board marine bills of lading",
+      "type": "boolean"
+    },
+    "bl_made_out_to": {
+      "title": "Made out to",
+      "enum": [
+        "",
+        "order of the Bank",
+        "order blank endorsed",
+        "other (specify)"
+      ],
+      "description": "is not one of the options"
+    },
+    "bl_made_out_to_other": {
+      "title": "Made out to (other)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 70,
+          "description": "is longer than 70 characters"
+        }
+      ]
+    },
+    "bl_freight": {
+      "title": "Marked Freight",
+      "enum": [
+        "",
+        "Prepaid",
+        "Collect"
+      ],
+      "description": "is not one of the options"
+    },
+    "bl_notify_party": {
+      "title": "Notify party (if not specified, notify party is considered to be applicant)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 114,
+          "description": "is longer than 114 characters"
+        }
+      ]
+    },
+    "doc_air_waybill": {
+      "title": "Original Air Waybill consigned to the Bank",
+      "type": "boolean"
+    },
+    "awb_freight": {
+      "title": "Marked Freight",
+      "enum": [
+        "",
+        "Prepaid",
+        "Collect"
+      ],
+      "description": "is not one of the options"
+    },
+    "awb_notify_party": {
+      "title": "Notify party (if not specified, notify party is considered to be applicant)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 114,
+          "description": "is longer than 114 characters"
+        }
+      ]
+    },
+    "doc_delivery_order": {
+      "title": "Delivery order signed by beneficiary made out to applicant",
+      "type": "boolean"
+    },
+    "do_originals": {
+      "title": "Delivery order: originals",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "do_copies": {
+      "title": "Delivery order: copies",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "do_countersigned_by": {
+      "title": "Countersigned by how many of our signatories",
+      "enum": [
+        "",
+        "One",
+        "Two"
+      ],
+      "description": "is not one of the options"
+    },
+    "do_signature_verified": {
+      "title": "Whose signature(s) ... to be verified by the Bank",
+      "enum": [
+        "",
+        "need",
+        "need not"
+      ],
+      "description": "is not one of the options"
+    },
+    "doc_insurance": {
+      "title": "Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion",
+      "type": "boolean"
+    },
+    "insurance_arrangement": {
+      "title": "For FOB/CFR/FCA/CPT",
+      "enum": [
+        "",
+        "Insurance cover note attached",
+        "Covered by ultimate buyer",
+        "Please arrange insurance on our behalf",
+        "Insurance covered by applicant under open Cover No."
+      ],
+      "description": "is not one of the options"
+    },
+    "insurance_cover_no": {
+      "title": "Open cover no",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 20,
+          "description": "is longer than 20 characters"
+        }
+      ]
+    },
+    "insurance_cover_with": {
+      "title": "With",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "doc_beneficiary_certificate": {
+      "title": "Beneficiary's certificate stating 1 set of non-negotiable documents has been sent to applicant",
+      "type": "boolean"
+    },
+    "bencert_sent_by": {
+      "title": "Sent by",
+      "type": "array",
+      "items": {
+        "enum": [
+          "faxed",
+          "mailed",
+          "couriered"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "bencert_days": {
+      "title": "Within (days after shipment)",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "doc_commercial_invoice": {
+      "title": "Signed commercial invoice",
+      "type": "boolean"
+    },
+    "invoice_originals": {
+      "title": "Commercial invoice: originals",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "invoice_copies": {
+      "title": "Commercial invoice: copies",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "doc_packing_list": {
+      "title": "Packing list",
+      "type": "boolean"
+    },
+    "packing_list_originals": {
+      "title": "Packing list: originals",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "packing_list_copies": {
+      "title": "Packing list: copies",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "doc_weight_note": {
+      "title": "Weight note",
+      "type": "boolean"
+    },
+    "weight_note_originals": {
+      "title": "Weight note: originals",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "weight_note_copies": {
+      "title": "Weight note: copies",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "doc_certificate_of_origin": {
+      "title": "Certificate of origin",
+      "type": "boolean"
+    },
+    "origin_originals": {
+      "title": "Certificate of origin: originals",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "origin_copies": {
+      "title": "Certificate of origin: copies",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 2,
+          "description": "is longer than 2 characters"
+        }
+      ]
+    },
+    "origin_country": {
+      "title": "Showing country of origin as",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "doc_other": {
+      "title": "Other documents",
+      "type": "boolean"
+    },
+    "other_documents_1": {
+      "title": "Other documents",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 70,
+          "description": "is longer than 70 characters"
+        }
+      ]
+    },
+    "other_documents_2": {
+      "title": "Other documents (line 2)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 70,
+          "description": "is longer than 70 characters"
+        }
+      ]
+    },
+    "goods_description": {
+      "title": "Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 6500,
+          "description": "is longer than 6500 characters"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "additional_conditions": {
+      "title": "Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 6500,
+          "description": "is longer than 6500 characters"
+        }
+      ]
+    },
+    "bank_charges": {
+      "title": "All bank charges are for account of",
+      "type": "boolean",
+      "allOf": [
+        {
+          "const": true,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "bank_charges_for": {
+      "title": "Charges for account of",
+      "enum": [
+        "",
+        "Beneficiary, except charges at DC Issuing Bank's counter",
+        "Applicant (including all charges incurred inside and outside of DC Issuing Bank's country)"
+      ],
+      "description": "is not one of the options"
+    },
+    "confirmation": {
+      "title": "Confirmation required",
+      "type": "boolean"
+    },
+    "confirmation_charges": {
+      "title": "Confirmation charges",
+      "enum": [
+        "",
+        "Applicant",
+        "Beneficiary"
+      ],
+      "description": "is not one of the options"
+    },
+    "post_shipment_financing": {
+      "title": "Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies",
+      "type": "boolean"
+    },
+    "financing_type": {
+      "title": "Financing",
+      "enum": [
+        "",
+        "SGD financing",
+        "Foreign Currency Financing",
+        "Apply Forward Contract"
+      ],
+      "description": "is not one of the options"
+    },
+    "financing_currency": {
+      "title": "Foreign currency financing in (type of currency)",
+      "enum": [
+        "",
+        "SGD",
+        "USD",
+        "EUR",
+        "GBP",
+        "JPY",
+        "CNY",
+        "HKD",
+        "AUD",
+        "NZD",
+        "CAD",
+        "CHF",
+        "MYR",
+        "IDR",
+        "THB",
+        "INR",
+        "KRW",
+        "TWD",
+        "PHP",
+        "VND",
+        "AED",
+        "SAR",
+        "AFN",
+        "ALL",
+        "AMD",
+        "ANG",
+        "AOA",
+        "ARS",
+        "AWG",
+        "AZN",
+        "BAM",
+        "BBD",
+        "BDT",
+        "BGN",
+        "BHD",
+        "BIF",
+        "BMD",
+        "BND",
+        "BOB",
+        "BRL",
+        "BSD",
+        "BTN",
+        "BWP",
+        "BYN",
+        "BZD",
+        "CDF",
+        "CLP",
+        "COP",
+        "CRC",
+        "CUC",
+        "CUP",
+        "CVE",
+        "CZK",
+        "DJF",
+        "DKK",
+        "DOP",
+        "DZD",
+        "EGP",
+        "ERN",
+        "ETB",
+        "FJD",
+        "FKP",
+        "GEL",
+        "GHS",
+        "GIP",
+        "GMD",
+        "GNF",
+        "GTQ",
+        "GYD",
+        "HNL",
+        "HRK",
+        "HTG",
+        "HUF",
+        "ILS",
+        "IQD",
+        "IRR",
+        "ISK",
+        "JMD",
+        "JOD",
+        "KES",
+        "KGS",
+        "KHR",
+        "KMF",
+        "KPW",
+        "KWD",
+        "KYD",
+        "KZT",
+        "LAK",
+        "LBP",
+        "LKR",
+        "LRD",
+        "LSL",
+        "LYD",
+        "MAD",
+        "MDL",
+        "MGA",
+        "MKD",
+        "MMK",
+        "MNT",
+        "MOP",
+        "MRU",
+        "MUR",
+        "MVR",
+        "MWK",
+        "MXN",
+        "MZN",
+        "NAD",
+        "NGN",
+        "NIO",
+        "NOK",
+        "NPR",
+        "OMR",
+        "PAB",
+        "PEN",
+        "PGK",
+        "PKR",
+        "PLN",
+        "PYG",
+        "QAR",
+        "RON",
+        "RSD",
+        "RUB",
+        "RWF",
+        "SBD",
+        "SCR",
+        "SDG",
+        "SEK",
+        "SHP",
+        "SLE",
+        "SOS",
+        "SRD",
+        "SSP",
+        "STN",
+        "SVC",
+        "SYP",
+        "SZL",
+        "TJS",
+        "TMT",
+        "TND",
+        "TOP",
+        "TRY",
+        "TTD",
+        "TZS",
+        "UAH",
+        "UGX",
+        "UYU",
+        "UZS",
+        "VES",
+        "VUV",
+        "WST",
+        "XAF",
+        "XCD",
+        "XCG",
+        "XDR",
+        "XOF",
+        "XPF",
+        "XSU",
+        "YER",
+        "ZAR",
+        "ZMW",
+        "ZWG"
+      ],
+      "description": "is not one of the options"
+    },
+    "forward_contract_no": {
+      "title": "Forward contract no",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 20,
+          "description": "is longer than 20 characters"
+        }
+      ]
+    },
+    "advance_payment": {
+      "title": "We authorise you to debit DC amount in full from our account for advance payment",
+      "type": "boolean"
+    },
+    "advance_payment_account": {
+      "title": "Account no for advance payment",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d[\\d-]*\\d$|^\\d$",
+          "description": "is not an account number (digits and - only)"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 20,
+          "description": "is longer than 20 characters"
+        }
+      ]
+    },
+    "debit_issuance_charges": {
+      "title": "Please debit all DC issuance charges to our account with you",
+      "type": "boolean"
+    },
+    "issuance_charges_account": {
+      "title": "Account no for DC issuance charges",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d[\\d-]*\\d$|^\\d$",
+          "description": "is not an account number (digits and - only)"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 17,
+          "description": "is longer than 17 characters"
+        },
+        {
+          "minLength": 1,
+          "description": "is mandatory"
+        }
+      ]
+    },
+    "authorised_person": {
+      "title": "Authorised person(s) & company stamp",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "tolerance"
+        ],
+        "properties": {
+          "tolerance": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "tolerance_plus"
+        ],
+        "properties": {
+          "tolerance_plus": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Tolerance on credit amount & goods quantity is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "tolerance"
+          ],
+          "properties": {
+            "tolerance": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "tolerance_plus": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Tolerance on credit amount & goods quantity is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "tolerance"
+        ],
+        "properties": {
+          "tolerance": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "tolerance_minus"
+        ],
+        "properties": {
+          "tolerance_minus": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Tolerance on credit amount & goods quantity is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "tolerance"
+          ],
+          "properties": {
+            "tolerance": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "tolerance_minus": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Tolerance on credit amount & goods quantity is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "price_basis"
+        ],
+        "properties": {
+          "price_basis": {
+            "enum": [
+              "Others"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "price_basis_other"
+        ],
+        "properties": {
+          "price_basis_other": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Price basis is \"Others\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "price_basis"
+          ],
+          "properties": {
+            "price_basis": {
+              "enum": [
+                "Others"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "price_basis_other": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Price basis is \"Others\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "shipment_from"
+        ],
+        "properties": {
+          "shipment_from": {
+            "not": {
+              "enum": [
+                ""
+              ]
+            },
+            "minLength": 1
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "shipment_from_place"
+        ],
+        "properties": {
+          "shipment_from_place": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Shipment from is not \"\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "shipment_to"
+        ],
+        "properties": {
+          "shipment_to": {
+            "not": {
+              "enum": [
+                ""
+              ]
+            },
+            "minLength": 1
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "shipment_to_place"
+        ],
+        "properties": {
+          "shipment_to_place": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Shipment to is not \"\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "back_to_back"
+        ],
+        "properties": {
+          "back_to_back": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "master_dc_no"
+        ],
+        "properties": {
+          "master_dc_no": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because This is a back-to-back DC to be issued against the… is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "back_to_back"
+          ],
+          "properties": {
+            "back_to_back": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "master_dc_no": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when This is a back-to-back DC to be issued against the… is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "back_to_back"
+        ],
+        "properties": {
+          "back_to_back": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "master_dc_issued_by"
+        ],
+        "properties": {
+          "master_dc_issued_by": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because This is a back-to-back DC to be issued against the… is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "back_to_back"
+          ],
+          "properties": {
+            "back_to_back": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "master_dc_issued_by": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when This is a back-to-back DC to be issued against the… is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "drafts"
+        ],
+        "properties": {
+          "drafts": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "drafts_at"
+        ],
+        "properties": {
+          "drafts_at": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Drafts for 100% invoice value at is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "drafts"
+          ],
+          "properties": {
+            "drafts": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "drafts_at": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Drafts for 100% invoice value at is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "drafts_at"
+        ],
+        "properties": {
+          "drafts_at": {
+            "enum": [
+              "Term"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "term_days"
+        ],
+        "properties": {
+          "term_days": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Drafts at is \"Term\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "drafts_at"
+          ],
+          "properties": {
+            "drafts_at": {
+              "enum": [
+                "Term"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "term_days": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Drafts at is \"Term\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "drafts_at"
+        ],
+        "properties": {
+          "drafts_at": {
+            "enum": [
+              "Term"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "term_after"
+        ],
+        "properties": {
+          "term_after": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Drafts at is \"Term\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "drafts_at"
+          ],
+          "properties": {
+            "drafts_at": {
+              "enum": [
+                "Term"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "term_after": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Drafts at is \"Term\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "drafts_at"
+        ],
+        "properties": {
+          "drafts_at": {
+            "enum": [
+              "Date"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "draft_date"
+        ],
+        "properties": {
+          "draft_date": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Drafts at is \"Date\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "drafts_at"
+          ],
+          "properties": {
+            "drafts_at": {
+              "enum": [
+                "Date"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "draft_date": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Drafts at is \"Date\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "drafts_at"
+        ],
+        "properties": {
+          "drafts_at": {
+            "enum": [
+              "Term"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "term_prepay"
+        ],
+        "properties": {
+          "term_prepay": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Drafts at is \"Term\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "drafts_at"
+          ],
+          "properties": {
+            "drafts_at": {
+              "enum": [
+                "Term"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "term_prepay": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Drafts at is \"Term\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_bill_of_lading"
+        ],
+        "properties": {
+          "doc_bill_of_lading": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "bl_made_out_to"
+        ],
+        "properties": {
+          "bl_made_out_to": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Full set of Clean on Board marine bills of lading is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_bill_of_lading"
+          ],
+          "properties": {
+            "doc_bill_of_lading": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bl_made_out_to": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Full set of Clean on Board marine bills of lading is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "bl_made_out_to"
+        ],
+        "properties": {
+          "bl_made_out_to": {
+            "enum": [
+              "other (specify)"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "bl_made_out_to_other"
+        ],
+        "properties": {
+          "bl_made_out_to_other": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Made out to is \"other (specify)\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "bl_made_out_to"
+          ],
+          "properties": {
+            "bl_made_out_to": {
+              "enum": [
+                "other (specify)"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bl_made_out_to_other": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Made out to is \"other (specify)\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_bill_of_lading"
+        ],
+        "properties": {
+          "doc_bill_of_lading": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "bl_freight"
+        ],
+        "properties": {
+          "bl_freight": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Full set of Clean on Board marine bills of lading is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_bill_of_lading"
+          ],
+          "properties": {
+            "doc_bill_of_lading": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bl_freight": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Full set of Clean on Board marine bills of lading is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_bill_of_lading"
+        ],
+        "properties": {
+          "doc_bill_of_lading": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "bl_notify_party"
+        ],
+        "properties": {
+          "bl_notify_party": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Full set of Clean on Board marine bills of lading is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_bill_of_lading"
+          ],
+          "properties": {
+            "doc_bill_of_lading": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bl_notify_party": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Full set of Clean on Board marine bills of lading is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_air_waybill"
+        ],
+        "properties": {
+          "doc_air_waybill": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "awb_freight"
+        ],
+        "properties": {
+          "awb_freight": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Original Air Waybill consigned to the Bank is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_air_waybill"
+          ],
+          "properties": {
+            "doc_air_waybill": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "awb_freight": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Original Air Waybill consigned to the Bank is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_air_waybill"
+        ],
+        "properties": {
+          "doc_air_waybill": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "awb_notify_party"
+        ],
+        "properties": {
+          "awb_notify_party": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Original Air Waybill consigned to the Bank is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_air_waybill"
+          ],
+          "properties": {
+            "doc_air_waybill": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "awb_notify_party": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Original Air Waybill consigned to the Bank is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_delivery_order"
+        ],
+        "properties": {
+          "doc_delivery_order": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "do_originals"
+        ],
+        "properties": {
+          "do_originals": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Delivery order signed by beneficiary made out to applicant is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_delivery_order"
+          ],
+          "properties": {
+            "doc_delivery_order": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "do_originals": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Delivery order signed by beneficiary made out to applicant is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_delivery_order"
+        ],
+        "properties": {
+          "doc_delivery_order": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "do_copies"
+        ],
+        "properties": {
+          "do_copies": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Delivery order signed by beneficiary made out to applicant is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_delivery_order"
+          ],
+          "properties": {
+            "doc_delivery_order": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "do_copies": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Delivery order signed by beneficiary made out to applicant is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_delivery_order"
+        ],
+        "properties": {
+          "doc_delivery_order": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "do_countersigned_by"
+        ],
+        "properties": {
+          "do_countersigned_by": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Delivery order signed by beneficiary made out to applicant is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_delivery_order"
+          ],
+          "properties": {
+            "doc_delivery_order": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "do_countersigned_by": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Delivery order signed by beneficiary made out to applicant is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_delivery_order"
+        ],
+        "properties": {
+          "doc_delivery_order": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "do_signature_verified"
+        ],
+        "properties": {
+          "do_signature_verified": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Delivery order signed by beneficiary made out to applicant is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_delivery_order"
+          ],
+          "properties": {
+            "doc_delivery_order": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "do_signature_verified": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Delivery order signed by beneficiary made out to applicant is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_insurance"
+          ],
+          "properties": {
+            "doc_insurance": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "insurance_arrangement": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Marine/Air Insurance Policy or Certificate in duplicate,… is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "insurance_arrangement"
+        ],
+        "properties": {
+          "insurance_arrangement": {
+            "enum": [
+              "Insurance covered by applicant under open Cover No."
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "insurance_cover_no"
+        ],
+        "properties": {
+          "insurance_cover_no": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because For FOB/CFR/FCA/CPT is \"Insurance covered by applicant under open Cover No.\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "insurance_arrangement"
+          ],
+          "properties": {
+            "insurance_arrangement": {
+              "enum": [
+                "Insurance covered by applicant under open Cover No."
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "insurance_cover_no": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when For FOB/CFR/FCA/CPT is \"Insurance covered by applicant under open Cover No.\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "insurance_arrangement"
+        ],
+        "properties": {
+          "insurance_arrangement": {
+            "enum": [
+              "Insurance covered by applicant under open Cover No."
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "insurance_cover_with"
+        ],
+        "properties": {
+          "insurance_cover_with": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because For FOB/CFR/FCA/CPT is \"Insurance covered by applicant under open Cover No.\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "insurance_arrangement"
+          ],
+          "properties": {
+            "insurance_arrangement": {
+              "enum": [
+                "Insurance covered by applicant under open Cover No."
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "insurance_cover_with": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when For FOB/CFR/FCA/CPT is \"Insurance covered by applicant under open Cover No.\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_beneficiary_certificate"
+        ],
+        "properties": {
+          "doc_beneficiary_certificate": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "bencert_sent_by"
+        ],
+        "properties": {
+          "bencert_sent_by": {
+            "minItems": 1
+          }
+        },
+        "description": "is mandatory because Beneficiary's certificate stating 1 set of… is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_beneficiary_certificate"
+          ],
+          "properties": {
+            "doc_beneficiary_certificate": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bencert_sent_by": {
+            "maxItems": 0
+          }
+        },
+        "description": "only applies when Beneficiary's certificate stating 1 set of… is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_beneficiary_certificate"
+        ],
+        "properties": {
+          "doc_beneficiary_certificate": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "bencert_days"
+        ],
+        "properties": {
+          "bencert_days": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Beneficiary's certificate stating 1 set of… is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_beneficiary_certificate"
+          ],
+          "properties": {
+            "doc_beneficiary_certificate": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bencert_days": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Beneficiary's certificate stating 1 set of… is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_commercial_invoice"
+        ],
+        "properties": {
+          "doc_commercial_invoice": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "invoice_originals"
+        ],
+        "properties": {
+          "invoice_originals": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Signed commercial invoice is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_commercial_invoice"
+          ],
+          "properties": {
+            "doc_commercial_invoice": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "invoice_originals": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Signed commercial invoice is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_commercial_invoice"
+        ],
+        "properties": {
+          "doc_commercial_invoice": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "invoice_copies"
+        ],
+        "properties": {
+          "invoice_copies": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Signed commercial invoice is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_commercial_invoice"
+          ],
+          "properties": {
+            "doc_commercial_invoice": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "invoice_copies": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Signed commercial invoice is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_packing_list"
+        ],
+        "properties": {
+          "doc_packing_list": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "packing_list_originals"
+        ],
+        "properties": {
+          "packing_list_originals": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Packing list is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_packing_list"
+          ],
+          "properties": {
+            "doc_packing_list": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "packing_list_originals": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Packing list is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_packing_list"
+        ],
+        "properties": {
+          "doc_packing_list": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "packing_list_copies"
+        ],
+        "properties": {
+          "packing_list_copies": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Packing list is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_packing_list"
+          ],
+          "properties": {
+            "doc_packing_list": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "packing_list_copies": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Packing list is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_weight_note"
+        ],
+        "properties": {
+          "doc_weight_note": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "weight_note_originals"
+        ],
+        "properties": {
+          "weight_note_originals": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Weight note is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_weight_note"
+          ],
+          "properties": {
+            "doc_weight_note": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "weight_note_originals": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Weight note is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_weight_note"
+        ],
+        "properties": {
+          "doc_weight_note": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "weight_note_copies"
+        ],
+        "properties": {
+          "weight_note_copies": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Weight note is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_weight_note"
+          ],
+          "properties": {
+            "doc_weight_note": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "weight_note_copies": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Weight note is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_certificate_of_origin"
+        ],
+        "properties": {
+          "doc_certificate_of_origin": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "origin_originals"
+        ],
+        "properties": {
+          "origin_originals": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Certificate of origin is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_certificate_of_origin"
+          ],
+          "properties": {
+            "doc_certificate_of_origin": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origin_originals": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Certificate of origin is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_certificate_of_origin"
+        ],
+        "properties": {
+          "doc_certificate_of_origin": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "origin_copies"
+        ],
+        "properties": {
+          "origin_copies": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Certificate of origin is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_certificate_of_origin"
+          ],
+          "properties": {
+            "doc_certificate_of_origin": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origin_copies": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Certificate of origin is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_certificate_of_origin"
+        ],
+        "properties": {
+          "doc_certificate_of_origin": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "origin_country"
+        ],
+        "properties": {
+          "origin_country": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Certificate of origin is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_certificate_of_origin"
+          ],
+          "properties": {
+            "doc_certificate_of_origin": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "origin_country": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Certificate of origin is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "doc_other"
+        ],
+        "properties": {
+          "doc_other": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "other_documents_1"
+        ],
+        "properties": {
+          "other_documents_1": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Other documents is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_other"
+          ],
+          "properties": {
+            "doc_other": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "other_documents_1": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Other documents is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "doc_other"
+          ],
+          "properties": {
+            "doc_other": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "other_documents_2": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Other documents is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "bank_charges"
+        ],
+        "properties": {
+          "bank_charges": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "bank_charges_for"
+        ],
+        "properties": {
+          "bank_charges_for": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because All bank charges are for account of is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "bank_charges"
+          ],
+          "properties": {
+            "bank_charges": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bank_charges_for": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when All bank charges are for account of is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "confirmation"
+        ],
+        "properties": {
+          "confirmation": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "confirmation_charges"
+        ],
+        "properties": {
+          "confirmation_charges": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Confirmation required is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "confirmation"
+          ],
+          "properties": {
+            "confirmation": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "confirmation_charges": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Confirmation required is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "post_shipment_financing"
+        ],
+        "properties": {
+          "post_shipment_financing": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "financing_type"
+        ],
+        "properties": {
+          "financing_type": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Please provide us with post-shipment financing under… is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "post_shipment_financing"
+          ],
+          "properties": {
+            "post_shipment_financing": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "financing_type": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Please provide us with post-shipment financing under… is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "financing_type"
+        ],
+        "properties": {
+          "financing_type": {
+            "enum": [
+              "Foreign Currency Financing"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "financing_currency"
+        ],
+        "properties": {
+          "financing_currency": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Financing is \"Foreign Currency Financing\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "financing_type"
+          ],
+          "properties": {
+            "financing_type": {
+              "enum": [
+                "Foreign Currency Financing"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "financing_currency": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Financing is \"Foreign Currency Financing\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "financing_type"
+        ],
+        "properties": {
+          "financing_type": {
+            "enum": [
+              "Apply Forward Contract"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "forward_contract_no"
+        ],
+        "properties": {
+          "forward_contract_no": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Financing is \"Apply Forward Contract\""
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "financing_type"
+          ],
+          "properties": {
+            "financing_type": {
+              "enum": [
+                "Apply Forward Contract"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "forward_contract_no": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Financing is \"Apply Forward Contract\""
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "advance_payment"
+        ],
+        "properties": {
+          "advance_payment": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "advance_payment_account"
+        ],
+        "properties": {
+          "advance_payment_account": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because We authorise you to debit DC amount in full from our… is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "advance_payment"
+          ],
+          "properties": {
+            "advance_payment": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "advance_payment_account": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when We authorise you to debit DC amount in full from our… is ticked"
+      }
+    }
+  ]
+}

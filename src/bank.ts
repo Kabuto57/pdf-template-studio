@@ -28,7 +28,7 @@ const lcRow = () =>
       { className: "name" },
       h("b", {}, "Irrevocable Documentary Credit (LC)"),
       h("span", { className: "tag" }, "UPDATED"),
-      h("small", {}, "Checks your entries as you fill it in. PDF, 6 pages."),
+      h("small", {}, "Fill online (every answer checked as you type), or download the PDF (6 pages)."),
     ),
     h(
       "span",
@@ -43,6 +43,7 @@ const lcRow = () =>
         },
         "Download Form",
       ),
+      h("a", { className: "btn", href: "apply.html" }, "Fill online"),
     ),
   );
 

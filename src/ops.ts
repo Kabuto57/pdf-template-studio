@@ -17,6 +17,7 @@ import {
   type Values,
 } from "./pdf";
 import { clearInbox, deleteMail, inbox, saveMail, type Mail } from "./mailbox";
+import { date, validateLc } from "./form/validate";
 import { compare, find } from "./customers";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
@@ -170,12 +171,11 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
 }
 
 // ---- Checks ----
-const date = (s: string) => {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
-  const d = m && new Date(+m[3], +m[2] - 1, +m[1]);
-  return d && d.getDate() === +m![1] ? d : undefined;
-};
+// An LC is checked against its JSON Schema (Ajv) plus the checks across answers (form/validate.ts). Mandatory
+// answers are listed separately (rows marked required), so they're left out here.
 function problems(t: Template | undefined, data: Record<string, unknown>) {
+  if ("doc_bill_of_lading" in data) return validateLc(data).filter(i => i.kind !== "missing").map(i => ({ id: i.id, msg: i.msg }));
+  // Any other form: answers to questions that don't apply, formats, characters and lengths.
   const out: { id: string; msg: string }[] = [];
   const push = (id: string, msg: string) => out.push({ id, msg });
   for (const f of t?.sections.flatMap(s => s.fields) ?? []) {
@@ -195,23 +195,6 @@ function problems(t: Template | undefined, data: Record<string, unknown>) {
     if (odd.length) push(f.id, `unusual characters ${odd.join(" ")}`);
     if (f.max && v.length > f.max) push(f.id, `longer than ${f.max} characters`);
   }
-  // Checks across answers, which a PDF can't make without JavaScript.
-  const ship = date(String(data.latest_shipment_date ?? "")),
-    expiry = date(String(data.expiry_date ?? "")),
-    applied = date(String(data.application_date ?? ""));
-  if (ship && expiry && expiry < ship) push("expiry_date", "before the latest shipment date");
-  if (applied && ship && ship < applied) push("latest_shipment_date", "before the application date");
-  if (applied && expiry && expiry < applied) push("expiry_date", "before the application date");
-  if (applied && applied.getTime() > Date.now()) push("application_date", "in the future");
-  const amount = Number(String(data.amount ?? "").replace(/,/g, ""));
-  if (String(data.amount ?? "") && FORMATS.amount.ok.test(String(data.amount)) && !(amount > 0))
-    push("amount", "must be more than zero");
-  // The smart form only offers the insurance arrangement for FOB / CFR / FCA / CPT (seller doesn't insure).
-  if (show(data.insurance_arrangement as Value) && ["CIF", "CIP"].includes(String(data.price_basis)))
-    push(
-      "insurance_arrangement",
-      `only for FOB/CFR/FCA/CPT, but price basis is ${data.price_basis} (the beneficiary insures)`,
-    );
   return out;
 }
 
@@ -611,6 +594,9 @@ function did(rows: Row[], template: Template | undefined, compared: number, cif?
       item(rows.filter(r => r.required).length, "mandatory questions checked"),
       item(conditional, "conditional rules applied"),
       item(typed, "typed answers checked for format, real dates, length and characters"),
+      "doc_bill_of_lading" in current!.result.data
+        ? h("li", {}, "Checked against ", h("a", { href: "../lc-application.schema.json", target: "_blank" }, "lc-application.schema.json"), " (JSON Schema standard, Ajv)")
+        : "",
       "expiry_date" in current!.result.data ? item(6, "cross-answer checks (dates in order, date not in the future, amount, insurance vs price basis)") : "",
       cif ? item(compared, `details compared with customer record ${cif}`) : item("KYC", "applicant not found in customer records"),
     ),

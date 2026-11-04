@@ -178,6 +178,18 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     p.drawText(safe(t.title), { x: M, y: 24, size: 7.5, font, color: GREY });
     const n = `Page ${i + 1} of ${pages.length}`;
     p.drawText(n, { x: W - M - font.widthOfTextAtSize(n, 7.5), y: 24, size: 7.5, font, color: GREY });
+    // "< Previous page" / "Next page >": plain PDF links, so they work in every viewer, JavaScript on or off.
+    const link = (text: string, to: PDFPage, x: number) => {
+      const w = bold.widthOfTextAtSize(text, 8);
+      p.drawText(text, { x, y: 23.5, size: 8, font: bold, color: INK });
+      const annot = doc.context.register(doc.context.obj({
+        Type: "Annot", Subtype: "Link", Rect: [x - 4, 18, x + w + 4, 34], Border: [0, 0, 0],
+        A: { S: "GoTo", D: [to.ref, PDFName.of("XYZ"), null, null, null] },
+      }));
+      p.node.addAnnot(annot);
+    };
+    if (i > 0) link("< Previous page", pages[i - 1], W / 2 - 90);
+    if (i < pages.length - 1) link("Next page >", pages[i + 1], W / 2 + 20);
   });
 
   // 6. Conditional highlighting without JavaScript, then the checks for when Acrobat runs JavaScript.
