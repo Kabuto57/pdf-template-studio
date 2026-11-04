@@ -1,6 +1,6 @@
 // Writes the files the website serves or imports, so they have fixed links:
 //   the blank LC application PDFs, the filled samples, the LC's JSON Schema, and its ready-made Ajv checker.
-//   LC_PDFS=1 npx vitest run scripts/lc-pdfs
+//   npm run pdfs
 import { it } from "vitest";
 import { mkdirSync, writeFileSync } from "node:fs";
 import Ajv2020 from "ajv/dist/2020";
@@ -11,7 +11,7 @@ import { LC } from "../src/lc";
 import { SAMPLES, samplePdf } from "../src/demo-applications";
 import { toSchema } from "../src/form/schema";
 
-it.skipIf(!process.env.LC_PDFS)("blank LC PDFs, samples, schema", async () => {
+it.skipIf(!process.env.LC_PDFS && process.env.npm_lifecycle_event !== "pdfs")("blank LC PDFs, samples, schema", async () => {
   writeFileSync("public/LC-Application-original-look.pdf", await buildLcPdf(LC.defaults));
   writeFileSync("public/LC-Application-new-design.pdf", await buildPdf(LC.template, LC.defaults));
   // The same form twice: checked by Acrobat's JavaScript, or with no scripts at all.
