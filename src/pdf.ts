@@ -64,32 +64,33 @@ export const safe = (s: string) => s.replace(/[^\n\x20-\x7e\xa0-\xff€]/g, c =>
 export const subId = (id: string, i: number) => `${id}__${i}`;
 
 /**
- * Dates as three drop-downs (day, month, year): they need no JavaScript, open on click, and only offer real days,
- * months and years. Under them sits a hidden date box with Acrobat's own pop-up calendar; when Acrobat runs the
- * form's JavaScript (lcDates, at open) the box is shown and the drop-downs hidden. Whichever is shown is the answer.
+ * Dates as one drop-down of real dates ("15 Mar 2026"): needs no JavaScript, and 31 Feb is simply not offered.
+ * Under it sits a hidden date box with Acrobat's own pop-up calendar; when Acrobat runs the form's JavaScript
+ * (lcDates, at open) the box is shown and the list hidden. Whichever is shown is the answer.
  */
-export const dateIds = (id: string) => [`${id}__dd`, `${id}__mm`, `${id}__yyyy`];
+export const dateIds = (id: string) => [`${id}__list`];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DATE_BLANKS = ["DD", "MM", "YYYY"];
+const PICK = "Pick a date";
 const pad = (n: number) => String(n).padStart(2, "0");
+const say = (d: Date) => `${pad(d.getDate())} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+/** Every date from a year before the form is made to two years after. ponytail: re-made on each download, so it stays current. */
+export function dateOptions(now = new Date()) {
+  const out: string[] = [];
+  for (let d = new Date(now.getFullYear() - 1, now.getMonth(), 1); d <= new Date(now.getFullYear() + 2, now.getMonth() + 1, 0); d.setDate(d.getDate() + 1)) out.push(say(d));
+  return out;
+}
 export function addDateLists(form: ReturnType<PDFDocument["getForm"]>, page: PDFPage, id: string, label: string, v: unknown,
   r: { x: number; y: number; width: number; height: number }, font: PDFFont, size: number, extra: object = {}, js?: (code: string) => PDFObject) {
-  const [d, m, y] = typeof v === "string" ? v.split("/") : [];
-  const now = new Date().getFullYear(); // ponytail: years offered are last year to five years ahead
-  const years = [...new Set([...Array.from({ length: 7 }, (_, i) => now - 1 + i), ...(/^\d{4}$/.test(y ?? "") ? [+y] : [])])].sort();
-  const lists = [["DD", ...Array.from({ length: 31 }, (_, i) => pad(i + 1))], ["MM", ...MONTHS.map((n, i) => `${pad(i + 1)} ${n}`)], ["YYYY", ...years.map(String)]];
-  const want = [d, lists[1].find(o => m && o.startsWith(`${m} `)), y];
-  const share = [0.28, 0.4, 0.32], gap = 3, inner = r.width - 2 * gap;
-  let x = r.x;
-  dateIds(id).forEach((n, i) => {
-    const dd = form.createDropdown(n);
-    dd.addOptions(lists[i]);
-    dd.select(want[i] && lists[i].includes(want[i]!) ? want[i]! : lists[i][0]);
-    dd.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(`${safe(label)}: ${["day", "month", "year"][i]}`));
-    dd.addToPage(page, { ...extra, x, y: r.y, width: inner * share[i], height: r.height, font });
-    dd.setFontSize(size);
-    x += inner * share[i] + gap;
-  });
+  const [d, m, y] = typeof v === "string" ? v.split("/").map(Number) : [];
+  const want = d && m && y ? say(new Date(y, m - 1, d)) : "";
+  const list = dateOptions();
+  if (want && !list.includes(want)) list.unshift(want); // an answer outside the range is kept
+  const dd = form.createDropdown(dateIds(id)[0]);
+  dd.addOptions([PICK, ...list]);
+  dd.select(want || PICK);
+  dd.acroField.dict.set(PDFName.of("TU"), PDFHexString.fromText(safe(label)));
+  dd.addToPage(page, { ...extra, ...r, font });
+  dd.setFontSize(size);
   if (!js) return;
   const tf = form.createTextField(id);
   if (typeof v === "string" && v) tf.setText(v);
@@ -100,10 +101,14 @@ export function addDateLists(form: ReturnType<PDFDocument["getForm"]>, page: PDF
   tf.setFontSize(size);
   tf.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(2)); // hidden until Acrobat's JavaScript shows it
 }
-/** The three drop-downs back to DD/MM/YYYY; a part left unpicked stays empty, so the date reads as not valid. */
+/** The picked date back to DD/MM/YYYY ("" if none). Also reads forms made with day / month / year lists. */
 export function joinDate(parts: string[]) {
-  const p = parts.map((s, i) => s === DATE_BLANKS[i] ? "" : i === 1 ? s.slice(0, 2) : s);
-  return p.join("") ? p.join("/") : "";
+  if (parts.length === 3) { // DD, "MM Mon", YYYY: forms made before 4 Nov 2026
+    const p = parts.map((s, i) => s === ["DD", "MM", "YYYY"][i] ? "" : i === 1 ? s.slice(0, 2) : s);
+    return p.join("") ? p.join("/") : "";
+  }
+  const x = /^(\d\d) (\w{3}) (\d{4})$/.exec(parts[0] ?? "");
+  return x ? `${x[1]}/${pad(MONTHS.indexOf(x[2]) + 1)}/${x[3]}` : "";
 }
 
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
@@ -372,8 +377,8 @@ function val(id) {
   var m = M[id], f, a = [], i;
   if (m.k == "checks") { for (i = 0; i < m.o.length; i++) { f = d.getField(id + "__" + i); if (f && f.value != "Off") a.push(m.o[i]); } return a; }
   if (m.k == "date" && shown(id)) return d.getField(id).valueAsString;
-  if (m.k == "date" && d.getField(id + "__dd")) { a = [d.getField(id + "__dd").valueAsString, d.getField(id + "__mm").valueAsString.substr(0, 2), d.getField(id + "__yyyy").valueAsString];
-    for (i = 0; i < 3; i++) if (/^(DD|MM|YYYY)$/.test(a[i])) a[i] = ""; return a.join("") ? a.join("/") : ""; }
+  if (m.k == "date" && d.getField(id + "__list")) { a = /^(\\d\\d) (\\w{3}) (\\d{4})$/.exec(d.getField(id + "__list").valueAsString);
+    return a ? a[1] + "/" + ("0" + ("JanFebMarAprMayJunJulAugSepOctNovDec".indexOf(a[2]) / 3 + 1)).slice(-2) + "/" + a[3] : ""; }
   f = d.getField(id); if (!f) return "";
   if (m.k == "check") return f.value != "Off" ? "true" : "false";
   return f.value == "Off" ? "" : String(f.value);
@@ -407,7 +412,7 @@ for (id in M) {
   if (b) miss.push(m.l);
   w = on ? wrong(id) : ""; if (w) { bad.push(m.l + ": " + w); b = true; }
   names = [id]; if (m.k == "checks") { names = []; for (i = 0; i < m.o.length; i++) names.push(id + "__" + i); }
-  if (m.k == "date" && !shown(id) && d.getField(id + "__dd")) names = [id + "__dd", id + "__mm", id + "__yyyy"];
+  if (m.k == "date" && !shown(id) && d.getField(id + "__list")) names = [id + "__list"];
   for (i = 0; i < names.length; i++) { f = d.getField(names[i]); if (!f) continue; if (m.c && m.k != "checks") f.required = q;
     if (m.a) f.readonly = !on;
     if (!on) { f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; }
@@ -417,10 +422,10 @@ for (id in M) {
 miss.bad = bad;
 return miss;
 }
-function lcDates(d) { // Acrobat: its calendar box replaces the drop-downs
-  var D = ${JSON.stringify(all.filter(f => f.kind === "date").map(f => f.id))}, i, j, t, p;
+function lcDates(d) { // Acrobat: its calendar box replaces the date list
+  var D = ${JSON.stringify(all.filter(f => f.kind === "date").map(f => f.id))}, i, t, p;
   for (i = 0; i < D.length; i++) { t = d.getField(D[i]); if (!t) continue; t.display = display.visible;
-    for (j = 0; j < 3; j++) { p = d.getField(D[i] + "__" + ["dd", "mm", "yyyy"][j]); if (p) p.display = display.hidden; } }
+    p = d.getField(D[i] + "__list"); if (p) p.display = display.hidden; }
 }
 if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) lcDates(this);`;
   // A script stream, not a string: no 32,767-byte limit however many rules a form has.
@@ -597,7 +602,8 @@ async function extractFields(doc: PDFDocument): Promise<Extracted> {
     for (const s of template.sections) for (const f of s.fields) {
       const value: Value = f.kind === "checks"
         ? (f.options ?? []).filter((_, i) => raw.get(subId(f.id, i)) === true)
-        : f.kind === "date" && raw.has(dateIds(f.id)[0]) && !(raw.has(f.id) && shown.has(f.id)) ? joinDate(dateIds(f.id).map(n => String(raw.get(n) ?? "")))
+        : f.kind === "date" && !(raw.has(f.id) && shown.has(f.id)) && (raw.has(dateIds(f.id)[0]) || raw.has(`${f.id}__dd`))
+          ? joinDate((raw.has(dateIds(f.id)[0]) ? dateIds(f.id) : ["dd", "mm", "yyyy"].map(p => `${f.id}__${p}`)).map(n => String(raw.get(n) ?? "")))
         : raw.get(f.id) ?? (f.kind === "check" ? false : "");
       rows.push({ section: s.title, id: f.id, label: f.label, value });
       data[f.id] = value;
