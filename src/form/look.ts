@@ -1,6 +1,6 @@
 // THE LOOK OF THE PDF: page size, margins, colours, and small drawing helpers.
 // Change the numbers here to restyle every form.
-import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFString, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFString, StandardFonts, rgb } from "pdf-lib";
 import { safe } from "./types";
 
 // Colours
@@ -43,6 +43,9 @@ export const tip = (f: { acroField: { dict: { set(k: PDFName, v: PDFHexString): 
  */
 export function finishForm(doc: PDFDocument, font: PDFFont) {
   const acroForm = doc.getForm().acroForm.dict;
-  acroForm.set(PDFName.of("DR"), doc.context.obj({ Font: { Helvetica: font.ref, Helv: font.ref } }));
+  // ZaDb: the symbol font the red frames and grey shade draw with (red-frames.ts). Without it here, Windows Acrobat
+  // ignores their size and colour and draws black squares.
+  const zadb = doc.embedStandardFont(StandardFonts.ZapfDingbats);
+  acroForm.set(PDFName.of("DR"), doc.context.obj({ Font: { Helvetica: font.ref, Helv: font.ref, ZaDb: zadb.ref } }));
   acroForm.set(PDFName.of("DA"), PDFString.of("/Helv 0 Tf 0 g"));
 }
