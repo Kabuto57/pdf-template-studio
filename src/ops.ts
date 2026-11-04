@@ -321,6 +321,8 @@ function render() {
     for (const r of rows) sections.set(r.section || "Answers", [...(sections.get(r.section || "Answers") ?? []), r]);
 
   const pdfTop = pane?.el.scrollTop ?? 0; // moving the PDF pane into the new layout would reset its scroll
+  // Redrawing after an edit must not move anything: keep the page's scroll and the box being edited.
+  const workTop = $("#work").scrollTop, focused = document.activeElement?.getAttribute("aria-label");
   $("#work").replaceChildren(
     h(
       "div",
@@ -541,6 +543,8 @@ function render() {
     ),
   );
   if (pane) pane.el.scrollTop = pdfTop;
+  $("#work").scrollTop = workTop;
+  if (focused) document.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
   if (showPdf) pins();
   if (showPdf && !pane!.pages.length) {
     const open = current!;
