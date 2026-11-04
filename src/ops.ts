@@ -64,8 +64,8 @@ let boxes = new Map<string, Box[]>(),
   sel = "",
   nums = new Map<string, number>(); // nums: the answer numbers pinned on the PDF // where each answer sits in the PDF; the row being shown
 let checked = new Set<string>(); // rows the ops officer has ticked as checked
-let editing = false, jsonOpen = false;                       // "Edit answers" on: every answer is a box the officer can correct
-let original: Values = {};                 // the answers as read from the PDF, to show what was corrected
+let jsonOpen = false;                       // "Edit answers" on: every answer is a box the officer can correct
+let original: Values = {};                 // the answers as read from the PDF, to record what ops corrected
 let decision: "" | "approve" | "reject" = "",
   reason = ""; // the officer's decision, before it is submitted
 
@@ -159,7 +159,6 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
     current = { result, name, bytes, mail, vendor };
     checked = new Set();
     original = structuredClone(result.data) as Values;
-    editing = false;
     // Corrections made before (kept with the email when it was submitted): apply them again.
     for (const c of mail?.corrections ?? []) {
       const row = result.rows.find(r => r.id === c.id);
@@ -210,8 +209,11 @@ function problems(t: Template | undefined, data: Record<string, unknown>) {
 }
 
 // ---- Correcting an answer ----
+// Answers are editable until the case is submitted; then they're what was sent on.
+const editable = () => !current?.mail?.caseId;
 // The officer can fix what the customer wrote (a typo, a wrong format). The checks, the customer comparison and the
-// JSON all use the corrected answers at once; each correction is listed with what the PDF said, and kept on submit.
+// JSON all use the corrected answers at once. Corrections aren't flagged on screen, but are kept with the case
+// (what the PDF said, and the new answer) for the record.
 const same = (a: Value | undefined, b: Value | undefined) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
 const corrections = () =>
   current!.result.rows.filter(r => !same(r.value, original[r.id])).map(r => ({ id: r.id, label: r.label, from: original[r.id], to: r.value }));
@@ -232,15 +234,14 @@ function correct(id: string, value: Value) {
   render();
 }
 
-/** The answers as JSON, exactly what goes to the back end; corrected lines are marked. */
+/** The answers as JSON, exactly what goes to the back end. */
 function jsonView(data: Values) {
-  const fixed = new Set(corrections().map(c => c.id));
   return h(
     "details",
     { className: "sec json-view", open: jsonOpen, ontoggle: (e: Event) => (jsonOpen = (e.target as HTMLDetailsElement).open) },
-    h("summary", {}, `JSON sent to the back end${fixed.size ? ` (${fixed.size} corrected)` : ""}`),
+    h("summary", {}, "JSON sent to the back end"),
     h("pre", {}, "{\n", ...Object.entries(data).map(([k, v], i, all) =>
-      h("span", { className: fixed.has(k) ? "fixed" : "" }, `  ${JSON.stringify(k)}: ${JSON.stringify(v)}${i < all.length - 1 ? "," : ""}\n`)), "}"),
+      h("span", {}, `  ${JSON.stringify(k)}: ${JSON.stringify(v)}${i < all.length - 1 ? "," : ""}\n`)), "}"),
   );
 }
 
@@ -306,7 +307,7 @@ function render() {
 
   // With the PDF beside it, list the answers in the PDF's own order (page, then top to bottom, left to right) and number
   // them; the same numbers are pinned on the PDF. Otherwise, by the form's sections.
-  const visible = (r: Row) => showEmpty || editing || !!show(r.value) || !!r.required || !same(r.value, original[r.id]);
+  const visible = (r: Row) => showEmpty || editable() || !!show(r.value) || !!r.required || !same(r.value, original[r.id]);
   const sections = new Map<string, Row[]>();
   nums = new Map();
   if (showPdf && boxes.size) {
@@ -399,16 +400,6 @@ function render() {
           h("b", {}, "Complete. "),
           `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. Read directly from the PDF's fields: no OCR, nothing retyped.`,
         ),
-    did(rows, template, matches.length, cust?.cif),
-    corrections().length
-      ? h(
-          "div",
-          { className: "banner corrected", role: "status" },
-          h("b", {}, `${corrections().length} answer${corrections().length > 1 ? "s" : ""} corrected by ops. `),
-          "The checks, the customer comparison and the JSON use the corrected answers; the PDF stays as received.",
-          h("ul", {}, ...corrections().map(c => h("li", {}, `${c.label}: "${show(c.from) || "(blank)"}" → "${show(c.to) || "(blank)"}"`))),
-        )
-      : "",
     h(
       "div",
       { className: showPdf ? "split" : "" },
@@ -467,11 +458,6 @@ function render() {
         h(
           "div",
           { className: "toggles" },
-          h(
-            "button",
-            { type: "button", className: editing ? "primary" : "", "aria-pressed": String(editing), onclick: () => { editing = !editing; render(); } },
-            editing ? "Done editing" : "Edit answers",
-          ),
           h(
             "label",
             {},
@@ -532,7 +518,7 @@ function render() {
                           className: `${blank || why.length ? "missing" : ""}${at.length ? " findable" : ""}${sel === r.id ? " sel" : ""}`,
                           title: at.length ? "Click to show it in the PDF" : "",
                           onclick: (e: Event) => {
-                            if (at.length && !editing && !(e.target as HTMLElement).matches("input")) locate(r.id);
+                            if (at.length && !(e.target as HTMLElement).closest("input, select, textarea, label")) locate(r.id);
                           },
                         },
                         h(
@@ -546,8 +532,7 @@ function render() {
                         h(
                           "td",
                           {},
-                          editing ? editor(r) : blank ? "Missing" : r.value === true ? "Yes" : val || h("span", { className: "muted" }, "—"),
-                          same(r.value, original[r.id]) ? "" : h("div", { className: "was" }, `Corrected by ops · PDF said: ${show(original[r.id]) || "(blank)"}`),
+                          editable() ? editor(r) : blank ? "Missing" : r.value === true ? "Yes" : val || h("span", { className: "muted" }, "—"),
                           ...why.map(w => h("div", { className: "flag" }, w)),
                         ),
                         h(
@@ -660,33 +645,6 @@ function locate(id: string, scrollPdf = true) {
 }
 
 // ---- Decision: approve or reject, then submit (simulated: the real one would create an iBPM case) ----
-/** What the workbench did for this application, in numbers: the work an officer no longer does by hand. */
-function did(rows: Row[], template: Template | undefined, compared: number, cif?: string) {
-  const fields = template?.sections.flatMap(s => s.fields) ?? [];
-  const answered = rows.filter(r => !!show(r.value)).length;
-  const typed = fields.filter(f => typeof current!.result.data[f.id] === "string" && current!.result.data[f.id] !== "").length;
-  const conditional = fields.filter(f => f.requiredIf || f.activeIf).length;
-  const item = (n: number | string, what: string) => h("li", {}, h("b", {}, String(n)), ` ${what}`);
-  return h(
-    "div",
-    { className: "did" },
-    h("span", { className: "q" }, "Done automatically"),
-    h(
-      "ul",
-      {},
-      item(answered, "answers read from the PDF's fields: none retyped, no OCR"),
-      item(rows.filter(r => r.required).length, "mandatory questions checked"),
-      item(conditional, "conditional rules applied"),
-      item(typed, "typed answers checked for format, real dates, length and characters"),
-      "doc_bill_of_lading" in current!.result.data
-        ? h("li", {}, "Checked against ", h("a", { href: "../lc-application.schema.json", target: "_blank" }, "lc-application.schema.json"), " (JSON Schema standard, Ajv)")
-        : "",
-      "expiry_date" in current!.result.data ? item(6, "cross-answer checks (dates in order, date not in the future, amount, insurance vs price basis)") : "",
-      cif ? item(compared, `details compared with customer record ${cif}`) : item("KYC", "applicant not found in customer records"),
-    ),
-  );
-}
-
 function decide(open: number, items: string[]) {
   const mail = current!.mail;
   if (mail?.caseId)
@@ -696,6 +654,10 @@ function decide(open: number, items: string[]) {
       h("b", {}, mail.decision === "reject" ? "Rejected" : "Approved"),
       ` and submitted to the workflow as case ${mail.caseId}`,
       mail.reason ? h("span", {}, ` · Reason: ${mail.reason}`) : "",
+      mail.submitted
+        ? h("span", {}, ` · Sent ${Object.keys(mail.submitted).length} answers `,
+            h("button", { type: "button", onclick: () => download(JSON.stringify(mail.submitted, null, 2), `${mail.caseId}.json`, "application/json") }, "Download submitted JSON"))
+        : "",
     );
   const pick = (d: typeof decision, text: string) =>
     h(
@@ -772,6 +734,7 @@ async function submit(open: number) {
     status: "new" as const,
   };
   mail.corrections = corrections().map(({ id, from, to }) => ({ id, from, to }));
+  mail.submitted = structuredClone(o.result.data) as Values; // the answers as edited: what the next step receives
   mail.caseId = `TS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
   mail.status = "processed";
   mail.decision = decision || "approve";

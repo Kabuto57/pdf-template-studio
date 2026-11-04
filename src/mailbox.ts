@@ -16,6 +16,7 @@ export interface Mail {
   decision?: "approve" | "reject";
   reason?: string; // what Trade Ops decided when submitting
   corrections?: { id: string; from: unknown; to: Value }[]; // answers Trade Ops corrected (the PDF stays as received)
+  submitted?: Record<string, Value>; // the answers as submitted to the workflow (with the corrections)
 }
 export const OPS_ADDRESS = "trade.ops@demobank.example";
 
