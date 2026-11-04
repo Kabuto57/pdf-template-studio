@@ -247,9 +247,15 @@ function editor(r: Row): HTMLElement {
   if (f?.kind === "radio" || f?.kind === "select")
     return h("select", { "aria-label": label, onchange: (e: Event) => correct(r.id, (e.target as HTMLSelectElement).value) },
       h("option", { value: "" }, "—"), ...(f.options ?? []).map(o => h("option", { value: o, selected: r.value === o }, o)));
+  // Dates: the browser's calendar (it works in YYYY-MM-DD; the form in DD/MM/YYYY).
+  if (f?.kind === "date")
+    return h("input", {
+      type: "date", className: "edit-box", "aria-label": label,
+      value: typeof r.value === "string" ? r.value.split("/").reverse().join("-") : "",
+      onchange: (e: Event) => { const v = (e.target as HTMLInputElement).value; correct(r.id, v ? v.split("-").reverse().join("/") : ""); },
+    });
   return h(f?.kind === "long" ? "textarea" : "input", {
     value: typeof r.value === "string" ? r.value : "", "aria-label": label, className: "edit-box",
-    ...(f?.kind === "date" ? { placeholder: "DD/MM/YYYY" } : {}),
     onchange: (e: Event) => correct(r.id, (e.target as HTMLInputElement).value),
   });
 }
