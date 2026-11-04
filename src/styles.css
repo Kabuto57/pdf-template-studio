@@ -112,3 +112,8 @@ input:invalid, select:invalid { box-shadow: none; }
 #gaps button { margin-left: 8px; }
 .row.small { flex-wrap: wrap; }
 .inactive { opacity: .45; } /* only answerable once what it depends on is ticked or picked */
+.sample-files { position: relative; }
+.sample-files summary { list-style: none; cursor: pointer; padding: 7px 12px; border: 1px solid #ccc; border-radius: 4px; background: #fff; white-space: nowrap; }
+.sample-files summary::-webkit-details-marker { display: none; }
+.sample-files div { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; background: var(--bg); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 12px; white-space: nowrap; box-shadow: 0 4px 12px #0002; }
+.sample-files a { display: block; padding: 3px 0; color: var(--ink); }
