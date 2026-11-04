@@ -1,7 +1,7 @@
 // Trade Ops workbench (demo): open an emailed application PDF, read every answer exactly, check it, show it.
 import "./ops.css";
 import { PDFDocument, PDFName, PDFNumber } from "pdf-lib";
-import { $, download, h } from "./dom";
+import { $, h } from "./dom";
 import {
   BAD_CHARS,
   FORMATS,
@@ -9,7 +9,6 @@ import {
   extractPdf,
   isActive,
   isRequired,
-  slug,
   type Extracted,
   type Row,
   type Template,
@@ -345,20 +344,6 @@ function render() {
           },
           showPdf ? "Hide PDF" : "View PDF",
         ),
-        h(
-          "button",
-          {
-            type: "button",
-            onclick: () =>
-              download(JSON.stringify(data, null, 2), `${slug(template?.title ?? name)}.json`, "application/json"),
-          },
-          "JSON",
-        ),
-        h(
-          "button",
-          { type: "button", onclick: () => download(csv(rows), `${slug(template?.title ?? name)}.csv`, "text/csv") },
-          "CSV",
-        ),
         h("button", { type: "button", className: "danger", onclick: () => remove() }, "Delete"),
       ),
     ),
@@ -639,7 +624,8 @@ function decide(open: number, items: string[]) {
       "div",
       { className: `decision done ${mail.decision ?? "approve"}` },
       h("b", {}, mail.decision === "reject" ? "Rejected" : "Approved"),
-      ` and submitted to the workflow as case ${mail.caseId}`,
+      ` and submitted to the workflow as case ${mail.caseId} `,
+      h("a", { href: "../back-end/" }, "See it in the back end"),
       mail.reason ? h("span", {}, ` · Reason: ${mail.reason}`) : "",
     );
   const pick = (d: typeof decision, text: string) =>
@@ -718,6 +704,7 @@ async function submit(open: number) {
   };
   mail.corrections = corrections().map(({ id, from, to }) => ({ id, from, to }));
   mail.submitted = structuredClone(o.result.data) as Values; // the answers as edited: what the next step receives
+  mail.submittedAt = Date.now();
   mail.caseId = `TS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
   mail.status = "processed";
   mail.decision = decision || "approve";
@@ -789,13 +776,6 @@ function ask(title: string, text: string | Node, ok: string, cls = "primary", bo
 }
 
 const v0 = (x: unknown) => typeof x === "string" && x.trim() !== "";
-const csv = (rows: Row[]) =>
-  [
-    "section,question,key,value",
-    ...rows.map(r =>
-      [r.section, r.label, r.id, show(r.value)].map(c => `"${String(c).replace(/"/g, '""')}"`).join(","),
-    ),
-  ].join("\n");
 
 // ---- Upload: one or many PDFs; each goes into the mailbox, and the first one opens ----
 const take = async (files: FileList | File[] | undefined) => {

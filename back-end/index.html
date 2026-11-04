@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Back end | Trade workflow</title>
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Demo: the workflow back end (simulated). The cases Trade Ops submitted, and the data each one carries as JSON.">
+</head>
+<body>
+  <div class="ribbon">Demonstration: the workflow back end (simulated, e.g. iBPM). It shows the cases Trade Ops submitted in this browser.</div>
+  <header class="top"><b>Trade workflow</b><span class="muted">Back end · cases received</span></header>
+  <div class="shell">
+    <aside class="list" id="list" aria-label="Cases"></aside>
+    <main id="case"></main>
+  </div>
+  <script type="module" src="/src/backend.ts"></script>
+</body>
+</html>
