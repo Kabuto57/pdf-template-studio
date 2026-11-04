@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRawStream, PDFDropdown, PDFTextField, decodePDFRawStream } from "pdf-lib";
 import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
+import { LC } from "../src/lc";
 
 describe("pdf form", () => {
   it("round-trips every answer through a filled PDF", async () => {
@@ -147,4 +148,30 @@ describe("every conditional rule lights up its field (the PDF's own script)", as
       expect(shown?.strokeColor).toBe("red");
     });
   }
+});
+
+describe("two versions: JavaScript and no JavaScript", () => {
+  const scan = async (mode: "javascript" | "no-javascript") => {
+    const doc = await PDFDocument.load(await buildPdf(LC.template, LC.defaults, mode));
+    let scripts = 0, copies = 0;
+    for (const [, o] of doc.context.enumerateIndirectObjects()) {
+      const d = o instanceof PDFDict ? o : undefined;
+      if (!d) continue;
+      if (d.get(PDFName.of("S")) === PDFName.of("JavaScript") || d.has(PDFName.of("AA"))) scripts++;
+      if (d.lookup(PDFName.of("F")) instanceof PDFNumber && (d.lookup(PDFName.of("F")) as PDFNumber).asNumber() === 64) copies++;
+    }
+    return { scripts: scripts + (doc.catalog.has(PDFName.of("Names")) ? 1 : 0) + (doc.catalog.has(PDFName.of("AA")) ? 1 : 0), copies, check: !!doc.getForm().getFieldMaybe("__check_form") };
+  };
+  it("no JavaScript: no scripts at all, red frames instead", async () => {
+    const r = await scan("no-javascript");
+    expect(r.scripts).toBe(0);
+    expect(r.copies).toBeGreaterThan(100);
+    expect(r.check).toBe(false);
+  });
+  it("JavaScript: Acrobat's checks, no red-frame copies", async () => {
+    const r = await scan("javascript");
+    expect(r.scripts).toBeGreaterThan(50);
+    expect(r.copies).toBe(0);
+    expect(r.check).toBe(true);
+  });
 });

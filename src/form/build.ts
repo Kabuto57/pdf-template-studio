@@ -6,6 +6,12 @@
 //   4. each question: its label (red * if mandatory), then its box(es)
 //   5. page footers
 //   6. red frames / grey shading (no JavaScript needed), then the Acrobat checks (JavaScript)
+// Three versions (`mode`):
+//   "no-javascript": no scripts at all (no yellow JavaScript bar). Red frames, grey shading, date lists, page links.
+//   "javascript":    everything checked by Acrobat's JavaScript, like the bank's old smart form: red outlines that
+//                    follow the answers, locking, typing filters, calendar dates, "Check form", warnings before
+//                    save/print. Assumes JavaScript is on; with it off, only the page links and lists work.
+//   "both":          the two together (the studio's preview and the samples).
 import { PDFDocument, PDFHexString, PDFName, PDFPage, StandardFonts } from "pdf-lib";
 import { addChecks, formatActions } from "./acrobat-script";
 import { addDateLists } from "./dates";
@@ -16,14 +22,17 @@ import { stamp } from "./stored-template";
 import { hasOptions, safe, subId, type Field, type Template, type Values } from "./types";
 import { fillBase } from "./upload";
 
+export type Mode = "both" | "javascript" | "no-javascript";
+
 /** Makes the blank form, or (with values) a filled one. */
-export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8Array> {
+export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "both"): Promise<Uint8Array> {
   if (t.base) return fillBase(t, values); // an uploaded PDF: fill its own fields instead
 
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const form = doc.getForm();
-  const js = (code: string) => doc.context.obj({ S: "JavaScript", JS: PDFHexString.fromText(code) }); // a script, as a PDF action
+  const script = (code: string) => doc.context.obj({ S: "JavaScript", JS: PDFHexString.fromText(code) }); // a script, as a PDF action
+  const js = mode === "no-javascript" ? undefined : script;
   doc.setTitle(safe(t.title));
   doc.setCreator("PDF Template Studio");
 
@@ -139,7 +148,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
       if (typeof answer === "string" && answer) box.setText(safe(answer).slice(0, f.max));
       box.addToPage(page, { x, y: y - h, width: w, height: h, font, ...look });
       box.setFontSize(10);
-      if (f.format) box.acroField.dict.set(PDFName.of("AA"), formatActions(doc, js, f)); // Acrobat: refuse wrong keys
+      if (f.format && js) box.acroField.dict.set(PDFName.of("AA"), formatActions(doc, js, f)); // Acrobat: refuse wrong keys
     }
     return 13 + h;
   }
@@ -193,8 +202,8 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
   });
 
   // 6. Conditional highlighting without JavaScript, then the checks for when Acrobat runs JavaScript.
-  addRedFrames(doc, form, t, values, { blocks, font });
-  if (t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
+  if (mode !== "javascript") addRedFrames(doc, form, t, values, { blocks, font });
+  if (js && t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
   form.updateFieldAppearances(font);
   finishForm(doc, font);
   return doc.save();

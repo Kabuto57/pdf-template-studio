@@ -14,6 +14,9 @@ import { toSchema } from "../src/form/schema";
 it.skipIf(!process.env.LC_PDFS)("blank LC PDFs, samples, schema", async () => {
   writeFileSync("public/LC-Application-original-look.pdf", await buildLcPdf(LC.defaults));
   writeFileSync("public/LC-Application-new-design.pdf", await buildPdf(LC.template, LC.defaults));
+  // The same form twice: checked by Acrobat's JavaScript, or with no scripts at all.
+  writeFileSync("public/LC-Application-JavaScript.pdf", await buildPdf(LC.template, LC.defaults, "javascript"));
+  writeFileSync("public/LC-Application-no-JavaScript.pdf", await buildPdf(LC.template, LC.defaults, "no-javascript"));
   mkdirSync("public/samples", { recursive: true }); // the workbench's sample applications, filled in
   for (const s of SAMPLES) writeFileSync(`public/samples/${s.file}`, await samplePdf(s));
   // The JSON Schema, and Ajv's checker for it as plain JavaScript (the site can't compile one while it runs).

@@ -142,7 +142,8 @@ function lcDates(d) {
   for (i = 0; i < D.length; i++) { t = d.getField(D[i]); if (!t) continue; t.display = display.visible;
     p = d.getField(D[i] + "__list"); if (p) p.display = display.hidden; }
 }
-if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) lcDates(this);`;
+// On opening in Acrobat: show the calendars, and set every box's colour and lock.
+if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lcDates(this); lcRules(this); }`;
   // Stored as a stream, not a string: no 32,767-byte limit however many rules a form has.
   const scriptRef = doc.context.register(doc.context.flateStream(Uint8Array.from(script, c => c.charCodeAt(0) & 0xff)));
   doc.catalog.set(PDFName.of("Names"), doc.context.obj({

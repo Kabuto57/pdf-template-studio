@@ -15,7 +15,7 @@
 export * from "./form/types";
 export * from "./form/rules";
 export { finishForm } from "./form/look";
-export { buildPdf } from "./form/build";
+export { buildPdf, type Mode } from "./form/build";
 export { addDateLists, dateIds, dateOptions, joinDate } from "./form/dates";
 export { addRedFrames } from "./form/red-frames";
 export { addChecks, formatActions } from "./form/acrobat-script";

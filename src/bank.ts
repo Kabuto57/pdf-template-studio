@@ -5,7 +5,6 @@ import { LC } from "./lc";
 import { buildPdf } from "./pdf";
 import { OPS_ADDRESS } from "./mailbox";
 
-const FILE = "Irrevocable-Documentary-Credit-Application.pdf";
 const CATEGORIES: [string, string[]][] = [
   ["Import", ["Irrevocable Documentary Credit (LC)", "Amendment to Original Documentary Credit"]],
   [
@@ -28,22 +27,32 @@ const lcRow = () =>
       { className: "name" },
       h("b", {}, "Irrevocable Documentary Credit (LC)"),
       h("span", { className: "tag" }, "UPDATED"),
-      h("small", {}, "Fill online (every answer checked as you type), or download the PDF (6 pages)."),
+      h("small", {}, "Fill online (every answer checked as you type), or download the PDF: the JavaScript version checks everything in Acrobat; the no-JavaScript version works in any viewer."),
     ),
     h(
       "span",
       { className: "dl" },
+      h("a", { className: "btn primary", href: "apply.html" }, "Fill online"),
       h(
         "button",
         {
           type: "button",
-          className: "primary",
+          title: "For Adobe Acrobat / Reader with JavaScript on: checks everything as you fill it in, like the old smart form",
           onclick: async () =>
-            download((await buildPdf(LC.template, LC.defaults)) as BlobPart, FILE, "application/pdf"),
+            download((await buildPdf(LC.template, LC.defaults, "javascript")) as BlobPart, "LC-Application-JavaScript.pdf", "application/pdf"),
         },
-        "Download Form",
+        "PDF (JavaScript)",
       ),
-      h("a", { className: "btn", href: "apply.html" }, "Fill online"),
+      h(
+        "button",
+        {
+          type: "button",
+          title: "For any PDF viewer, JavaScript off: no scripts; red frames and drop-down lists guide you",
+          onclick: async () =>
+            download((await buildPdf(LC.template, LC.defaults, "no-javascript")) as BlobPart, "LC-Application-no-JavaScript.pdf", "application/pdf"),
+        },
+        "PDF (no JavaScript)",
+      ),
     ),
   );
 
@@ -76,9 +85,11 @@ function page() {
               "li",
               {},
               h("b", {}, "Fill it in"),
-              " with Adobe Acrobat Reader (free). Boxes outlined in red are mandatory; click ",
+              ". Easiest: ",
+              h("b", {}, "Fill online"),
+              ", which checks every answer as you go. Or download a PDF: the JavaScript version (Adobe Acrobat / Reader with JavaScript on) checks everything and has a ",
               h("b", {}, "Check form"),
-              " at the top to see anything missing.",
+              " button; the no-JavaScript version works in any viewer and outlines mandatory boxes in red.",
             ),
             h("li", {}, h("b", {}, "Save"), " the completed PDF."),
             h(

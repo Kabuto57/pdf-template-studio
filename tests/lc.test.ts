@@ -82,9 +82,10 @@ describe("dates: Acrobat's calendar when its JavaScript runs, drop-downs otherwi
     const fields: Record<string, any> = { expiry_date: { display: 1 } };
     const d = { getField: (n: string) => fields[n] ??= { display: 0 } };
     // In Acrobat the calendar box is shown and the drop-downs hidden; in other viewers (Chrome: "pdfium") nothing changes.
-    new Function("app", "display", js).call(d, { viewerType: "pdfium" }, { visible: 0, hidden: 1 });
+    const quiet = { println() {} }; // the checks also run on opening; this fake has no real fields for them
+    new Function("app", "display", "console", js).call(d, { viewerType: "pdfium" }, { visible: 0, hidden: 1 }, quiet);
     expect(fields.expiry_date.display).toBe(1);
-    new Function("app", "display", js).call(d, { viewerType: "Exchange-Pro" }, { visible: 0, hidden: 1 });
+    new Function("app", "display", "console", js).call(d, { viewerType: "Exchange-Pro" }, { visible: 0, hidden: 1 }, quiet);
     expect([fields.expiry_date.display, fields.expiry_date__list.display]).toEqual([0, 1]);
     // The box has Acrobat's date format (which brings the calendar) and refuses dates that don't exist.
     const form = (await PDFDocument.load(pdf)).getForm(), box = form.getTextField("expiry_date");
