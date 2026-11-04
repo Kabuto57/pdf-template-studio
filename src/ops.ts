@@ -64,6 +64,8 @@ let boxes = new Map<string, Box[]>(),
   sel = "",
   nums = new Map<string, number>(); // nums: the answer numbers pinned on the PDF // where each answer sits in the PDF; the row being shown
 let checked = new Set<string>(); // rows the ops officer has ticked as checked
+let editing = false;                       // "Edit answers" on: every answer is a box the officer can correct
+let original: Values = {};                 // the answers as read from the PDF, to show what was corrected
 let decision: "" | "approve" | "reject" = "",
   reason = ""; // the officer's decision, before it is submitted
 
@@ -156,6 +158,15 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
     }
     current = { result, name, bytes, mail, vendor };
     checked = new Set();
+    original = structuredClone(result.data) as Values;
+    editing = false;
+    // Corrections made before (kept with the email when it was submitted): apply them again.
+    for (const c of mail?.corrections ?? []) {
+      const row = result.rows.find(r => r.id === c.id);
+      if (row) { row.value = c.to; result.data[c.id] = c.to; }
+    }
+    const fields = new Map(result.template?.sections.flatMap(s => s.fields).map(f => [f.id, f]) ?? []);
+    for (const r of result.rows) { const f = fields.get(r.id); if (f && mail?.corrections?.length) r.required = isRequired(f, result.data as Values) || undefined; }
     pane = undefined;
     sel = "";
     decision = "";
@@ -198,6 +209,46 @@ function problems(t: Template | undefined, data: Record<string, unknown>) {
   return out;
 }
 
+// ---- Correcting an answer ----
+// The officer can fix what the customer wrote (a typo, a wrong format). The checks, the customer comparison and the
+// JSON all use the corrected answers at once; each correction is listed with what the PDF said, and kept on submit.
+const same = (a: Value | undefined, b: Value | undefined) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+const corrections = () =>
+  current!.result.rows.filter(r => !same(r.value, original[r.id])).map(r => ({ id: r.id, label: r.label, from: original[r.id], to: r.value }));
+
+function correct(id: string, value: Value) {
+  const { result } = current!;
+  const row = result.rows.find(r => r.id === id)!;
+  row.value = value;
+  result.data[id] = value;
+  // Mandatory or not can depend on this answer, so judge every question again.
+  const fields = new Map(result.template?.sections.flatMap(s => s.fields).map(f => [f.id, f]) ?? []);
+  for (const r of result.rows) { const f = fields.get(r.id); if (f) r.required = isRequired(f, result.data as Values) || undefined; }
+  render();
+}
+
+/** The box for correcting one answer, matching its kind of question. */
+function editor(r: Row): HTMLElement {
+  const f = current!.result.template?.sections.flatMap(s => s.fields).find(q => q.id === r.id);
+  const label = `Correct ${r.label}`;
+  if (typeof r.value === "boolean" || f?.kind === "check")
+    return h("input", { type: "checkbox", checked: r.value === true, "aria-label": label, onchange: (e: Event) => correct(r.id, (e.target as HTMLInputElement).checked) });
+  if (f?.kind === "checks")
+    return h("div", { className: "edit-choices" }, ...(f.options ?? []).map(o => h("label", {}, h("input", {
+      type: "checkbox", checked: Array.isArray(r.value) && r.value.includes(o),
+      onchange: (e: Event) => { const now = new Set(Array.isArray(r.value) ? r.value : []); (e.target as HTMLInputElement).checked ? now.add(o) : now.delete(o);
+        correct(r.id, (f.options ?? []).filter(x => now.has(x))); },
+    }), ` ${o}`)));
+  if (f?.kind === "radio" || f?.kind === "select")
+    return h("select", { "aria-label": label, onchange: (e: Event) => correct(r.id, (e.target as HTMLSelectElement).value) },
+      h("option", { value: "" }, "—"), ...(f.options ?? []).map(o => h("option", { value: o, selected: r.value === o }, o)));
+  return h(f?.kind === "long" ? "textarea" : "input", {
+    value: typeof r.value === "string" ? r.value : "", "aria-label": label, className: "edit-box",
+    ...(f?.kind === "date" ? { placeholder: "DD/MM/YYYY" } : {}),
+    onchange: (e: Event) => correct(r.id, (e.target as HTMLInputElement).value),
+  });
+}
+
 // ---- The application ----
 function render() {
   const { result, name, mail, vendor } = current!,
@@ -238,7 +289,7 @@ function render() {
 
   // With the PDF beside it, list the answers in the PDF's own order (page, then top to bottom, left to right) and number
   // them; the same numbers are pinned on the PDF. Otherwise, by the form's sections.
-  const visible = (r: Row) => showEmpty || !!show(r.value) || !!r.required;
+  const visible = (r: Row) => showEmpty || editing || !!show(r.value) || !!r.required || !same(r.value, original[r.id]);
   const sections = new Map<string, Row[]>();
   nums = new Map();
   if (showPdf && boxes.size) {
@@ -332,6 +383,15 @@ function render() {
           `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. Read directly from the PDF's fields: no OCR, nothing retyped.`,
         ),
     did(rows, template, matches.length, cust?.cif),
+    corrections().length
+      ? h(
+          "div",
+          { className: "banner corrected", role: "status" },
+          h("b", {}, `${corrections().length} answer${corrections().length > 1 ? "s" : ""} corrected by ops. `),
+          "The checks, the customer comparison and the JSON use the corrected answers; the PDF stays as received.",
+          h("ul", {}, ...corrections().map(c => h("li", {}, `${c.label}: "${show(c.from) || "(blank)"}" → "${show(c.to) || "(blank)"}"`))),
+        )
+      : "",
     h(
       "div",
       { className: showPdf ? "split" : "" },
@@ -391,6 +451,11 @@ function render() {
           "div",
           { className: "toggles" },
           h(
+            "button",
+            { type: "button", className: editing ? "primary" : "", "aria-pressed": String(editing), onclick: () => { editing = !editing; render(); } },
+            editing ? "Done editing" : "Edit answers",
+          ),
+          h(
             "label",
             {},
             h("input", {
@@ -449,7 +514,7 @@ function render() {
                           className: `${blank || why.length ? "missing" : ""}${at.length ? " findable" : ""}${sel === r.id ? " sel" : ""}`,
                           title: at.length ? "Click to show it in the PDF" : "",
                           onclick: (e: Event) => {
-                            if (at.length && !(e.target as HTMLElement).matches("input")) locate(r.id);
+                            if (at.length && !editing && !(e.target as HTMLElement).matches("input")) locate(r.id);
                           },
                         },
                         h(
@@ -463,7 +528,8 @@ function render() {
                         h(
                           "td",
                           {},
-                          blank ? "Missing" : r.value === true ? "Yes" : val || h("span", { className: "muted" }, "—"),
+                          editing ? editor(r) : blank ? "Missing" : r.value === true ? "Yes" : val || h("span", { className: "muted" }, "—"),
+                          same(r.value, original[r.id]) ? "" : h("div", { className: "was" }, `Corrected by ops · PDF said: ${show(original[r.id]) || "(blank)"}`),
                           ...why.map(w => h("div", { className: "flag" }, w)),
                         ),
                         h(
@@ -687,6 +753,7 @@ async function submit(open: number) {
     file: { name: o.name, bytes: o.bytes },
     status: "new" as const,
   };
+  mail.corrections = corrections().map(({ id, from, to }) => ({ id, from, to }));
   mail.caseId = `TS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 90000) + 10000)}`;
   mail.status = "processed";
   mail.decision = decision || "approve";

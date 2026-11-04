@@ -1,6 +1,8 @@
 // A pretend email system for the demo: the customer site "sends" to Trade Ops and the ops workbench reads
 // its inbox. It lives in this browser (IndexedDB), so the whole journey runs on one laptop; a PDF that came
 // by real email can still be dropped into the workbench.
+import type { Value } from "./pdf";
+
 export interface Mail {
   id: string;
   from: string;
@@ -13,6 +15,7 @@ export interface Mail {
   caseId?: string;
   decision?: "approve" | "reject";
   reason?: string; // what Trade Ops decided when submitting
+  corrections?: { id: string; from: unknown; to: Value }[]; // answers Trade Ops corrected (the PDF stays as received)
 }
 export const OPS_ADDRESS = "trade.ops@demobank.example";
 
