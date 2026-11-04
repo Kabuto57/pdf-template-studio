@@ -64,7 +64,7 @@ let boxes = new Map<string, Box[]>(),
   sel = "",
   nums = new Map<string, number>(); // nums: the answer numbers pinned on the PDF // where each answer sits in the PDF; the row being shown
 let checked = new Set<string>(); // rows the ops officer has ticked as checked
-let editing = false;                       // "Edit answers" on: every answer is a box the officer can correct
+let editing = false, jsonOpen = false;                       // "Edit answers" on: every answer is a box the officer can correct
 let original: Values = {};                 // the answers as read from the PDF, to show what was corrected
 let decision: "" | "approve" | "reject" = "",
   reason = ""; // the officer's decision, before it is submitted
@@ -224,7 +224,24 @@ function correct(id: string, value: Value) {
   // Mandatory or not can depend on this answer, so judge every question again.
   const fields = new Map(result.template?.sections.flatMap(s => s.fields).map(f => [f.id, f]) ?? []);
   for (const r of result.rows) { const f = fields.get(r.id); if (f) r.required = isRequired(f, result.data as Values) || undefined; }
+  // Saved at once with the email (the demo's back end), so a correction is never lost, submitted or not.
+  if (current!.mail) {
+    current!.mail.corrections = corrections().map(({ id, from, to }) => ({ id, from, to }));
+    saveMail(current!.mail);
+  }
   render();
+}
+
+/** The answers as JSON, exactly what goes to the back end; corrected lines are marked. */
+function jsonView(data: Values) {
+  const fixed = new Set(corrections().map(c => c.id));
+  return h(
+    "details",
+    { className: "sec json-view", open: jsonOpen, ontoggle: (e: Event) => (jsonOpen = (e.target as HTMLDetailsElement).open) },
+    h("summary", {}, `JSON sent to the back end${fixed.size ? ` (${fixed.size} corrected)` : ""}`),
+    h("pre", {}, "{\n", ...Object.entries(data).map(([k, v], i, all) =>
+      h("span", { className: fixed.has(k) ? "fixed" : "" }, `  ${JSON.stringify(k)}: ${JSON.stringify(v)}${i < all.length - 1 ? "," : ""}\n`)), "}"),
+  );
 }
 
 /** The box for correcting one answer, matching its kind of question. */
@@ -490,6 +507,7 @@ function render() {
             "Tick all with no flags",
           ),
         ),
+        jsonView(data as Values),
         ...[...sections].map(([title, rs]) => {
           const shown = rs.filter(visible);
           return shown.length

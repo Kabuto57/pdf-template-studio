@@ -142,3 +142,6 @@ textarea.edit-box { min-height: 60px; }
 .was { font-size: 12px; color: #8a5a00; margin-top: 2px; }
 .banner.corrected { background: #fff8e6; border-color: #e8c66a; color: #5c4300; }
 .banner.corrected ul { margin: 6px 0 0; padding-left: 18px; }
+.json-view summary { cursor: pointer; font-weight: 600; }
+.json-view pre { max-height: 320px; overflow: auto; font-size: 12px; background: #f7f8fa; padding: 8px; margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; }
+.json-view .fixed { background: #fff1c2; }
