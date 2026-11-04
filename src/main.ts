@@ -20,8 +20,8 @@ const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
 
 const BANK_FORMS = BANK as { code: string; template: Template; defaults: Values }[];
 const bankForm = (code: string) => BANK_FORMS.find(f => f.code === code)!;
-let t: Template = clone(bankForm("BG").template);
-let values: Values = clone(bankForm("BG").defaults);
+let t: Template = { ...clone(LC.template), design: "new" }; // the showcase: the LC in the new design
+let values: Values = clone(LC.defaults);
 let view: View = "design";
 let filled: Uint8Array | undefined; // the last "Save filled PDF", so Extract can use it straight away
 const auto = new WeakSet<Field>(); // fields whose key still follows their label
@@ -295,6 +295,7 @@ document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAt
 
 $("#bankForms").append(...BANK_FORMS.flatMap(f => [h("option", { value: `bank:${f.code}` }, f.template.title),
   f.code === "LC" ? h("option", { value: "lc-new" }, `${f.template.title}: new design`) : ""]));
+$<HTMLOptionElement>('#bankForms option[value="bank:LC"]').textContent += ": bank's original look";
 document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.onclick = () => go(b.dataset.view as View));
 $("#blankBtn").onclick = async () => download(await pdfOf(t) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
