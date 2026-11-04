@@ -1,3 +1,6 @@
+// PDF TEMPLATE STUDIO (studio.html)
+// Three steps: 1. Design a form (sections and questions), 2. Fill it in on screen, 3. Extract the answers from a
+// filled PDF. The live preview on the right is the real PDF, made by buildPdf and drawn by pdf.js.
 import "./styles.css";
 import { download, h } from "./dom";
 import { FORMATS, KINDS, buildPdf, extractPdf, hasOptions, importPdf, isActive, isRequired, slug } from "./pdf";
@@ -7,7 +10,8 @@ import { LC } from "./lc";
 import { buildLcPdf } from "./lc-pdf";
 
 /** The LC is drawn in the bank's own layout; other forms in the standard one. */
-const pdfOf = (t: Template, v: Values = {}) => t.title === LC.template.title && !t.base && !t.design ? buildLcPdf(v) : buildPdf(t, v);
+const pdfOf = (t: Template, v: Values = {}) =>
+  t.title === LC.template.title && !t.base && !t.design ? buildLcPdf(v) : buildPdf(t, v);
 import BANK from "./bank-forms.json";
 import type { Line, Xfa } from "./text";
 
@@ -26,24 +30,42 @@ let view: View = "design";
 let filled: Uint8Array | undefined; // the last "Save filled PDF", so Extract can use it straight away
 const auto = new WeakSet<Field>(); // fields whose key still follows their label
 let pristine = ""; // the form as opened, to tell whether switching forms would lose edits
-try { const s = localStorage.getItem(STORE); if (s) t = JSON.parse(s); } catch { /* storage blocked: start from the sample */ }
+try {
+  const s = localStorage.getItem(STORE);
+  if (s) t = JSON.parse(s);
+} catch {
+  /* storage blocked: start from the sample */
+}
 pristine = JSON.stringify(t);
 
-
 // ---- Preview ----
-let timer = 0, drawn = 0;
+let timer = 0,
+  drawn = 0;
 function refresh(now = false) {
-  try { localStorage.setItem(STORE, JSON.stringify(t)); } catch { /* fine: just not remembered */ }
+  try {
+    localStorage.setItem(STORE, JSON.stringify(t));
+  } catch {
+    /* fine: just not remembered */
+  }
   clearTimeout(timer);
-  timer = window.setTimeout(async () => {
-    showPdf(await pdfOf(t, view === "fill" ? values : {}));
-  }, now ? 0 : 450);
+  timer = window.setTimeout(
+    async () => {
+      showPdf(await pdfOf(t, view === "fill" ? values : {}));
+    },
+    now ? 0 : 450,
+  );
 }
 
 // ---- 1. Design ----
 const unique = (base: string, self?: Field) => {
-  const taken = new Set(t.sections.flatMap(s => s.fields).filter(f => f !== self).map(f => f.id));
-  let id = base, n = 2;
+  const taken = new Set(
+    t.sections
+      .flatMap(s => s.fields)
+      .filter(f => f !== self)
+      .map(f => f.id),
+  );
+  let id = base,
+    n = 2;
   while (taken.has(id)) id = `${base}_${n++}`;
   return id;
 };
@@ -54,42 +76,168 @@ function move<T>(list: T[], i: number, by: number) {
 }
 
 function fieldCard(list: Field[], f: Field, i: number): HTMLElement {
-  if (t.base) return h("div", { className: "card" },
-    h("input", { className: "label wide", value: f.label, "aria-label": "Question",
-      oninput: (e: Event) => { f.label = (e.target as HTMLInputElement).value; refresh(); } }),
-    h("div", { className: "row small" }, h("span", {}, KINDS[f.kind], f.options ? `: ${f.options.join(", ")}` : ""), h("code", { className: "key-ro" }, f.id)));
-  const key = h("input", { className: "key", value: f.id, "aria-label": "JSON key", spellcheck: false,
-    oninput: (e: Event) => { auto.delete(f); f.id = slug((e.target as HTMLInputElement).value); refresh(); },
-    onchange: () => { f.id = unique(f.id, f); key.value = f.id; } });
-  const opts = hasOptions(f.kind) && h("textarea", { className: "opts", rows: Math.max(2, f.options?.length ?? 2),
-    value: (f.options ?? []).join("\n"), "aria-label": "Options, one per line", placeholder: "One option per line",
-    oninput: (e: Event) => { f.options = (e.target as HTMLTextAreaElement).value.split("\n").map(s => s.trim()).filter(Boolean); refresh(); } });
-  return h("div", { className: "card" },
-    h("div", { className: "row" },
-      h("input", { className: "label", value: f.label, "aria-label": "Question", placeholder: "Question",
+  if (t.base)
+    return h(
+      "div",
+      { className: "card" },
+      h("input", {
+        className: "label wide",
+        value: f.label,
+        "aria-label": "Question",
         oninput: (e: Event) => {
           f.label = (e.target as HTMLInputElement).value;
-          if (auto.has(f)) { f.id = unique(slug(f.label), f); key.value = f.id; }
           refresh();
-        } }),
-      h("select", { "aria-label": "Answer type", onchange: (e: Event) => {
-        f.kind = (e.target as HTMLSelectElement).value as Kind;
-        if (hasOptions(f.kind) && !f.options?.length) f.options = ["Yes", "No"];
-        renderDesign(); refresh();
-      } }, ...Object.entries(KINDS).map(([k, v]) => h("option", { value: k, selected: k === f.kind }, v))),
+        },
+      }),
+      h(
+        "div",
+        { className: "row small" },
+        h("span", {}, KINDS[f.kind], f.options ? `: ${f.options.join(", ")}` : ""),
+        h("code", { className: "key-ro" }, f.id),
+      ),
+    );
+  const key = h("input", {
+    className: "key",
+    value: f.id,
+    "aria-label": "JSON key",
+    spellcheck: false,
+    oninput: (e: Event) => {
+      auto.delete(f);
+      f.id = slug((e.target as HTMLInputElement).value);
+      refresh();
+    },
+    onchange: () => {
+      f.id = unique(f.id, f);
+      key.value = f.id;
+    },
+  });
+  const opts =
+    hasOptions(f.kind) &&
+    h("textarea", {
+      className: "opts",
+      rows: Math.max(2, f.options?.length ?? 2),
+      value: (f.options ?? []).join("\n"),
+      "aria-label": "Options, one per line",
+      placeholder: "One option per line",
+      oninput: (e: Event) => {
+        f.options = (e.target as HTMLTextAreaElement).value
+          .split("\n")
+          .map(s => s.trim())
+          .filter(Boolean);
+        refresh();
+      },
+    });
+  return h(
+    "div",
+    { className: "card" },
+    h(
+      "div",
+      { className: "row" },
+      h("input", {
+        className: "label",
+        value: f.label,
+        "aria-label": "Question",
+        placeholder: "Question",
+        oninput: (e: Event) => {
+          f.label = (e.target as HTMLInputElement).value;
+          if (auto.has(f)) {
+            f.id = unique(slug(f.label), f);
+            key.value = f.id;
+          }
+          refresh();
+        },
+      }),
+      h(
+        "select",
+        {
+          "aria-label": "Answer type",
+          onchange: (e: Event) => {
+            f.kind = (e.target as HTMLSelectElement).value as Kind;
+            if (hasOptions(f.kind) && !f.options?.length) f.options = ["Yes", "No"];
+            renderDesign();
+            refresh();
+          },
+        },
+        ...Object.entries(KINDS).map(([k, v]) => h("option", { value: k, selected: k === f.kind }, v)),
+      ),
     ),
     opts,
-    h("div", { className: "row small" },
+    h(
+      "div",
+      { className: "row small" },
       h("label", { className: "key-wrap" }, "Key ", key),
-      h("label", { className: "half" }, h("input", { type: "checkbox", checked: !!f.half,
-        onchange: (e: Event) => { f.half = (e.target as HTMLInputElement).checked; refresh(); } }), " Half width"),
-      h("label", { className: "half" }, h("input", { type: "checkbox", checked: !!f.required,
-        onchange: (e: Event) => { f.required = (e.target as HTMLInputElement).checked; refresh(); } }), " Required"),
+      h(
+        "label",
+        { className: "half" },
+        h("input", {
+          type: "checkbox",
+          checked: !!f.half,
+          onchange: (e: Event) => {
+            f.half = (e.target as HTMLInputElement).checked;
+            refresh();
+          },
+        }),
+        " Half width",
+      ),
+      h(
+        "label",
+        { className: "half" },
+        h("input", {
+          type: "checkbox",
+          checked: !!f.required,
+          onchange: (e: Event) => {
+            f.required = (e.target as HTMLInputElement).checked;
+            refresh();
+          },
+        }),
+        " Required",
+      ),
       f.requiredIf && h("span", { className: "when" }, `Required when ${rule(f)}`),
-      h("span", { className: "tools" },
-        h("button", { type: "button", title: "Move up", "aria-label": "Move up", onclick: () => { move(list, i, -1); renderDesign(); refresh(); } }, "↑"),
-        h("button", { type: "button", title: "Move down", "aria-label": "Move down", onclick: () => { move(list, i, 1); renderDesign(); refresh(); } }, "↓"),
-        h("button", { type: "button", title: "Delete question", "aria-label": "Delete question", onclick: () => { list.splice(i, 1); renderDesign(); refresh(); } }, "✕"),
+      h(
+        "span",
+        { className: "tools" },
+        h(
+          "button",
+          {
+            type: "button",
+            title: "Move up",
+            "aria-label": "Move up",
+            onclick: () => {
+              move(list, i, -1);
+              renderDesign();
+              refresh();
+            },
+          },
+          "↑",
+        ),
+        h(
+          "button",
+          {
+            type: "button",
+            title: "Move down",
+            "aria-label": "Move down",
+            onclick: () => {
+              move(list, i, 1);
+              renderDesign();
+              refresh();
+            },
+          },
+          "↓",
+        ),
+        h(
+          "button",
+          {
+            type: "button",
+            title: "Delete question",
+            "aria-label": "Delete question",
+            onclick: () => {
+              list.splice(i, 1);
+              renderDesign();
+              refresh();
+            },
+          },
+          "✕",
+        ),
       ),
     ),
   );
@@ -99,187 +247,506 @@ function renderDesign() {
   const panel = $("#panel");
   const base = !!t.base;
   panel.replaceChildren(
-    h("div", { className: "upload" },
+    h(
+      "div",
+      { className: "upload" },
       h("label", { className: "btn primary", for: "templateIn" }, "Upload your PDF template…"),
-      h("span", {}, "Use a form you already have. Its fields are kept; on a printed-style form, fields are added over the blanks (____ and ☐)."),
-    ),
-    h("p", { className: "lead" }, base
-      ? "Fields come from your PDF. Rename the questions so the answers are easy to read; the keys come from the PDF."
-      : "Or build a form here: sections, then questions. Each answer gets a key, so you can pull it back out later."),
-    h("label", { className: "lbl" }, "Form title", h("input", { value: t.title, oninput: (e: Event) => { t.title = (e.target as HTMLInputElement).value; refresh(); } })),
-    base ? "" : h("label", { className: "lbl" }, "Instructions under the title", h("textarea", { rows: 2, value: t.note, oninput: (e: Event) => { t.note = (e.target as HTMLTextAreaElement).value; refresh(); } })),
-    ...t.sections.map((s, si) => h("section", { className: "sec" },
-      h("div", { className: "sec-head" },
-        h("span", { className: "num" }, String(si + 1)),
-        h("input", { value: s.title, "aria-label": "Section title", oninput: (e: Event) => { s.title = (e.target as HTMLInputElement).value; refresh(); } }),
-        !base && h("span", { className: "tools" },
-          h("button", { type: "button", title: "Move section up", "aria-label": "Move section up", onclick: () => { move(t.sections, si, -1); renderDesign(); refresh(); } }, "↑"),
-          h("button", { type: "button", title: "Move section down", "aria-label": "Move section down", onclick: () => { move(t.sections, si, 1); renderDesign(); refresh(); } }, "↓"),
-          h("button", { type: "button", title: "Delete section", "aria-label": "Delete section", onclick: () => { t.sections.splice(si, 1); renderDesign(); refresh(); } }, "✕"),
-        ),
+      h(
+        "span",
+        {},
+        "Use a form you already have. Its fields are kept; on a printed-style form, fields are added over the blanks (____ and ☐).",
       ),
-      ...s.fields.map((f, i) => fieldCard(s.fields, f, i)),
-      !base && h("button", { type: "button", className: "add", onclick: () => {
-        const f: Field = { id: unique("question"), label: "New question", kind: "text", half: true };
-        auto.add(f); s.fields.push(f); renderDesign(); refresh();
-        ($("#panel").querySelectorAll<HTMLInputElement>(".sec")[si].querySelectorAll<HTMLInputElement>(".label")[s.fields.length - 1]).select();
-      } }, "+ Add question"),
-    )),
-    base ? "" : h("button", { type: "button", className: "add big", onclick: () => { t.sections.push({ title: "New section", fields: [] }); renderDesign(); refresh(); } }, "+ Add section"),
+    ),
+    h(
+      "p",
+      { className: "lead" },
+      base
+        ? "Fields come from your PDF. Rename the questions so the answers are easy to read; the keys come from the PDF."
+        : "Or build a form here: sections, then questions. Each answer gets a key, so you can pull it back out later.",
+    ),
+    h(
+      "label",
+      { className: "lbl" },
+      "Form title",
+      h("input", {
+        value: t.title,
+        oninput: (e: Event) => {
+          t.title = (e.target as HTMLInputElement).value;
+          refresh();
+        },
+      }),
+    ),
+    base
+      ? ""
+      : h(
+          "label",
+          { className: "lbl" },
+          "Instructions under the title",
+          h("textarea", {
+            rows: 2,
+            value: t.note,
+            oninput: (e: Event) => {
+              t.note = (e.target as HTMLTextAreaElement).value;
+              refresh();
+            },
+          }),
+        ),
+    ...t.sections.map((s, si) =>
+      h(
+        "section",
+        { className: "sec" },
+        h(
+          "div",
+          { className: "sec-head" },
+          h("span", { className: "num" }, String(si + 1)),
+          h("input", {
+            value: s.title,
+            "aria-label": "Section title",
+            oninput: (e: Event) => {
+              s.title = (e.target as HTMLInputElement).value;
+              refresh();
+            },
+          }),
+          !base &&
+            h(
+              "span",
+              { className: "tools" },
+              h(
+                "button",
+                {
+                  type: "button",
+                  title: "Move section up",
+                  "aria-label": "Move section up",
+                  onclick: () => {
+                    move(t.sections, si, -1);
+                    renderDesign();
+                    refresh();
+                  },
+                },
+                "↑",
+              ),
+              h(
+                "button",
+                {
+                  type: "button",
+                  title: "Move section down",
+                  "aria-label": "Move section down",
+                  onclick: () => {
+                    move(t.sections, si, 1);
+                    renderDesign();
+                    refresh();
+                  },
+                },
+                "↓",
+              ),
+              h(
+                "button",
+                {
+                  type: "button",
+                  title: "Delete section",
+                  "aria-label": "Delete section",
+                  onclick: () => {
+                    t.sections.splice(si, 1);
+                    renderDesign();
+                    refresh();
+                  },
+                },
+                "✕",
+              ),
+            ),
+        ),
+        ...s.fields.map((f, i) => fieldCard(s.fields, f, i)),
+        !base &&
+          h(
+            "button",
+            {
+              type: "button",
+              className: "add",
+              onclick: () => {
+                const f: Field = { id: unique("question"), label: "New question", kind: "text", half: true };
+                auto.add(f);
+                s.fields.push(f);
+                renderDesign();
+                refresh();
+                $("#panel")
+                  .querySelectorAll<HTMLInputElement>(".sec")
+                  [si].querySelectorAll<HTMLInputElement>(".label")
+                  [s.fields.length - 1].select();
+              },
+            },
+            "+ Add question",
+          ),
+      ),
+    ),
+    base
+      ? ""
+      : h(
+          "button",
+          {
+            type: "button",
+            className: "add big",
+            onclick: () => {
+              t.sections.push({ title: "New section", fields: [] });
+              renderDesign();
+              refresh();
+            },
+          },
+          "+ Add section",
+        ),
   );
 }
 
 // ---- 2. Fill ----
-const toIso = (d: string) => { const m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(d); return m ? `${m[3]}-${m[2]}-${m[1]}` : ""; };
-const fromIso = (d: string) => d ? d.split("-").reverse().join("/") : "";
+const toIso = (d: string) => {
+  const m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(d);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
+};
+const fromIso = (d: string) => (d ? d.split("-").reverse().join("/") : "");
 
 function input(f: Field): HTMLElement {
   const v = values[f.id];
-  const set = (x: Value) => { values[f.id] = x; paint(); refresh(); };
+  const set = (x: Value) => {
+    values[f.id] = x;
+    paint();
+    refresh();
+  };
   const val = (e: Event) => (e.target as HTMLInputElement).value;
   switch (f.kind) {
-    case "long": return h("textarea", { id: f.id, rows: 3, value: (v as string) ?? "", ...(f.max ? { maxLength: f.max } : {}), oninput: (e: Event) => set(val(e)) });
-    case "date": return h("input", { id: f.id, type: "date", value: toIso((v as string) ?? ""), oninput: (e: Event) => set(fromIso(val(e))) });
-    case "check": return h("input", { id: f.id, type: "checkbox", checked: v === true, onchange: (e: Event) => set((e.target as HTMLInputElement).checked) });
-    case "select": return h("select", { id: f.id, onchange: (e: Event) => set((e.target as HTMLSelectElement).value) },
-      h("option", { value: "" }, "Choose…"), ...(f.options ?? []).map(o => h("option", { value: o, selected: v === o }, o)));
-    case "radio": case "checks": return h("div", { className: "choices", role: f.kind === "radio" ? "radiogroup" : "group", "aria-label": f.label },
-      ...(f.options ?? []).map(o => h("label", {},
-        h("input", { type: f.kind === "radio" ? "radio" : "checkbox", name: f.id, value: o,
-          checked: Array.isArray(v) ? v.includes(o) : v === o,
-          onchange: () => set(f.kind === "radio" ? o : (f.options ?? []).filter((_, i) =>
-            document.querySelectorAll<HTMLInputElement>(`input[name="${f.id}"]`)[i].checked)) }), " ", o)));
-    default: return h("input", { id: f.id, type: f.id.includes("email") ? "email" : "text", value: (v as string) ?? "",
-      ...(f.max ? { maxLength: f.max } : {}), ...(f.format ? { inputMode: f.format === "amount" ? "decimal" : f.format === "phone" ? "tel" : "numeric" } : {}),
-      oninput: (e: Event) => {
-        const el = e.target as HTMLInputElement;
-        if (f.format) el.value = el.value.replace(new RegExp(FORMATS[f.format].bad, "g"), ""); // same keys the bank's form accepts
-        set(el.value);
-      },
-      // and a whole answer in the right shape (no "1..5" amounts), said when leaving the box
-      onblur: (e: Event) => {
-        const el = e.target as HTMLInputElement, wrong = !!f.format && el.value !== "" && !FORMATS[f.format].ok.test(el.value);
-        el.setCustomValidity(wrong ? `${f.label} ${FORMATS[f.format!].say}.` : "");
-        el.closest("[data-q]")?.classList.toggle("missing", wrong);
-        if (wrong) el.reportValidity();
-      } });
+    case "long":
+      return h("textarea", {
+        id: f.id,
+        rows: 3,
+        value: (v as string) ?? "",
+        ...(f.max ? { maxLength: f.max } : {}),
+        oninput: (e: Event) => set(val(e)),
+      });
+    case "date":
+      return h("input", {
+        id: f.id,
+        type: "date",
+        value: toIso((v as string) ?? ""),
+        oninput: (e: Event) => set(fromIso(val(e))),
+      });
+    case "check":
+      return h("input", {
+        id: f.id,
+        type: "checkbox",
+        checked: v === true,
+        onchange: (e: Event) => set((e.target as HTMLInputElement).checked),
+      });
+    case "select":
+      return h(
+        "select",
+        { id: f.id, onchange: (e: Event) => set((e.target as HTMLSelectElement).value) },
+        h("option", { value: "" }, "Choose…"),
+        ...(f.options ?? []).map(o => h("option", { value: o, selected: v === o }, o)),
+      );
+    case "radio":
+    case "checks":
+      return h(
+        "div",
+        { className: "choices", role: f.kind === "radio" ? "radiogroup" : "group", "aria-label": f.label },
+        ...(f.options ?? []).map(o =>
+          h(
+            "label",
+            {},
+            h("input", {
+              type: f.kind === "radio" ? "radio" : "checkbox",
+              name: f.id,
+              value: o,
+              checked: Array.isArray(v) ? v.includes(o) : v === o,
+              onchange: () =>
+                set(
+                  f.kind === "radio"
+                    ? o
+                    : (f.options ?? []).filter(
+                        (_, i) => document.querySelectorAll<HTMLInputElement>(`input[name="${f.id}"]`)[i].checked,
+                      ),
+                ),
+            }),
+            " ",
+            o,
+          ),
+        ),
+      );
+    default:
+      return h("input", {
+        id: f.id,
+        type: f.id.includes("email") ? "email" : "text",
+        value: (v as string) ?? "",
+        ...(f.max ? { maxLength: f.max } : {}),
+        ...(f.format
+          ? { inputMode: f.format === "amount" ? "decimal" : f.format === "phone" ? "tel" : "numeric" }
+          : {}),
+        oninput: (e: Event) => {
+          const el = e.target as HTMLInputElement;
+          if (f.format) el.value = el.value.replace(new RegExp(FORMATS[f.format].bad, "g"), ""); // same keys the bank's form accepts
+          set(el.value);
+        },
+        // and a whole answer in the right shape (no "1..5" amounts), said when leaving the box
+        onblur: (e: Event) => {
+          const el = e.target as HTMLInputElement,
+            wrong = !!f.format && el.value !== "" && !FORMATS[f.format].ok.test(el.value);
+          el.setCustomValidity(wrong ? `${f.label} ${FORMATS[f.format!].say}.` : "");
+          el.closest("[data-q]")?.classList.toggle("missing", wrong);
+          if (wrong) el.reportValidity();
+        },
+      });
   }
 }
 
 function renderFill() {
   $("#panel").replaceChildren(
-    h("p", { className: "lead" }, "Fill in the form as an applicant would. The preview is the real PDF. You can also download the blank PDF and fill it in Acrobat or Preview."),
-    h("div", { className: "btns" },
-      h("button", { type: "button", onclick: () => { values = sampleFor(t); renderFill(); refresh(true); } }, "Fill with sample"),
-      h("button", { type: "button", onclick: () => { values = {}; renderFill(); refresh(true); } }, "Clear"),
+    h(
+      "p",
+      { className: "lead" },
+      "Fill in the form as an applicant would. The preview is the real PDF. You can also download the blank PDF and fill it in Acrobat or Preview.",
     ),
-    ...t.sections.map((s, si) => h("fieldset", { className: "sec" },
-      h("legend", {}, h("span", { className: "num" }, String(si + 1)), s.title),
-      h("div", { className: "grid" }, ...s.fields.map(f => f.kind === "check"
-        ? h("label", { className: "full tick", "data-q": f.id }, input(f), " ", f.label, star(f))
-        : h(hasOptions(f.kind) ? "div" : "label", { className: f.half ? "q" : "q full", "data-q": f.id, ...(hasOptions(f.kind) ? {} : { for: f.id }) },
-          h("span", { className: "q-label" }, f.label, star(f)), input(f)))),
-    )),
+    h(
+      "div",
+      { className: "btns" },
+      h(
+        "button",
+        {
+          type: "button",
+          onclick: () => {
+            values = sampleFor(t);
+            renderFill();
+            refresh(true);
+          },
+        },
+        "Fill with sample",
+      ),
+      h(
+        "button",
+        {
+          type: "button",
+          onclick: () => {
+            values = {};
+            renderFill();
+            refresh(true);
+          },
+        },
+        "Clear",
+      ),
+    ),
+    ...t.sections.map((s, si) =>
+      h(
+        "fieldset",
+        { className: "sec" },
+        h("legend", {}, h("span", { className: "num" }, String(si + 1)), s.title),
+        h(
+          "div",
+          { className: "grid" },
+          ...s.fields.map(f =>
+            f.kind === "check"
+              ? h("label", { className: "full tick", "data-q": f.id }, input(f), " ", f.label, star(f))
+              : h(
+                  hasOptions(f.kind) ? "div" : "label",
+                  { className: f.half ? "q" : "q full", "data-q": f.id, ...(hasOptions(f.kind) ? {} : { for: f.id }) },
+                  h("span", { className: "q-label" }, f.label, star(f)),
+                  input(f),
+                ),
+          ),
+        ),
+      ),
+    ),
   );
   $("#panel .btns").after(h("p", { id: "left", role: "status" }));
   paint();
 }
 
 const star = (f: Field) => h("span", { className: "req", "aria-label": "mandatory", hidden: !f.required }, " *");
-const blank = (f: Field) => f.kind === "check" ? values[f.id] !== true : !show(values[f.id] ?? "");
+const blank = (f: Field) => (f.kind === "check" ? values[f.id] !== true : !show(values[f.id] ?? ""));
 const missing = () => t.sections.flatMap(s => s.fields).filter(f => isRequired(f, values) && blank(f));
-const rule = (f: Field) => f.requiredIf?.map(r => {
-  const by = t.sections.flatMap(s => s.fields).find(q => q.id === r.field);
-  const vs = r.values.map(v => v === "true" ? "ticked" : v === "false" ? "not ticked" : `"${v}"`).join(" or ");
-  return `${by?.label ?? r.field} is ${r.not ? "not " : ""}${vs}`;
-}).join("; ");
+const rule = (f: Field) =>
+  f.requiredIf
+    ?.map(r => {
+      const by = t.sections.flatMap(s => s.fields).find(q => q.id === r.field);
+      const vs = r.values.map(v => (v === "true" ? "ticked" : v === "false" ? "not ticked" : `"${v}"`)).join(" or ");
+      return `${by?.label ?? r.field} is ${r.not ? "not " : ""}${vs}`;
+    })
+    .join("; ");
 
 /** Mandatory questions follow the answers: picking an option can make others mandatory. Blank ones are outlined in red. */
 function paint() {
   if (view !== "fill") return;
   for (const f of t.sections.flatMap(s => s.fields)) {
-    const el = document.querySelector(`[data-q="${CSS.escape(f.id)}"]`), req = isRequired(f, values);
+    const el = document.querySelector(`[data-q="${CSS.escape(f.id)}"]`),
+      req = isRequired(f, values);
     if (!el) continue;
     el.classList.toggle("missing", req && blank(f));
     const on = isActive(f, values); // only answerable once what it depends on is ticked or picked
     el.classList.toggle("inactive", !on);
-    el.querySelectorAll<HTMLInputElement>("input, select, textarea").forEach(i => i.disabled = !on);
+    el.querySelectorAll<HTMLInputElement>("input, select, textarea").forEach(i => (i.disabled = !on));
     (el.querySelector(".req") as HTMLElement).hidden = !req;
     if (f.requiredIf) el.setAttribute("title", req ? `Mandatory because ${rule(f)}` : `Mandatory when ${rule(f)}`);
   }
-  const n = missing().length, left = document.getElementById("left");
-  if (left) { left.className = n ? "error" : "note"; left.textContent = n ? `${n} mandatory ${n === 1 ? "question is" : "questions are"} still blank (outlined in red).` : "All mandatory questions are answered."; }
+  const n = missing().length,
+    left = document.getElementById("left");
+  if (left) {
+    left.className = n ? "error" : "note";
+    left.textContent = n
+      ? `${n} mandatory ${n === 1 ? "question is" : "questions are"} still blank (outlined in red).`
+      : "All mandatory questions are answered.";
+  }
 }
 
 // ---- 3. Extract ----
-const show = (v: Value) => v === true ? "Yes" : v === false ? "No" : Array.isArray(v) ? v.join(", ") : v;
+const show = (v: Value) => (v === true ? "Yes" : v === false ? "No" : Array.isArray(v) ? v.join(", ") : v);
 
 function renderExtract(result?: Extracted, name?: string, lines?: Line[], note?: string) {
-  const open = h("input", { type: "file", accept: "application/pdf,.pdf", id: "pdfIn", className: "sr", onchange: async (e: Event) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) read(new Uint8Array(await file.arrayBuffer()), file.name);
-  } });
+  const open = h("input", {
+    type: "file",
+    accept: "application/pdf,.pdf",
+    id: "pdfIn",
+    className: "sr",
+    onchange: async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) read(new Uint8Array(await file.arrayBuffer()), file.name);
+    },
+  });
   const panel = $("#panel");
   panel.replaceChildren(
-    h("p", { className: "lead" }, "Open any filled PDF, including your old ones, to pull every answer out, matched to its question."),
-    h("div", { className: "btns" },
-      h("label", { className: "btn primary", for: "pdfIn" }, "Open filled PDF…"), open,
-      filled && h("button", { type: "button", onclick: () => read(filled!, "the form you just saved") }, "Use the form I just saved"),
+    h(
+      "p",
+      { className: "lead" },
+      "Open any filled PDF, including your old ones, to pull every answer out, matched to its question.",
+    ),
+    h(
+      "div",
+      { className: "btns" },
+      h("label", { className: "btn primary", for: "pdfIn" }, "Open filled PDF…"),
+      open,
+      filled &&
+        h(
+          "button",
+          { type: "button", onclick: () => read(filled!, "the form you just saved") },
+          "Use the form I just saved",
+        ),
     ),
     h("div", { className: "drop", id: "drop" }, "or drop a PDF here"),
   );
   if (!result) return;
   if (lines && !lines.length) {
-    panel.append(h("p", { className: "error", role: "alert" }, `${name} has no form fields and no text. It looks like a scan, which would need OCR to read.`));
+    panel.append(
+      h(
+        "p",
+        { className: "error", role: "alert" },
+        `${name} has no form fields and no text. It looks like a scan, which would need OCR to read.`,
+      ),
+    );
     return;
   }
   const json = JSON.stringify(result.data, null, 2);
   const bySection = new Map<string, Extracted["rows"]>();
-  for (const r of result.rows) bySection.set(r.section, [...bySection.get(r.section) ?? [], r]);
+  for (const r of result.rows) bySection.set(r.section, [...(bySection.get(r.section) ?? []), r]);
   panel.append(
-    h("p", { className: "note" }, `${result.rows.filter(r => show(r.value)).length} of ${result.rows.length} questions answered in ${name}. `,
-      note ? note : lines ? "This PDF has no form fields, so answers were read from its text (\u201cLabel: value\u201d and ticked boxes). Check them against the PDF."
-        : result.template ? "Questions matched using the template inside the PDF." : "Read from the PDF's form fields; their names or tooltips are used as questions."),
-    ...[...bySection].map(([sec, rows]) => h("table", { className: "result" },
-      sec && h("caption", {}, sec),
-      h("tbody", {}, ...rows.map(r => h("tr", {}, h("th", { scope: "row" }, r.label, r.required ? h("span", { className: "req" }, " *") : ""),
-        h("td", { className: show(r.value) ? "" : r.required ? "empty req" : "empty" }, show(r.value) || (r.required ? "(blank: required)" : "(blank)"))))))),
-    h("div", { className: "btns" },
-      h("button", { type: "button", className: "primary", onclick: () => download(json, `${slug(result.template?.title ?? "form")}-answers.json`, "application/json") }, "Download JSON"),
-      h("button", { type: "button", onclick: (e: Event) => { navigator.clipboard.writeText(json); (e.target as HTMLElement).textContent = "Copied"; } }, "Copy JSON"),
+    h(
+      "p",
+      { className: "note" },
+      `${result.rows.filter(r => show(r.value)).length} of ${result.rows.length} questions answered in ${name}. `,
+      note
+        ? note
+        : lines
+          ? "This PDF has no form fields, so answers were read from its text (\u201cLabel: value\u201d and ticked boxes). Check them against the PDF."
+          : result.template
+            ? "Questions matched using the template inside the PDF."
+            : "Read from the PDF's form fields; their names or tooltips are used as questions.",
+    ),
+    ...[...bySection].map(([sec, rows]) =>
+      h(
+        "table",
+        { className: "result" },
+        sec && h("caption", {}, sec),
+        h(
+          "tbody",
+          {},
+          ...rows.map(r =>
+            h(
+              "tr",
+              {},
+              h("th", { scope: "row" }, r.label, r.required ? h("span", { className: "req" }, " *") : ""),
+              h(
+                "td",
+                { className: show(r.value) ? "" : r.required ? "empty req" : "empty" },
+                show(r.value) || (r.required ? "(blank: required)" : "(blank)"),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+    h(
+      "div",
+      { className: "btns" },
+      h(
+        "button",
+        {
+          type: "button",
+          className: "primary",
+          onclick: () => download(json, `${slug(result.template?.title ?? "form")}-answers.json`, "application/json"),
+        },
+        "Download JSON",
+      ),
+      h(
+        "button",
+        {
+          type: "button",
+          onclick: (e: Event) => {
+            navigator.clipboard.writeText(json);
+            (e.target as HTMLElement).textContent = "Copied";
+          },
+        },
+        "Copy JSON",
+      ),
     ),
     h("pre", { className: "json" }, json),
-    lines ? h("details", {}, h("summary", {}, "All text in the PDF"),
-      h("pre", { className: "json" }, lines.map(l => l.segs.map(g => g.text).join("    ")).join("\n"))) : "",
+    lines
+      ? h(
+          "details",
+          {},
+          h("summary", {}, "All text in the PDF"),
+          h("pre", { className: "json" }, lines.map(l => l.segs.map(g => g.text).join("    ")).join("\n")),
+        )
+      : "",
   );
 }
 
 async function read(bytes: Uint8Array, name: string) {
   try {
-    let r = await extractPdf(bytes).catch(() => undefined), lines: Line[] | undefined;
+    let r = await extractPdf(bytes).catch(() => undefined),
+      lines: Line[] | undefined;
     const xfa = r?.rows.length ? undefined : await (await text()).readXfa(bytes);
     if (xfa) return showXfa(xfa, name, bytes);
     if (!r?.rows.length) {
       const { readText, pairs } = await text();
       lines = await readText(bytes);
       const seen = new Map<string, number>();
-      r = { rows: pairs(lines).map(p => {
-        const base = slug(p.label), n = (seen.get(base) ?? 0) + 1;
-        seen.set(base, n);
-        return { section: `Page ${p.page}`, id: n > 1 ? `${base}_${n}` : base, label: p.label, value: p.value };
-      }), data: {} };
+      r = {
+        rows: pairs(lines).map(p => {
+          const base = slug(p.label),
+            n = (seen.get(base) ?? 0) + 1;
+          seen.set(base, n);
+          return { section: `Page ${p.page}`, id: n > 1 ? `${base}_${n}` : base, label: p.label, value: p.value };
+        }),
+        data: {},
+      };
       for (const row of r.rows) r.data[row.id] = row.value;
     }
     renderExtract(r!, name, lines);
     showPdf(bytes);
   } catch (err) {
     renderExtract();
-    $("#panel").append(h("p", { className: "error", role: "alert" }, `Could not read ${name}: ${(err as Error).message}`));
+    $("#panel").append(
+      h("p", { className: "error", role: "alert" }, `Could not read ${name}: ${(err as Error).message}`),
+    );
   }
 }
 
 async function showPdf(bytes: Uint8Array) {
-  const box = $("#preview"), mine = ++drawn;
+  const box = $("#preview"),
+    mine = ++drawn;
   const pages = await (await text()).renderPages(bytes, Math.min(box.clientWidth - 32, 900));
   if (mine === drawn) box.replaceChildren(...pages); // a newer edit may have drawn already
 }
@@ -287,29 +754,56 @@ async function showPdf(bytes: Uint8Array) {
 // ---- Shell ----
 function go(v: View) {
   view = v;
-document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-view]")
+    .forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
   ({ design: renderDesign, fill: renderFill, extract: () => renderExtract() })[v]();
   $("#panel").scrollTop = 0;
   refresh(true);
 }
 
-$("#bankForms").append(...BANK_FORMS.flatMap(f => [h("option", { value: `bank:${f.code}` }, f.template.title),
-  f.code === "LC" ? h("option", { value: "lc-new" }, `${f.template.title}: new design`) : ""]));
+$("#bankForms").append(
+  ...BANK_FORMS.flatMap(f => [
+    h("option", { value: `bank:${f.code}` }, f.template.title),
+    f.code === "LC" ? h("option", { value: "lc-new" }, `${f.template.title}: new design`) : "",
+  ]),
+);
 $<HTMLOptionElement>('#bankForms option[value="bank:LC"]').textContent += ": bank's original look";
-document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(b => b.onclick = () => go(b.dataset.view as View));
-$("#blankBtn").onclick = async () => download(await pdfOf(t) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
+document
+  .querySelectorAll<HTMLButtonElement>("[data-view]")
+  .forEach(b => (b.onclick = () => go(b.dataset.view as View)));
+$("#blankBtn").onclick = async () => download((await pdfOf(t)) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
-  const gaps = missing(), save = async (suffix: string) => {
-    filled = await pdfOf(t, values);
-    download(filled as BlobPart, `${slug(t.title)}-${suffix}.pdf`, "application/pdf");
-  };
+  const gaps = missing(),
+    save = async (suffix: string) => {
+      filled = await pdfOf(t, values);
+      download(filled as BlobPart, `${slug(t.title)}-${suffix}.pdf`, "application/pdf");
+    };
   if (!gaps.length) return save("filled");
   // Enforced: a form with blank mandatory answers is only saved as a draft, on purpose.
   if (view !== "fill") go("fill");
   $("#panel").querySelector("#gaps")?.remove();
-  $("#panel").prepend(h("div", { className: "error", role: "alert", id: "gaps" },
-    `Not saved: ${gaps.length} mandatory ${gaps.length === 1 ? "question is" : "questions are"} blank: ${gaps.slice(0, 6).map(f => f.label).join(", ")}${gaps.length > 6 ? "…" : ""}. Fill the ones outlined in red. `,
-    h("button", { type: "button", onclick: () => { $("#gaps").remove(); save("draft"); } }, "Save as draft anyway")));
+  $("#panel").prepend(
+    h(
+      "div",
+      { className: "error", role: "alert", id: "gaps" },
+      `Not saved: ${gaps.length} mandatory ${gaps.length === 1 ? "question is" : "questions are"} blank: ${gaps
+        .slice(0, 6)
+        .map(f => f.label)
+        .join(", ")}${gaps.length > 6 ? "…" : ""}. Fill the ones outlined in red. `,
+      h(
+        "button",
+        {
+          type: "button",
+          onclick: () => {
+            $("#gaps").remove();
+            save("draft");
+          },
+        },
+        "Save as draft anyway",
+      ),
+    ),
+  );
   const first = document.querySelector<HTMLElement>(`[data-q="${CSS.escape(gaps[0].id)}"]`);
   first?.scrollIntoView({ block: "center" });
   (first?.querySelector("input, select, textarea") as HTMLElement | null)?.focus();
@@ -322,8 +816,15 @@ $("#templateSel").onchange = async e => {
   values = {};
   if (v === "guarantee") t = clone(GUARANTEE);
   if (v === "blank") t = { title: "Untitled form", note: "", sections: [{ title: "Details", fields: [] }] };
-  if (v === "lc-new") { t = { ...clone(LC.template), design: "new" }; values = clone(LC.defaults); } // same as the bank site's download
-  if (v.startsWith("bank:")) { const f = bankForm(v.slice(5)); t = clone(f.template); values = clone(f.defaults); }
+  if (v === "lc-new") {
+    t = { ...clone(LC.template), design: "new" };
+    values = clone(LC.defaults);
+  } // same as the bank site's download
+  if (v.startsWith("bank:")) {
+    const f = bankForm(v.slice(5));
+    t = clone(f.template);
+    values = clone(f.defaults);
+  }
   go("design");
   pristine = JSON.stringify(t);
 };
@@ -333,30 +834,65 @@ $<HTMLInputElement>("#templateIn").onchange = async e => {
   (e.target as HTMLInputElement).value = "";
   const bytes = new Uint8Array(await file.arrayBuffer());
   try {
-    const m = await text(), xfa = await m.readXfa(bytes).catch(() => undefined);
+    const m = await text(),
+      xfa = await m.readXfa(bytes).catch(() => undefined);
     if (xfa) return pickXfaForm(xfa, file.name);
-    const r = await importPdf(bytes, file.name, async () => { const m = await text(); return m.blanks(await m.readText(bytes)); });
-    t = r.template; values = r.values; go("design");
+    const r = await importPdf(bytes, file.name, async () => {
+      const m = await text();
+      return m.blanks(await m.readText(bytes));
+    });
+    t = r.template;
+    values = r.values;
+    go("design");
     const n = t.sections.reduce((a, s) => a + s.fields.length, 0);
-    if (r.found === "none") alertBox(`${file.name} has no form fields and no blanks (____ or ☐) to fill. Use Extract to read its text instead.`);
-    else infoBox(r.found === "blanks"
-      ? `${file.name} had no form fields, so ${n} were added over its blanks. Check the questions below, then Fill.`
-      : `Read ${n} fields from ${file.name}. Any answers already in it are in Fill.`);
+    if (r.found === "none")
+      alertBox(
+        `${file.name} has no form fields and no blanks (____ or ☐) to fill. Use Extract to read its text instead.`,
+      );
+    else
+      infoBox(
+        r.found === "blanks"
+          ? `${file.name} had no form fields, so ${n} were added over its blanks. Check the questions below, then Fill.`
+          : `Read ${n} fields from ${file.name}. Any answers already in it are in Fill.`,
+      );
   } catch (err) {
     alertBox(`Could not read ${file.name}: ${(err as Error).message}`);
   }
 };
 /** Extract from an XFA bundle: one form at a time, the most filled-in first. */
 async function showXfa(xfa: Xfa, name: string, bytes: Uint8Array, code?: string) {
-  const m = await text(), forms = m.xfaForms(xfa).filter(f => f.count > 1).sort((a, b) => b.answered - a.answered);
+  const m = await text(),
+    forms = m
+      .xfaForms(xfa)
+      .filter(f => f.count > 1)
+      .sort((a, b) => b.answered - a.answered);
   const pick = forms.find(f => f.code === code) ?? forms[0];
   const { template, values: v } = m.xfaTemplate(xfa, pick.code);
-  const rows = template.sections.flatMap(s => s.fields.map(q => ({ section: s.title, id: q.id, label: q.label, value: v[q.id], required: q.required })));
-  renderExtract({ template, rows, data: v }, name, undefined,
-    `Adobe smart form (XFA) with ${forms.length} forms. Showing ${pick.title}. Answers include any defaults built into the form.`);
-  $("#panel").querySelector(".note")!.after(h("label", { className: "lbl" }, "Form in this file",
-    h("select", { onchange: (e: Event) => showXfa(xfa, name, bytes, (e.target as HTMLSelectElement).value) },
-      ...forms.map(f => h("option", { value: f.code, selected: f === pick }, `${f.title} (${f.answered} of ${f.count} filled)`)))));
+  const rows = template.sections.flatMap(s =>
+    s.fields.map(q => ({ section: s.title, id: q.id, label: q.label, value: v[q.id], required: q.required })),
+  );
+  renderExtract(
+    { template, rows, data: v },
+    name,
+    undefined,
+    `Adobe smart form (XFA) with ${forms.length} forms. Showing ${pick.title}. Answers include any defaults built into the form.`,
+  );
+  $("#panel")
+    .querySelector(".note")!
+    .after(
+      h(
+        "label",
+        { className: "lbl" },
+        "Form in this file",
+        h(
+          "select",
+          { onchange: (e: Event) => showXfa(xfa, name, bytes, (e.target as HTMLSelectElement).value) },
+          ...forms.map(f =>
+            h("option", { value: f.code, selected: f === pick }, `${f.title} (${f.answered} of ${f.count} filled)`),
+          ),
+        ),
+      ),
+    );
   showPdf(bytes);
 }
 
@@ -365,12 +901,38 @@ async function pickXfaForm(xfa: Xfa, name: string) {
   const m = await text();
   go("design");
   $("#panel").replaceChildren(
-    h("p", { className: "info", role: "status" }, `${name} is an Adobe smart form (XFA) with ${m.xfaForms(xfa).length} forms. Pick one to rebuild as a plain fillable PDF. Its questions, choices and drop-downs are kept; the layout is redrawn.`),
-    h("div", { className: "picks" }, ...m.xfaForms(xfa).filter(f => f.count > 1).map(f => h("button", { type: "button", className: "pick", onclick: () => {
-      const { template, values: v } = m.xfaTemplate(xfa, f.code);
-      t = template; values = v; go("design");
-      infoBox(`Rebuilt ${f.title}: ${f.count} questions. Rename questions or drop the ones you don't need, then Fill.`);
-    } }, h("strong", {}, f.title), h("span", {}, `${f.count} questions${f.answered ? `, ${f.answered} answered` : ""}`)))),
+    h(
+      "p",
+      { className: "info", role: "status" },
+      `${name} is an Adobe smart form (XFA) with ${m.xfaForms(xfa).length} forms. Pick one to rebuild as a plain fillable PDF. Its questions, choices and drop-downs are kept; the layout is redrawn.`,
+    ),
+    h(
+      "div",
+      { className: "picks" },
+      ...m
+        .xfaForms(xfa)
+        .filter(f => f.count > 1)
+        .map(f =>
+          h(
+            "button",
+            {
+              type: "button",
+              className: "pick",
+              onclick: () => {
+                const { template, values: v } = m.xfaTemplate(xfa, f.code);
+                t = template;
+                values = v;
+                go("design");
+                infoBox(
+                  `Rebuilt ${f.title}: ${f.count} questions. Rename questions or drop the ones you don't need, then Fill.`,
+                );
+              },
+            },
+            h("strong", {}, f.title),
+            h("span", {}, `${f.count} questions${f.answered ? `, ${f.answered} answered` : ""}`),
+          ),
+        ),
+    ),
   );
 }
 

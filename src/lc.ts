@@ -3,6 +3,18 @@
 // Source: the LC subform of Trade-Smartform.pdf (its subforms, captions and mandatoryChange scripts).
 // One deliberate difference: ticking a "Documents Required" row (and the other tick-to-fill rows) makes
 // that row's own boxes mandatory. The smart form only unlocks them (mandatoryChange(..., 0)).
+//
+// HOW TO EDIT: each question is one line. For example
+//   text("term_days", "Term: days", { requiredIf: when("drafts_at", "Term"), format: "number" }),
+// means: a half-width text box called term_days, labelled "Term: days", mandatory only when Drafts at = Term,
+// digits only. The PDF, the in-PDF checks, the studio and the workbench all follow from these lines.
+//   ...req                         always mandatory
+//   requiredIf: ticked("x")        mandatory (and unlocked) only when tick box x is ticked
+//   requiredIf: when("x", "A")     mandatory only when x is "A"
+//   activeIf: ticked("x")          only applies when x is ticked, but optional
+//   max: 35                        at most 35 characters
+//   format: "amount"               amount / number / phone / account (see FORMATS in form/types.ts)
+// After a change: npm test, then LC_PDFS=1 npx vitest run scripts/lc-pdfs, then git push.
 import type { Field, Rule, Section, Template, Values } from "./pdf";
 import { CURRENCIES } from "./lists";
 

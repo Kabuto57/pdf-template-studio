@@ -149,7 +149,8 @@ pdf-template-studio/
 │   ├── main.ts                the app: four steps (Design / Fill / Extract / Review), buttons, file upload, preview
 │   ├── lc.ts                  the LC application, rebuilt by hand to match the bank's form, plus its sample answers
 │   ├── review.ts              ops review: automatic checks, name screening, AI prompt, review report
-│   ├── pdf.ts                 PDF engine (pdf-lib): template -> fillable PDF, fill, read answers, import PDFs
+│   ├── pdf.ts                 table of contents for the form engine in src/form/ (see CODE-TOUR.md)
+│   ├── form/                  the form engine, one job per file: build, rules, dates, red frames, Acrobat checks, read
 │   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks, preview drawing
 │   ├── bank-forms.json        the 13 bank trade forms, as templates (generated, see below)
 │   ├── lists.ts               currency codes (ISO 4217) and country names (ISO 3166) for drop-downs
