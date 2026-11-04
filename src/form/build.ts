@@ -53,6 +53,9 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
    */
   function place(f: Field, x: number, w: number, draw: boolean): number {
     const answer = values[f.id], required = isRequired(f, values);
+    // Acrobat outlines "required" boxes in red itself. Only always-mandatory boxes get the flag: the others get the
+    // red frame (red-frames.ts), which follows the tick; both would draw two red lines.
+    const flag = required && !!f.required;
     const blank = answer === undefined || answer === "" || answer === false || (Array.isArray(answer) && !answer.length);
     const style = required && blank ? mandatory : plain;
     // Questions that can be switched off are see-through, so the grey "not yet" shade under them shows.
@@ -65,7 +68,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
         const box = form.createCheckBox(f.id);
         box.addToPage(page, { x, y: top - 11, width: 10, height: 10, ...look });
         tip(box, f.label);
-        if (required) { box.enableRequired(); page.drawText("*", { x: x - 7, y: top - 10, size: 9, font: bold, color: RED }); }
+        if (required) { if (flag) box.enableRequired(); page.drawText("*", { x: x - 7, y: top - 10, size: 9, font: bold, color: RED }); }
         if (answer === true) box.check();
         lines.forEach((l, i) => page.drawText(l, { x: x + 16, y: top - 9 - i * 11, size: 9, font, color: INK }));
       }
@@ -86,7 +89,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
         const list = form.createDropdown(f.id);
         list.addOptions((f.options ?? []).map(safe));
         tip(list, f.label);
-        if (required) list.enableRequired();
+        if (flag) list.enableRequired();
         if (typeof answer === "string" && f.options?.includes(answer)) list.select(safe(answer));
         list.addToPage(page, { x, y: y - 20, width: w, height: 20, font, ...look });
         list.setFontSize(10);
@@ -98,7 +101,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     if (hasOptions(f.kind)) {
       const options = f.options ?? [];
       const group = f.kind === "radio" && draw ? form.createRadioGroup(f.id) : undefined;
-      if (group) { tip(group, f.label); if (required) group.enableRequired(); }
+      if (group) { tip(group, f.label); if (flag) group.enableRequired(); }
       let cx = x, right = x;
       options.forEach((option, i) => {
         const span = 14 + font.widthOfTextAtSize(safe(option), 9) + 14;
@@ -130,7 +133,7 @@ export async function buildPdf(t: Template, values: Values = {}): Promise<Uint8A
     } else if (draw) {
       const box = form.createTextField(f.id);
       if (f.kind === "long") box.enableMultiline();
-      if (required) box.enableRequired();
+      if (flag) box.enableRequired();
       tip(box, f.label);
       if (f.max) box.setMaxLength(f.max);
       if (typeof answer === "string" && answer) box.setText(safe(answer).slice(0, f.max));
