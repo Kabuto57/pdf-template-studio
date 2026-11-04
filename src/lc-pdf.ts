@@ -3,7 +3,7 @@
 import { PDFDocument, PDFFont, PDFHexString, PDFName, PDFPage, PDFRadioGroup, StandardFonts, rgb } from "pdf-lib";
 import layout from "./lc-layout.json";
 import { LC } from "./lc";
-import { activeRules, formatActions, addChecks, addDateLists, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
+import { activeRules, formatActions, addChecks, addDateBox, addRedFrames, finishForm, isRequired, safe, stamp, subId, type Field, type Values } from "./pdf";
 
 type Item = { k: string; line?: string; x: number; y: number; w?: number; h?: number; x2?: number; y2?: number; size?: number; bold?: boolean;
   align?: string; text?: string; edges?: boolean[]; key?: string; option?: string | null; round?: boolean; multi?: boolean };
@@ -150,7 +150,7 @@ export async function buildLcPdf(values: Values = {}): Promise<Uint8Array> {
       if (typeof v === "string" && f.options?.includes(v)) dd.select(safe(v));
       dd.addToPage(page, { ...rect, font }); dd.setFontSize(8);
     } else if (f.kind === "date") {
-      addDateLists(form, page, f.id, f.label, v, rect, font, 8, rect, js);
+      addDateBox(form, page, f.id, f.label, v, rect, font, 8, rect, js);
     } else {
       const tf = form.createTextField(f.id);
       if (f.kind === "long" || it.multi) tf.enableMultiline();

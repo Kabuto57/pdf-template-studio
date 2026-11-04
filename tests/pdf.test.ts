@@ -143,7 +143,7 @@ describe("every conditional rule lights up its field (the PDF's own script)", as
       const state: Record<string, Fake> = {};
       const acro = { getField: (n: string) => n in state ? state[n] : (state[n] = like(doc, n, n === by ? value : undefined)) };
       new Function("color", "console", `${lib}; lcRules(this);`).call(acro, { red: "red", black: "black", white: "white", transparent: "none" }, { println() {} });
-      const kind = byId.get(target)!.kind, shown = kind === "checks" ? state[`${target}__0`] : kind === "date" ? state[`${target}__dd`] : state[target];
+      const kind = byId.get(target)!.kind, shown = kind === "checks" ? state[`${target}__0`] : state[target];
       expect(shown?.strokeColor).toBe("red");
     });
   }
