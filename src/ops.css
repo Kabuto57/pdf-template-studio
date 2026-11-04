@@ -84,7 +84,7 @@ th, td { text-align: left; vertical-align: top; padding: 6px 16px; border-bottom
 .split .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .pdf-view { background: #525659; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; position: sticky; top: 0; max-height: calc(100vh - 80px); overflow: auto; }
 .pdf-view .muted { color: #e5e7eb; }
-.pdf-view canvas { background: #fff; max-width: 100%; height: auto !important; display: block; }
+.pdf-view canvas, .pdf-view img { background: #fff; max-width: 100%; height: auto !important; display: block; }
 .pg { position: relative; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 .hl { position: absolute; outline: 2px solid var(--teal); outline-offset: 2px; background: rgba(200,16,46,.12); pointer-events: none; }
 .sec tr.findable { cursor: pointer; }

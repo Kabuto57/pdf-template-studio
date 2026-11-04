@@ -164,6 +164,7 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
     }
     const fields = new Map(result.template?.sections.flatMap(s => s.fields).map(f => [f.id, f]) ?? []);
     for (const r of result.rows) { const f = fields.get(r.id); if (f && mail?.corrections?.length) r.required = isRequired(f, result.data as Values) || undefined; }
+    pane?.el.querySelectorAll("img").forEach(i => URL.revokeObjectURL(i.src)); // free the previous PDF's page images
     pane = undefined;
     sel = "";
     decision = "";
@@ -237,7 +238,7 @@ function editor(r: Row): HTMLElement {
   const f = current!.result.template?.sections.flatMap(s => s.fields).find(q => q.id === r.id);
   const label = `Correct ${r.label}`;
   if (typeof r.value === "boolean" || f?.kind === "check")
-    return h("input", { type: "checkbox", checked: r.value === true, "aria-label": label, onchange: (e: Event) => correct(r.id, (e.target as HTMLInputElement).checked) });
+    return h("input", { type: "checkbox", checked: r.value === true, "aria-label": label, "data-edit": r.id, onchange: (e: Event) => correct(r.id, (e.target as HTMLInputElement).checked) });
   if (f?.kind === "checks")
     return h("div", { className: "edit-choices" }, ...(f.options ?? []).map(o => h("label", {}, h("input", {
       type: "checkbox", checked: Array.isArray(r.value) && r.value.includes(o),
@@ -245,17 +246,17 @@ function editor(r: Row): HTMLElement {
         correct(r.id, (f.options ?? []).filter(x => now.has(x))); },
     }), ` ${o}`)));
   if (f?.kind === "radio" || f?.kind === "select")
-    return h("select", { "aria-label": label, onchange: (e: Event) => correct(r.id, (e.target as HTMLSelectElement).value) },
+    return h("select", { "aria-label": label, "data-edit": r.id, onchange: (e: Event) => correct(r.id, (e.target as HTMLSelectElement).value) },
       h("option", { value: "" }, "—"), ...(f.options ?? []).map(o => h("option", { value: o, selected: r.value === o }, o)));
   // Dates: the browser's calendar (it works in YYYY-MM-DD; the form in DD/MM/YYYY).
   if (f?.kind === "date")
     return h("input", {
-      type: "date", className: "edit-box", "aria-label": label,
+      type: "date", className: "edit-box", "aria-label": label, "data-edit": r.id,
       value: typeof r.value === "string" ? r.value.split("/").reverse().join("-") : "",
       onchange: (e: Event) => { const v = (e.target as HTMLInputElement).value; correct(r.id, v ? v.split("-").reverse().join("/") : ""); },
     });
   return h(f?.kind === "long" ? "textarea" : "input", {
-    value: typeof r.value === "string" ? r.value : "", "aria-label": label, className: "edit-box",
+    value: typeof r.value === "string" ? r.value : "", "aria-label": label, "data-edit": r.id, className: "edit-box",
     onchange: (e: Event) => correct(r.id, (e.target as HTMLInputElement).value),
   });
 }
@@ -322,7 +323,7 @@ function render() {
 
   const pdfTop = pane?.el.scrollTop ?? 0; // moving the PDF pane into the new layout would reset its scroll
   // Redrawing after an edit must not move anything: keep the page's scroll and the box being edited.
-  const workTop = $("#work").scrollTop, focused = document.activeElement?.getAttribute("aria-label");
+  const workTop = $("#work").scrollTop, focused = (document.activeElement as HTMLElement | null)?.dataset.edit;
   $("#work").replaceChildren(
     h(
       "div",
@@ -544,15 +545,22 @@ function render() {
   );
   if (pane) pane.el.scrollTop = pdfTop;
   $("#work").scrollTop = workTop;
-  if (focused) document.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
+  if (focused) document.querySelector<HTMLElement>(`[data-edit="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
   if (showPdf) pins();
   if (showPdf && !pane!.pages.length) {
     const open = current!;
     text()
       .then(m => m.renderPages(open.bytes, Math.min(pane!.el.clientWidth - 24, 860)))
-      .then(cs => {
+      // Each page as a plain image: on some (older, Windows) laptops Chrome wipes canvases when a pop-up such as the
+      // date calendar opens, and the PDF went blank. Images are never wiped.
+      .then(cs => Promise.all(cs.map(c => new Promise<HTMLImageElement>(ok => c.toBlob(b => {
+        const img = h("img", { src: b ? URL.createObjectURL(b) : c.toDataURL(), alt: "" });
+        img.style.width = c.style.width;
+        ok(img);
+      })))))
+      .then(imgs => {
         if (current !== open || !pane) return;
-        pane.pages = cs.map((c, i) => h("div", { className: "pg", "aria-label": `Page ${i + 1}` }, c));
+        pane.pages = imgs.map((img, i) => h("div", { className: "pg", "aria-label": `Page ${i + 1}` }, img));
         pane.el.replaceChildren(...pane.pages);
         pins();
         if (sel) locate(sel);
