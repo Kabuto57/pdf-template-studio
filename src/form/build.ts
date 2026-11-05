@@ -24,11 +24,11 @@ import { fillBase } from "./upload";
 
 export type Mode = "both" | "javascript" | "no-javascript";
 
-// Sizes, kept small so the LC fits on two pages while staying readable.
+// Sizes, kept small so the LC fits on three pages while staying readable.
 const BOTTOM = 42;   // start a new page below this height (the footer is under it)
-const BOX = 13;      // height of a one-line answer box
-const LABEL = 7;     // question labels
-const TEXT = 8;      // answers, options and tick-box wording
+const BOX = 15;      // height of a one-line answer box
+const LABEL = 7.5;   // question labels
+const TEXT = 8.5;    // answers, options and tick-box wording
 const COLS = 12;     // the page is a grid of 12 narrow columns; each question takes as many as it needs
 const CGAP = 4;      // gap between columns
 
@@ -96,10 +96,10 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
     // Everything else: the label on top (with a red * if mandatory), the box(es) below.
     if (draw) {
       blocks.set(f.id, { page, label: { x, y: top - 6.5, text: safe(f.label) } });
-      page.drawText(safe(f.label), { x, y: top - 6.5, size: LABEL, font, color: INK });
-      if (required) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), LABEL) + 2, y: top - 6.5, size: 8, font: bold, color: RED });
+      page.drawText(safe(f.label), { x, y: top - 7, size: LABEL, font, color: INK });
+      if (required) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), LABEL) + 2, y: top - 7, size: 8.5, font: bold, color: RED });
     }
-    let y = top - 9;
+    let y = top - 10;
 
     // A drop-down list.
     if (f.kind === "select") {
@@ -112,7 +112,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
         list.addToPage(page, { x, y: y - BOX, width: w, height: BOX, font, ...look });
         list.setFontSize(TEXT);
       }
-      return 9 + BOX;
+      return 10 + BOX;
     }
 
     // Pick one (radio buttons) or tick any (one tick box per option), wrapping onto more lines when needed.
@@ -140,12 +140,12 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
         cx += span;
       });
       if (group && typeof answer === "string" && options.includes(answer)) group.select(safe(answer));
-      if (draw) blocks.get(f.id)!.box = [x - 3, y - 13, right - x + 6, top - 9 - y + 16]; // all the options, framed as one
+      if (draw) blocks.get(f.id)!.box = [x - 3, y - 13, right - x + 6, top - 10 - y + 16]; // all the options, framed as one
       return top - y + 12;
     }
 
     // A date, or a text box (one line, or a paragraph).
-    const h = f.kind === "long" ? 30 : BOX;
+    const h = f.kind === "long" ? 64 : BOX;
     if (draw && f.kind === "date") {
       addDateLists(form, page, f.id, f.label, answer, { x, y: y - h, width: Math.min(w, 200), height: h }, font, TEXT, look, js);
     } else if (draw) {
@@ -164,13 +164,13 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
       if (f.kind === "text" && room < font.widthOfTextAtSize("N".repeat(f.max ?? 35), TEXT)) shrink.push(box);
       if (js) box.acroField.dict.set(PDFName.of("AA"), f.format ? formatActions(doc, js, f) : swiftActions(doc, js)); // Acrobat: refuse wrong keys
     }
-    return 9 + h;
+    return 10 + h;
   }
   const optionWidth = (option: string) => 12 + font.widthOfTextAtSize(safe(option), TEXT) + 10;
 
   // 3. The sections, on a grid of 12 narrow columns. Each question takes the width it needs: a little for a number,
-  //    a date or a currency, a third of the page for a 35-character name or address line, more for long text or
-  //    many options. Questions fill a line left to
+  //    a date or a currency, a third of the page for a 35-character name or address line (room for the whole line),
+  //    more for long text or many options. Questions fill a line left to
   //    right; a question that other questions depend on (a tick box, "Drafts at", "Shipment from") starts a new line,
   //    so it sits with the boxes it switches on, as on the bank's own form.
   const colW = (W - 2 * M - (COLS - 1) * CGAP) / COLS;
@@ -185,7 +185,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
       f.kind === "select" ? Math.max(...(f.options ?? []).map(o => font.widthOfTextAtSize(safe(o), TEXT))) + 24 :
       hasOptions(f.kind) ? (f.options ?? []).reduce((sum, o) => sum + optionWidth(o), 0) :
       f.format === "number" || (f.max ?? 99) <= 3 ? 40 :
-      (f.max ?? 35) <= 35 ? 120 : (f.max ?? 0) <= 70 ? 330 : Infinity;
+      (f.max ?? 35) <= 35 ? 165 : (f.max ?? 0) <= 70 ? 330 : Infinity;
     // A tick box that switches on other boxes takes at least a third of the line, so the boxes after it line up
     // from one row to the next (originals, copies, ...).
     const least = f.kind === "check" && triggers.has(f.id) ? COLS / 3 : 1;
@@ -207,15 +207,15 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
 
     // The black section bar, "1.  APPLICATION" (on a new page if not even its first row fits).
     if (top - 18 - (rows[0] ? height(rows[0]) : 0) < BOTTOM) newPage();
-    page.drawRectangle({ x: M, y: top - 11, width: W - 2 * M, height: 10, color: INK });
-    page.drawText(safe(`${si + 1}.  ${s.title.toUpperCase()}`), { x: M + 5, y: top - 8.7, size: 7, font: bold, color: WHITE });
-    top -= 13;
+    page.drawRectangle({ x: M, y: top - 13, width: W - 2 * M, height: 12, color: INK });
+    page.drawText(safe(`${si + 1}.  ${s.title.toUpperCase()}`), { x: M + 5, y: top - 10, size: 7.5, font: bold, color: WHITE });
+    top -= 17;
 
     for (const row of rows) {
       const h = height(row);
       if (top - h < BOTTOM) newPage();
       for (const c of layout(row)) place(c.f, c.x, c.w, true);
-      top -= h + 2;
+      top -= h + 6;
     }
     top -= 1;
   });
