@@ -554,7 +554,7 @@
           "id": "shipment_from_place_2",
           "label": "Shipment from: place (line 2)",
           "kind": "text",
-          "half": true
+          "half": false
         },
         {
           "id": "shipment_to",
@@ -588,7 +588,7 @@
           "id": "shipment_to_place_2",
           "label": "Shipment to: place (line 2)",
           "kind": "text",
-          "half": true
+          "half": false
         },
         {
           "id": "latest_shipment_date",

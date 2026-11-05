@@ -83,10 +83,10 @@ const sections: Section[] = [
     pick("transhipment", "Transhipment", ["allowed", "not allowed"], { ...req, half: true }),
     { id: "shipment_from", label: "Shipment from", kind: "select", half: true, options: ["Port of Loading / Airport of Departure", "Dispatch from", "Place of Taking in charge", "Place of Receipt"] },
     text("shipment_from_place", "Shipment from: place", { max: 35, requiredIf: [{ field: "shipment_from", values: [""], not: true }] }),
-    text("shipment_from_place_2", "Shipment from: place (line 2)"),
+    text("shipment_from_place_2", "Shipment from: place (line 2)", { half: false }),
     { id: "shipment_to", label: "Shipment to", kind: "select", half: true, options: ["Port of Discharge / Airport of Destination", "For Transportation to", "Place of Final Destination", "Place of Delivery"] },
     text("shipment_to_place", "Shipment to: place", { max: 35, requiredIf: [{ field: "shipment_to", values: [""], not: true }] }),
-    text("shipment_to_place_2", "Shipment to: place (line 2)"),
+    text("shipment_to_place_2", "Shipment to: place (line 2)", { half: false }),
     { id: "latest_shipment_date", label: "Latest shipment date", kind: "date", half: true },
   ] },
   { title: "Expiry and Presentation", fields: [

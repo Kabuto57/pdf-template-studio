@@ -139,10 +139,10 @@ Your reply: the results of the acceptance checks, then the PDF file LC-Applicati
 {"id": "transhipment", "section": "Shipment", "label": "Transhipment", "kind": "radio", "options": ["allowed", "not allowed"], "half": true, "required": true}
 {"id": "shipment_from", "section": "Shipment", "label": "Shipment from", "kind": "select", "options": ["Port of Loading / Airport of Departure", "Dispatch from", "Place of Taking in charge", "Place of Receipt"], "half": true}
 {"id": "shipment_from_place", "section": "Shipment", "label": "Shipment from: place", "kind": "text", "half": true, "requiredIf": [{"field": "shipment_from", "values": [""], "not": true}], "max": 35}
-{"id": "shipment_from_place_2", "section": "Shipment", "label": "Shipment from: place (line 2)", "kind": "text", "half": true}
+{"id": "shipment_from_place_2", "section": "Shipment", "label": "Shipment from: place (line 2)", "kind": "text", "half": false}
 {"id": "shipment_to", "section": "Shipment", "label": "Shipment to", "kind": "select", "options": ["Port of Discharge / Airport of Destination", "For Transportation to", "Place of Final Destination", "Place of Delivery"], "half": true}
 {"id": "shipment_to_place", "section": "Shipment", "label": "Shipment to: place", "kind": "text", "half": true, "requiredIf": [{"field": "shipment_to", "values": [""], "not": true}], "max": 35}
-{"id": "shipment_to_place_2", "section": "Shipment", "label": "Shipment to: place (line 2)", "kind": "text", "half": true}
+{"id": "shipment_to_place_2", "section": "Shipment", "label": "Shipment to: place (line 2)", "kind": "text", "half": false}
 {"id": "latest_shipment_date", "section": "Shipment", "label": "Latest shipment date", "kind": "date", "half": true}
 {"id": "expiry_date", "section": "Expiry and Presentation", "label": "Date of expiry (in beneficiary's country)", "kind": "date", "half": true, "required": true}
 {"id": "presentation_days", "section": "Expiry and Presentation", "label": "Presentation period (days after shipment)", "kind": "text", "half": true, "format": "number"}
