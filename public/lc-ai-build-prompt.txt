@@ -74,8 +74,8 @@ Every question is one or more PDF fields, named by the question's "id" in the SP
     Unanswered = value "Off". (Inside the file the export names are PDF names, e.g. Full#20Swift; Acrobat's
     field.value gives "Full Swift". If you ever see "#20", treat it as a space.)
   - kind "check": a single check box named <id>. Ticked = value is not "Off".
-  - kind "checks" ("tick any"): one check box per option, named <id>__0, <id>__1, ... in the order of "options"
-    (listed in "pdfFields"). The answer is the list of options whose box is ticked.
+  - kind "checks" ("tick any"): one check box per option, named <id>__0, <id>__1, ... in the order of "options".
+    The answer is the list of options whose box is ticked.
 Always-mandatory questions already have a red border and the PDF Required flag. Other borders are grey
 (RGB 0.55, 0.55, 0.55); text boxes are filled light blue-grey (RGB 0.96, 0.97, 0.99).
 Each conditional rule is also printed in small red text under its question, e.g. 'Mandatory if Drafts at is "Term"'.
