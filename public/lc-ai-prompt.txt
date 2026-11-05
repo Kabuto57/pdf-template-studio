@@ -1,0 +1,224 @@
+MASTER PROMPT: ACROBAT JAVASCRIPT FOR THE LC APPLICATION FORM
+
+== WHO I AM AND WHAT I NEED ==
+I work in Trade Finance at a bank. I have a PDF form for the "Irrevocable Documentary Credit (LC)" application:
+LC-Application-reportlab.pdf (5 pages, A4, an ordinary AcroForm PDF, no XFA, no JavaScript yet).
+It replaces the bank's old Adobe LiveCycle (XFA) smart form, whose checks were JavaScript.
+I need you to write the Adobe Acrobat JavaScript that gives this PDF the same behaviour as the old smart form:
+  1. Boxes turn red as answers change (mandatory and still empty).
+  2. Questions that don't apply are locked (read-only, greyed, cleared) until the answer that switches them on is given.
+  3. Date and format checks (dates DD/MM/YYYY and real, amounts, whole numbers, phone, account, SWIFT characters, max length).
+  4. A "Check form" button that lists every problem and puts the cursor on the first one.
+  5. A "Reset form" button (asks to confirm first).
+  6. "Previous page" / "Next page" buttons.
+I will add your scripts myself in Adobe Acrobat Pro (Prepare Form and Document JavaScripts), so give me
+exact copy-paste blocks and click-by-click steps. Write for Acrobat DC on Windows. Use only the Acrobat
+JavaScript API (Doc, Field, app, util, event, color). No external libraries, no network, no privileged calls
+(no app.trustedFunction, no folder-level scripts, no file access), so it runs as an ordinary document script.
+
+== HOW THE PDF IS BUILT (the field names are fixed; don't rename anything) ==
+Every question is one or more PDF fields, named by the question's "id" in the SPEC below:
+  - kind "text", "long", "date": a text field named <id>. "long" is multi-line. Dates are plain text fields (DD/MM/YYYY).
+  - kind "select": a combo box named <id>. IMPORTANT: its blank choice is a single space " ". Treat " " as empty.
+  - kind "radio": a radio group named <id>. Each button's export value is the option text exactly (e.g. "Term").
+    Unanswered = value "Off". (Inside the file the export names are PDF names, e.g. Full#20Swift; Acrobat's
+    field.value gives "Full Swift". If you ever see "#20", treat it as a space.)
+  - kind "check": a single check box named <id>. Ticked = value is not "Off".
+  - kind "checks" ("tick any"): one check box per option, named <id>__0, <id>__1, ... in the order of "options"
+    (listed in "pdfFields"). The answer is the list of options whose box is ticked.
+Always-mandatory questions already have a red border and the PDF Required flag. Other borders are grey
+(RGB 0.55, 0.55, 0.55); text boxes are filled light blue-grey (RGB 0.96, 0.97, 0.99).
+Each conditional rule is also printed in small red text under its question, e.g. 'Mandatory if Drafts at is "Term"'.
+Any field whose name starts with "__" is a helper, not an answer (use that for any hidden helper field you add).
+
+== THE RULES (exact meaning) ==
+An answer's value, for rules: text/date/select = the text (select " " = ""); radio = the option text or "" if "Off";
+check = "true" or "false"; checks = the list of ticked option texts.
+A rule is {"field": F, "values": [V1, V2, ...], "not": optional true}.
+  - It holds when the answer of F is one of the values. For a "checks" answer: when any ticked option is one of the values.
+  - With "not": true, it holds when F's answer is NOT one of the values AND F is answered (not blank).
+    So {"field": F, "values": [""], "not": true} means "F is filled in".
+"required": true            -> always mandatory.
+"requiredIf": [rules]       -> mandatory when ANY of these rules holds.
+"activeIf": [rules]         -> the question only applies when ANY of these rules holds; otherwise lock it.
+If there is no "activeIf", the switching rules are the "requiredIf" rules that do NOT have "not": true.
+  A question with no switching rules always applies.
+A question that doesn't apply must be: read-only, fill colour grey (RGB 0.9, 0.9, 0.9), and its answer cleared
+(text "", select " ", radio/check boxes "Off"). When it applies again: editable, normal fill colour.
+Mandatory and empty (and applies) -> border red (color.red) and fill light red (RGB 1, 0.9, 0.9).
+Otherwise -> border back to its original colour (red if "required": true, grey otherwise), normal fill.
+"max": N  -> at most N characters (also set the field's character limit).
+"format":
+  number  -> whole number: digits only. Message: "should be a whole number". Keys allowed while typing: 0-9.
+  amount  -> ^\d{1,3}(,?\d{3})*(\.\d{1,2})?$ . Message: "is not an amount". Keys: 0-9 . ,
+  phone   -> ^\+?[\d ()-]*\d[\d ()-]*$ . Message: "is not a phone number (digits, spaces, + - ( ) only)". Keys: 0-9 + ( ) space -
+  account -> ^\d[\d-]*\d$ or a single digit. Message: "is not an account number (digits and - only)". Keys: 0-9 -
+Every "text" and "long" answer: only these characters are allowed (SWIFT-safe):
+  A-Z a-z 0-9 space . , - / ( ) ' : ? + # & @ % and line breaks.
+  Message: "has characters the bank's SWIFT messages can't carry". Upper-case letters as they are typed.
+Dates ("kind": "date"): DD/MM/YYYY, a real day for the month (no 31/04; 29/02 only in leap years).
+  Message: "is not a real DD/MM/YYYY date". Use the Acrobat date format "dd/mm/yyyy" on these fields so
+  Acrobat shows its calendar pop-up.
+Checks across answers (only when both dates are real):
+  - expiry_date before latest_shipment_date -> expiry_date "is before the latest shipment date"
+  - latest_shipment_date before application_date -> latest_shipment_date "is before the application date"
+  - expiry_date before application_date -> expiry_date "is before the application date"
+  - application_date after today -> application_date "is in the future"
+  - amount is a valid amount but not more than 0 -> amount "must be more than zero"
+  - insurance_arrangement answered while price_basis is "CIF" or "CIP" ->
+    insurance_arrangement "is only for FOB/CFR/FCA/CPT, but price basis is <price_basis> (the beneficiary insures)"
+Messages are "<label> <message>", e.g. "Term: days is mandatory because Drafts at is "Term"".
+  Missing: "is mandatory" (always) or "is mandatory because <rule in words>".
+  Rule in words: '<label of F> is "<V>"' (or 'is ticked' / 'is not ticked' for "true"/"false"; 'is filled in' for the not-blank rule),
+  several joined with " or ".
+
+== WHAT TO WRITE ==
+A. ONE document-level script (Tools > JavaScript > Document JavaScripts, name it "lcForm"):
+   - The SPEC below as a JavaScript array (convert it exactly; every field and rule).
+   - Helpers: answer(id), isFilled(id), holds(rule), applies(f), mandatory(f).
+   - lcPaint(): for every question, apply locking, red/normal colours. Must be fast (it runs after every change)
+     and must not loop forever: guard with a flag, and only set a field property when it actually changes.
+   - lcIssues(): returns every problem (missing, wrong format, characters, max length, bad dates, the checks
+     across answers) as {id, message} in form order. Skip questions that don't apply.
+   - lcCheck(): runs lcIssues(); if none, app.alert "Everything is filled in correctly." (icon 3);
+     else app.alert with the count and the first 20 messages, then setFocus() on the first problem's field.
+   - lcReset(): app.alert confirm (nType 2); on Yes: this.resetForm(); then lcPaint().
+   - lcKeys(format): returns a Keystroke function that rejects keys not allowed by the format (event.rc = false),
+     and upper-cases letters for text fields.
+   - At the end of the script: lcPaint(); so the form is right as soon as it opens.
+B. ONE hidden helper text field named "__rules" (anywhere, tiny, hidden) whose Calculate script is: lcPaint();
+   Acrobat runs every Calculate script after any field changes, so this re-paints the form on every answer.
+   Tell me how to make sure it's in the calculation order.
+C. Buttons. Give the exact steps to add, on page 1 and then "Duplicate across pages" for the rest:
+   "Check form" (Mouse Up -> Run a JavaScript: lcCheck();), "Reset form" (lcReset();),
+   "Previous page" (this.pageNum--;), "Next page" (this.pageNum++;). Put them in the footer
+   (bottom margin, y about 10-30 pt from the bottom; there is free space right of the footer note).
+   Mark them "Visible but doesn't print".
+D. Per-field settings I set by hand (give me the list of field names for each):
+   - Date fields: Format > Date > dd/mm/yyyy.
+   - Fields with "format": Keystroke custom script, e.g. for amount: lcKeys("amount")(); (or your best equivalent).
+   - Text/long fields: Validate custom script calling one shared function, if you need one.
+   Keep the number of hand edits as small as possible; prefer logic inside lcPaint/lcIssues.
+E. A test plan I can follow (at least these):
+   1. Open the blank form: always-mandatory boxes red; "Drafts at" and "Term: days" locked and grey.
+   2. Tick "Drafts for 100% invoice value at", then Drafts at = Term -> Term: days and the term options unlock and turn red; Drafts at = Sight -> locked and cleared again.
+   3. Tick "Full set of Clean on Board marine bills of lading" -> its "Made out to", "Marked Freight", "Notify party" turn red.
+   4. Amount "1,25,000.0.0" -> Check form says "Amount is not an amount".
+   5. Expiry 31/12/2026, latest shipment 15/01/2027 -> "Date of expiry ... is before the latest shipment date".
+   6. Price basis CIF + an insurance arrangement -> the insurance message.
+   7. Reset form -> asks, then everything blank and red again.
+   8. Fill everything correctly -> "Everything is filled in correctly."
+F. Explain any limitation honestly (for example, if something can't be done in AcroForm JavaScript).
+
+IMPORTANT ABOUT MY LAPTOP: Acrobat JavaScript is switched off by the bank's policy on my laptop. I'm asking my IT team
+how this form can be trusted the same way as the old smart form (privileged location or certified document).
+Write the scripts anyway; they must work as soon as JavaScript is allowed for this document. Don't suggest ways
+around the bank's security settings.
+
+== SPEC: every question, in form order (one JSON object per line) ==
+{"id": "application_date", "section": "Application", "label": "Date", "kind": "date", "required": true}
+{"id": "mode_of_advising", "section": "Mode of Advising", "label": "Mode of advising", "kind": "radio", "options": ["Full Swift", "Registered Airmail", "Airmail with Brief Swift", "Courier Service", "Courier Service with Brief Swift"], "required": true}
+{"id": "applicant_name", "section": "Applicant", "label": "Applicant name", "kind": "text", "required": true, "max": 35}
+{"id": "applicant_address_1", "section": "Applicant", "label": "Applicant address", "kind": "text", "required": true, "max": 35}
+{"id": "applicant_address_2", "section": "Applicant", "label": "Applicant address (line 2)", "kind": "text", "max": 35}
+{"id": "applicant_address_3", "section": "Applicant", "label": "Applicant address (line 3)", "kind": "text", "max": 35}
+{"id": "contact_name", "section": "Applicant", "label": "Contact party for this application & confirmation of FX rate: Name", "kind": "text", "required": true, "max": 35}
+{"id": "contact_tel", "section": "Applicant", "label": "Contact party: Tel no", "kind": "text", "required": true, "max": 15, "format": "phone"}
+{"id": "contact_fax", "section": "Applicant", "label": "Contact party: Fax no", "kind": "text", "max": 15, "format": "phone"}
+{"id": "dc_no", "section": "For Bank Use", "label": "DC no", "kind": "text"}
+{"id": "bank_code", "section": "For Bank Use", "label": "Bank code", "kind": "text"}
+{"id": "advising_bank_name", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Name", "kind": "text", "max": 35}
+{"id": "advising_bank_address_1", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Address", "kind": "text", "max": 35}
+{"id": "advising_bank_address_2", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Address (line 2)", "kind": "text", "max": 35}
+{"id": "advising_bank_address_3", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Address (line 3)", "kind": "text", "max": 35}
+{"id": "third_party_name", "section": "For the Benefit of a 3rd Party", "label": "Name", "kind": "text", "max": 35}
+{"id": "third_party_address_1", "section": "For the Benefit of a 3rd Party", "label": "Address", "kind": "text", "max": 35}
+{"id": "third_party_address_2", "section": "For the Benefit of a 3rd Party", "label": "Address (line 2)", "kind": "text", "max": 35}
+{"id": "third_party_address_3", "section": "For the Benefit of a 3rd Party", "label": "Address (line 3)", "kind": "text", "max": 35}
+{"id": "beneficiary_name", "section": "Beneficiary", "label": "Beneficiary's name", "kind": "text", "required": true, "max": 35}
+{"id": "beneficiary_address_1", "section": "Beneficiary", "label": "Beneficiary's address", "kind": "text", "required": true, "max": 35}
+{"id": "beneficiary_address_2", "section": "Beneficiary", "label": "Beneficiary's address (line 2)", "kind": "text", "max": 35}
+{"id": "beneficiary_address_3", "section": "Beneficiary", "label": "Beneficiary's address (line 3)", "kind": "text", "max": 35}
+{"id": "beneficiary_contact", "section": "Beneficiary", "label": "Contact person", "kind": "text", "max": 35}
+{"id": "beneficiary_tel", "section": "Beneficiary", "label": "Tel no", "kind": "text", "max": 15, "format": "phone"}
+{"id": "beneficiary_fax", "section": "Beneficiary", "label": "Fax no", "kind": "text", "max": 15, "format": "phone"}
+{"id": "currency", "section": "Credit Amount (Currency & Figures)", "label": "Currency", "kind": "select", "options": ["SGD", "USD", "EUR", "GBP", "JPY", "CNY", "HKD", "AUD", "NZD", "CAD", "CHF", "MYR", "IDR", "THB", "INR", "KRW", "TWD", "PHP", "VND", "AED", "SAR", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AWG", "AZN", "BAM", "BBD", "BDT", "BGN", "BHD", "BIF", "BMD", "BND", "BOB", "BRL", "BSD", "BTN", "BWP", "BYN", "BZD", "CDF", "CLP", "COP", "CRC", "CUC", "CUP", "CVE", "CZK", "DJF", "DKK", "DOP", "DZD", "EGP", "ERN", "ETB", "FJD", "FKP", "GEL", "GHS", "GIP", "GMD", "GNF", "GTQ", "GYD", "HNL", "HRK", "HTG", "HUF", "ILS", "IQD", "IRR", "ISK", "JMD", "JOD", "KES", "KGS", "KHR", "KMF", "KPW", "KWD", "KYD", "KZT", "LAK", "LBP", "LKR", "LRD", "LSL", "LYD", "MAD", "MDL", "MGA", "MKD", "MMK", "MNT", "MOP", "MRU", "MUR", "MVR", "MWK", "MXN", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR", "OMR", "PAB", "PEN", "PGK", "PKR", "PLN", "PYG", "QAR", "RON", "RSD", "RUB", "RWF", "SBD", "SCR", "SDG", "SEK", "SHP", "SLE", "SOS", "SRD", "SSP", "STN", "SVC", "SYP", "SZL", "TJS", "TMT", "TND", "TOP", "TRY", "TTD", "TZS", "UAH", "UGX", "UYU", "UZS", "VES", "VUV", "WST", "XAF", "XCD", "XCG", "XDR", "XOF", "XPF", "XSU", "YER", "ZAR", "ZMW", "ZWG"], "required": true}
+{"id": "amount", "section": "Credit Amount (Currency & Figures)", "label": "Amount", "kind": "text", "required": true, "format": "amount"}
+{"id": "gst", "section": "Credit Amount (Currency & Figures)", "label": "For local DCs, amount is (if not checked, it will be inclusive of GST)", "kind": "radio", "options": ["inclusive of GST", "No GST"]}
+{"id": "tolerance", "section": "Credit Amount (Currency & Figures)", "label": "Tolerance on credit amount & goods quantity", "kind": "check"}
+{"id": "tolerance_plus", "section": "Credit Amount (Currency & Figures)", "label": "Tolerance + (%)", "kind": "text", "requiredIf": [{"field": "tolerance", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "tolerance_minus", "section": "Credit Amount (Currency & Figures)", "label": "Tolerance - (%)", "kind": "text", "requiredIf": [{"field": "tolerance", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "price_basis", "section": "Price Basis", "label": "Price basis", "kind": "radio", "options": ["FOB", "CFR", "CIF", "Local Delivery", "FCA", "CIP", "CPT", "Others"], "required": true}
+{"id": "price_basis_other", "section": "Price Basis", "label": "Others (please specify)", "kind": "text", "requiredIf": [{"field": "price_basis", "values": ["Others"]}], "max": 35}
+{"id": "partial_shipment", "section": "Shipment", "label": "Partial shipment", "kind": "radio", "options": ["allowed", "not allowed"], "required": true}
+{"id": "transhipment", "section": "Shipment", "label": "Transhipment", "kind": "radio", "options": ["allowed", "not allowed"], "required": true}
+{"id": "shipment_from", "section": "Shipment", "label": "Shipment from", "kind": "select", "options": ["Port of Loading / Airport of Departure", "Dispatch from", "Place of Taking in charge", "Place of Receipt"]}
+{"id": "shipment_from_place", "section": "Shipment", "label": "Shipment from: place", "kind": "text", "requiredIf": [{"field": "shipment_from", "values": [""], "not": true}], "max": 35}
+{"id": "shipment_from_place_2", "section": "Shipment", "label": "Shipment from: place (line 2)", "kind": "text"}
+{"id": "shipment_to", "section": "Shipment", "label": "Shipment to", "kind": "select", "options": ["Port of Discharge / Airport of Destination", "For Transportation to", "Place of Final Destination", "Place of Delivery"]}
+{"id": "shipment_to_place", "section": "Shipment", "label": "Shipment to: place", "kind": "text", "requiredIf": [{"field": "shipment_to", "values": [""], "not": true}], "max": 35}
+{"id": "shipment_to_place_2", "section": "Shipment", "label": "Shipment to: place (line 2)", "kind": "text"}
+{"id": "latest_shipment_date", "section": "Shipment", "label": "Latest shipment date", "kind": "date"}
+{"id": "expiry_date", "section": "Expiry and Presentation", "label": "Date of expiry (in beneficiary's country)", "kind": "date", "required": true}
+{"id": "presentation_days", "section": "Expiry and Presentation", "label": "Presentation period (days after shipment)", "kind": "text", "format": "number"}
+{"id": "back_to_back", "section": "Back-to-back DC", "label": "This is a back-to-back DC to be issued against the master credit (the \"Master DC\")", "kind": "check"}
+{"id": "master_dc_no", "section": "Back-to-back DC", "label": "Master credit no", "kind": "text", "requiredIf": [{"field": "back_to_back", "values": ["true"]}], "max": 20}
+{"id": "master_dc_issued_by", "section": "Back-to-back DC", "label": "Issued by", "kind": "text", "requiredIf": [{"field": "back_to_back", "values": ["true"]}], "max": 35}
+{"id": "drafts", "section": "Drafts", "label": "Drafts for 100% invoice value at", "kind": "check"}
+{"id": "drafts_at", "section": "Drafts", "label": "Drafts at", "kind": "radio", "options": ["Sight", "Term", "Date"], "requiredIf": [{"field": "drafts", "values": ["true"]}]}
+{"id": "term_days", "section": "Drafts", "label": "Term: days", "kind": "text", "requiredIf": [{"field": "drafts_at", "values": ["Term"]}], "format": "number"}
+{"id": "term_after", "section": "Drafts", "label": "days after", "kind": "text", "requiredIf": [{"field": "drafts_at", "values": ["Term"]}], "max": 35}
+{"id": "draft_date", "section": "Drafts", "label": "Date", "kind": "date", "requiredIf": [{"field": "drafts_at", "values": ["Date"]}]}
+{"id": "term_prepay", "section": "Drafts", "label": "If it is a term LC, please select one", "kind": "radio", "options": ["You may prepay the acceptance of this term LC at the cost of beneficiary", "You may not prepay the acceptance of this term LC"], "requiredIf": [{"field": "drafts_at", "values": ["Term"]}]}
+{"id": "doc_bill_of_lading", "section": "Documents Required", "label": "Full set of Clean on Board marine bills of lading", "kind": "check"}
+{"id": "bl_made_out_to", "section": "Documents Required", "label": "Made out to", "kind": "radio", "options": ["order of the Bank", "order blank endorsed", "other (specify)"], "requiredIf": [{"field": "doc_bill_of_lading", "values": ["true"]}]}
+{"id": "bl_made_out_to_other", "section": "Documents Required", "label": "Made out to (other)", "kind": "text", "requiredIf": [{"field": "bl_made_out_to", "values": ["other (specify)"]}], "max": 70}
+{"id": "bl_freight", "section": "Documents Required", "label": "Marked Freight", "kind": "radio", "options": ["Prepaid", "Collect"], "requiredIf": [{"field": "doc_bill_of_lading", "values": ["true"]}]}
+{"id": "bl_notify_party", "section": "Documents Required", "label": "Notify party (if not specified, notify party is considered to be applicant)", "kind": "text", "requiredIf": [{"field": "doc_bill_of_lading", "values": ["true"]}], "max": 114}
+{"id": "doc_air_waybill", "section": "Documents Required", "label": "Original Air Waybill consigned to the Bank", "kind": "check"}
+{"id": "awb_freight", "section": "Documents Required", "label": "Marked Freight", "kind": "radio", "options": ["Prepaid", "Collect"], "requiredIf": [{"field": "doc_air_waybill", "values": ["true"]}]}
+{"id": "awb_notify_party", "section": "Documents Required", "label": "Notify party (if not specified, notify party is considered to be applicant)", "kind": "text", "requiredIf": [{"field": "doc_air_waybill", "values": ["true"]}], "max": 114}
+{"id": "doc_delivery_order", "section": "Documents Required", "label": "Delivery order signed by beneficiary made out to applicant", "kind": "check"}
+{"id": "do_originals", "section": "Documents Required", "label": "Delivery order: originals", "kind": "text", "requiredIf": [{"field": "doc_delivery_order", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "do_copies", "section": "Documents Required", "label": "Delivery order: copies", "kind": "text", "requiredIf": [{"field": "doc_delivery_order", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "do_countersigned_by", "section": "Documents Required", "label": "Countersigned by how many of our signatories", "kind": "select", "options": ["One", "Two"], "requiredIf": [{"field": "doc_delivery_order", "values": ["true"]}]}
+{"id": "do_signature_verified", "section": "Documents Required", "label": "Whose signature(s) ... to be verified by the Bank", "kind": "select", "options": ["need", "need not"], "requiredIf": [{"field": "doc_delivery_order", "values": ["true"]}]}
+{"id": "doc_insurance", "section": "Documents Required", "label": "Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion", "kind": "check"}
+{"id": "insurance_arrangement", "section": "Documents Required", "label": "For FOB/CFR/FCA/CPT", "kind": "select", "options": ["Insurance cover note attached", "Covered by ultimate buyer", "Please arrange insurance on our behalf", "Insurance covered by applicant under open Cover No."], "activeIf": [{"field": "doc_insurance", "values": ["true"]}]}
+{"id": "insurance_cover_no", "section": "Documents Required", "label": "Open cover no", "kind": "text", "requiredIf": [{"field": "insurance_arrangement", "values": ["Insurance covered by applicant under open Cover No."]}], "max": 20}
+{"id": "insurance_cover_with", "section": "Documents Required", "label": "With", "kind": "text", "requiredIf": [{"field": "insurance_arrangement", "values": ["Insurance covered by applicant under open Cover No."]}], "max": 35}
+{"id": "doc_beneficiary_certificate", "section": "Documents Required", "label": "Beneficiary's certificate stating 1 set of non-negotiable documents has been sent to applicant", "kind": "check"}
+{"id": "bencert_sent_by", "section": "Documents Required", "label": "Sent by", "kind": "checks", "pdfFields": ["bencert_sent_by__0", "bencert_sent_by__1", "bencert_sent_by__2"], "options": ["faxed", "mailed", "couriered"], "requiredIf": [{"field": "doc_beneficiary_certificate", "values": ["true"]}]}
+{"id": "bencert_days", "section": "Documents Required", "label": "Within (days after shipment)", "kind": "text", "requiredIf": [{"field": "doc_beneficiary_certificate", "values": ["true"]}], "format": "number"}
+{"id": "doc_commercial_invoice", "section": "Documents Required", "label": "Signed commercial invoice", "kind": "check"}
+{"id": "invoice_originals", "section": "Documents Required", "label": "Commercial invoice: originals", "kind": "text", "requiredIf": [{"field": "doc_commercial_invoice", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "invoice_copies", "section": "Documents Required", "label": "Commercial invoice: copies", "kind": "text", "requiredIf": [{"field": "doc_commercial_invoice", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "doc_packing_list", "section": "Documents Required", "label": "Packing list", "kind": "check"}
+{"id": "packing_list_originals", "section": "Documents Required", "label": "Packing list: originals", "kind": "text", "requiredIf": [{"field": "doc_packing_list", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "packing_list_copies", "section": "Documents Required", "label": "Packing list: copies", "kind": "text", "requiredIf": [{"field": "doc_packing_list", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "doc_weight_note", "section": "Documents Required", "label": "Weight note", "kind": "check"}
+{"id": "weight_note_originals", "section": "Documents Required", "label": "Weight note: originals", "kind": "text", "requiredIf": [{"field": "doc_weight_note", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "weight_note_copies", "section": "Documents Required", "label": "Weight note: copies", "kind": "text", "requiredIf": [{"field": "doc_weight_note", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "doc_certificate_of_origin", "section": "Documents Required", "label": "Certificate of origin", "kind": "check"}
+{"id": "origin_originals", "section": "Documents Required", "label": "Certificate of origin: originals", "kind": "text", "requiredIf": [{"field": "doc_certificate_of_origin", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "origin_copies", "section": "Documents Required", "label": "Certificate of origin: copies", "kind": "text", "requiredIf": [{"field": "doc_certificate_of_origin", "values": ["true"]}], "max": 2, "format": "number"}
+{"id": "origin_country", "section": "Documents Required", "label": "Showing country of origin as", "kind": "text", "requiredIf": [{"field": "doc_certificate_of_origin", "values": ["true"]}], "max": 35}
+{"id": "doc_other", "section": "Documents Required", "label": "Other documents", "kind": "check"}
+{"id": "other_documents_1", "section": "Documents Required", "label": "Other documents", "kind": "text", "requiredIf": [{"field": "doc_other", "values": ["true"]}], "max": 70}
+{"id": "other_documents_2", "section": "Documents Required", "label": "Other documents (line 2)", "kind": "text", "activeIf": [{"field": "doc_other", "values": ["true"]}], "max": 70}
+{"id": "goods_description", "section": "Goods Description", "label": "Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)", "kind": "long", "required": true, "max": 6500}
+{"id": "additional_conditions", "section": "Additional Conditions", "label": "Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)", "kind": "long", "max": 6500}
+{"id": "bank_charges", "section": "Charges, Confirmation and Settlement", "label": "All bank charges are for account of", "kind": "check", "required": true}
+{"id": "bank_charges_for", "section": "Charges, Confirmation and Settlement", "label": "Charges for account of", "kind": "radio", "options": ["Beneficiary, except charges at DC Issuing Bank's counter", "Applicant (including all charges incurred inside and outside of DC Issuing Bank's country)"], "requiredIf": [{"field": "bank_charges", "values": ["true"]}]}
+{"id": "confirmation", "section": "Charges, Confirmation and Settlement", "label": "Confirmation required", "kind": "check"}
+{"id": "confirmation_charges", "section": "Charges, Confirmation and Settlement", "label": "Confirmation charges", "kind": "radio", "options": ["Applicant", "Beneficiary"], "requiredIf": [{"field": "confirmation", "values": ["true"]}]}
+{"id": "post_shipment_financing", "section": "Charges, Confirmation and Settlement", "label": "Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies", "kind": "check"}
+{"id": "financing_type", "section": "Charges, Confirmation and Settlement", "label": "Financing", "kind": "radio", "options": ["SGD financing", "Foreign Currency Financing", "Apply Forward Contract"], "requiredIf": [{"field": "post_shipment_financing", "values": ["true"]}]}
+{"id": "financing_currency", "section": "Charges, Confirmation and Settlement", "label": "Foreign currency financing in (type of currency)", "kind": "select", "options": ["SGD", "USD", "EUR", "GBP", "JPY", "CNY", "HKD", "AUD", "NZD", "CAD", "CHF", "MYR", "IDR", "THB", "INR", "KRW", "TWD", "PHP", "VND", "AED", "SAR", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AWG", "AZN", "BAM", "BBD", "BDT", "BGN", "BHD", "BIF", "BMD", "BND", "BOB", "BRL", "BSD", "BTN", "BWP", "BYN", "BZD", "CDF", "CLP", "COP", "CRC", "CUC", "CUP", "CVE", "CZK", "DJF", "DKK", "DOP", "DZD", "EGP", "ERN", "ETB", "FJD", "FKP", "GEL", "GHS", "GIP", "GMD", "GNF", "GTQ", "GYD", "HNL", "HRK", "HTG", "HUF", "ILS", "IQD", "IRR", "ISK", "JMD", "JOD", "KES", "KGS", "KHR", "KMF", "KPW", "KWD", "KYD", "KZT", "LAK", "LBP", "LKR", "LRD", "LSL", "LYD", "MAD", "MDL", "MGA", "MKD", "MMK", "MNT", "MOP", "MRU", "MUR", "MVR", "MWK", "MXN", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR", "OMR", "PAB", "PEN", "PGK", "PKR", "PLN", "PYG", "QAR", "RON", "RSD", "RUB", "RWF", "SBD", "SCR", "SDG", "SEK", "SHP", "SLE", "SOS", "SRD", "SSP", "STN", "SVC", "SYP", "SZL", "TJS", "TMT", "TND", "TOP", "TRY", "TTD", "TZS", "UAH", "UGX", "UYU", "UZS", "VES", "VUV", "WST", "XAF", "XCD", "XCG", "XDR", "XOF", "XPF", "XSU", "YER", "ZAR", "ZMW", "ZWG"], "requiredIf": [{"field": "financing_type", "values": ["Foreign Currency Financing"]}]}
+{"id": "forward_contract_no", "section": "Charges, Confirmation and Settlement", "label": "Forward contract no", "kind": "text", "requiredIf": [{"field": "financing_type", "values": ["Apply Forward Contract"]}], "max": 20}
+{"id": "advance_payment", "section": "Charges, Confirmation and Settlement", "label": "We authorise you to debit DC amount in full from our account for advance payment", "kind": "check"}
+{"id": "advance_payment_account", "section": "Charges, Confirmation and Settlement", "label": "Account no for advance payment", "kind": "text", "requiredIf": [{"field": "advance_payment", "values": ["true"]}], "max": 20, "format": "account"}
+{"id": "debit_issuance_charges", "section": "Charges, Confirmation and Settlement", "label": "Please debit all DC issuance charges to our account with you", "kind": "check"}
+{"id": "issuance_charges_account", "section": "Charges, Confirmation and Settlement", "label": "Account no for DC issuance charges", "kind": "text", "required": true, "max": 17, "format": "account"}
+{"id": "authorised_person", "section": "Signature", "label": "Authorised person(s) & company stamp", "kind": "text"}
+== END OF SPEC ==
