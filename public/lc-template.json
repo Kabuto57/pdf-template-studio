@@ -93,23 +93,6 @@
       ]
     },
     {
-      "title": "For Bank Use",
-      "fields": [
-        {
-          "id": "dc_no",
-          "label": "DC no",
-          "kind": "text",
-          "half": true
-        },
-        {
-          "id": "bank_code",
-          "label": "Bank code",
-          "kind": "text",
-          "half": true
-        }
-      ]
-    },
-    {
       "title": "Advising Bank (at Issuing Bank's option, if no nomination)",
       "fields": [
         {
@@ -1547,13 +1530,33 @@
       ]
     },
     {
-      "title": "Signature",
+      "title": "Declaration and Signature",
+      "signoff": true,
+      "note": "We request you to issue an irrevocable documentary credit on the terms above. We confirm that the details given are true and complete, and agree that the credit is subject to the Uniform Customs and Practice for Documentary Credits (UCP 600) and to the Bank's terms and conditions for documentary credits.",
       "fields": [
         {
           "id": "authorised_person",
-          "label": "Authorised person(s) & company stamp",
+          "label": "Name and title of authorised person(s)",
           "kind": "text",
           "half": false
+        }
+      ]
+    },
+    {
+      "title": "For Bank Use Only",
+      "bankOnly": true,
+      "fields": [
+        {
+          "id": "dc_no",
+          "label": "DC no",
+          "kind": "text",
+          "half": true
+        },
+        {
+          "id": "bank_code",
+          "label": "Bank code",
+          "kind": "text",
+          "half": true
         }
       ]
     }

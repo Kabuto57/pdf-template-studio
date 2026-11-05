@@ -41,10 +41,6 @@ const sections: Section[] = [
     text("contact_tel", "Contact party: Tel no", { ...req, max: 15, format: "phone" }),
     text("contact_fax", "Contact party: Fax no", { max: 15, format: "phone" }),
   ] },
-  { title: "For Bank Use", fields: [
-    text("dc_no", "DC no"),
-    text("bank_code", "Bank code"),
-  ] },
   { title: "Advising Bank (at Issuing Bank's option, if no nomination)", fields: [
     text("advising_bank_name", "Name", { half: false, max: 35 }),
     text("advising_bank_address_1", "Address", { half: false, max: 35 }),
@@ -176,8 +172,14 @@ const sections: Section[] = [
     tick("debit_issuance_charges", "Please debit all DC issuance charges to our account with you"),
     text("issuance_charges_account", "Account no for DC issuance charges", { ...req, max: 17, format: "account" }),
   ] },
-  { title: "Signature", fields: [
-    text("authorised_person", "Authorised person(s) & company stamp", { half: false }),
+  { title: "Declaration and Signature", signoff: true,
+    note: "We request you to issue an irrevocable documentary credit on the terms above. We confirm that the details given are true and complete, and agree that the credit is subject to the Uniform Customs and Practice for Documentary Credits (UCP 600) and to the Bank's terms and conditions for documentary credits.",
+    fields: [
+      text("authorised_person", "Name and title of authorised person(s)", { half: false }),
+    ] },
+  { title: "For Bank Use Only", bankOnly: true, fields: [
+    text("dc_no", "DC no"),
+    text("bank_code", "Bank code"),
   ] },
 ];
 

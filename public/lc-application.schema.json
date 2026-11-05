@@ -191,30 +191,6 @@
         }
       ]
     },
-    "dc_no": {
-      "title": "DC no",
-      "type": "string",
-      "allOf": [
-        {
-          "not": {
-            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
-          },
-          "description": "has characters the bank's SWIFT messages can't carry"
-        }
-      ]
-    },
-    "bank_code": {
-      "title": "Bank code",
-      "type": "string",
-      "allOf": [
-        {
-          "not": {
-            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
-          },
-          "description": "has characters the bank's SWIFT messages can't carry"
-        }
-      ]
-    },
     "advising_bank_name": {
       "title": "Name",
       "type": "string",
@@ -1774,7 +1750,31 @@
       ]
     },
     "authorised_person": {
-      "title": "Authorised person(s) & company stamp",
+      "title": "Name and title of authorised person(s)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "dc_no": {
+      "title": "DC no",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        }
+      ]
+    },
+    "bank_code": {
+      "title": "Bank code",
       "type": "string",
       "allOf": [
         {

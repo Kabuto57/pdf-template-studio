@@ -12,7 +12,7 @@
 //                    follow the answers, locking, typing filters, calendar dates, "Check form", warnings before
 //                    save/print. Assumes JavaScript is on; with it off, only the page links and lists work.
 //   "both":          the two together (the studio's preview and the samples).
-import { PDFDocument, PDFHexString, PDFName, PDFPage, PDFString, StandardFonts } from "pdf-lib";
+import { PDFDocument, PDFHexString, PDFName, PDFPage, PDFString, StandardFonts, rgb } from "pdf-lib";
 import { addChecks, formatActions, swiftActions } from "./acrobat-script";
 import { addDateLists } from "./dates";
 import { ACCENT, GREY, H, INK, M, RED, RULE, TINT, W, WHITE, finishForm, tip, wrap } from "./look";
@@ -75,7 +75,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
   const blocks: Blocks = new Map(); // where each question was drawn, for the red frames
   const shrink: ReturnType<typeof form.createTextField>[] = []; // boxes whose text shrinks to fit in Acrobat
   // Every question numbered by section, "3.1", "3.2", ..., so a question can be referred to ("see 14.3").
-  const number = new Map(t.sections.flatMap((s, si) => s.fields.map((f, qi) => [f.id, `${si + 1}.${qi + 1}`] as const)));
+  const number = new Map(t.sections.flatMap((s, si) => s.bankOnly ? [] : s.fields.map((f, qi) => [f.id, `${si + 1}.${qi + 1}`] as const)));
 
   /**
    * 4. Lays out one question at (x, top) in width w. Draws it only when `draw` (otherwise just measures it).
@@ -161,7 +161,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
     }
 
     // A date, or a text box (one line, or a paragraph).
-    const h = f.kind === "long" ? 64 : BOX;
+    const h = f.kind === "long" ? 50 : BOX;
     if (draw && f.kind === "date") {
       addDateLists(form, page, f.id, f.label, answer, { x, y: y - h, width: w, height: h }, font, TEXT, look, js);
     } else if (draw) {
@@ -187,7 +187,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
   // 3. The sections, on a grid of 12 narrow columns. Each question takes the width it needs: a little for a number,
   //    a date or a currency, a third of the page for a 35-character name or address line (room for the whole line),
   //    more for long text or many options. Questions fill a line left to
-  //    right; a question that other questions depend on (a tick box, "Drafts at", "Shipment from") starts a new line,
+  //    right; a tick box, or a question that other questions depend on ("Drafts at", "Shipment from"), starts a new line,
   //    so it sits with the boxes it switches on, as on the bank's own form.
   const colW = (W - 2 * M - (COLS - 1) * CGAP) / COLS;
   const spanWidth = (n: number) => n * colW + (n - 1) * CGAP;
@@ -228,18 +228,42 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
     };
     const height = (row: Field[]) => Math.max(...layout(row).map(c => place(c.f, c.x, c.w, false)));
 
-    // The section heading, "3  APPLICANT": a light band with a navy edge (on a new page if not even its first row fits).
-    if (top - 18 - (rows[0] ? height(rows[0]) : 0) < BOTTOM) newPage();
-    page.drawRectangle({ x: M, y: top - 13, width: W - 2 * M, height: 12, color: TINT });
-    page.drawRectangle({ x: M, y: top - 13, width: 3, height: 12, color: ACCENT });
-    page.drawText(safe(`${si + 1}   ${s.title.toUpperCase()}`), { x: M + 8, y: top - 9.8, size: 7.5, font: bold, color: ACCENT });
+    // Its parts' heights: the paragraph under the heading (a declaration), the rows, and the signature lines.
+    const note = s.note ? wrap(s.note, font, 7.5, W - 2 * M - 8) : [];
+    const SIGN = 62;
+    const whole = 17 + note.length * 9.5 + (note.length ? 4 : 0) + rows.reduce((sum, r) => sum + height(r) + 5, 0) + (s.signoff ? SIGN : 0);
+    // The section heading, "3  APPLICANT": a light band with a navy edge (on a new page if not even its first row
+    // fits). The sign-off and the bank's panel are kept whole on one page.
+    if (top - ((s.signoff || s.bankOnly) ? whole : 18 + (rows[0] ? height(rows[0]) : 0)) < BOTTOM) newPage();
+    if (s.bankOnly) { // a shaded, outlined panel, set apart from the customer's part
+      page.drawRectangle({ x: M - 6, y: top - whole - 4, width: W - 2 * M + 12, height: whole + 4, color: rgb(0.95, 0.95, 0.95), borderColor: RULE, borderWidth: 0.75 });
+      page.drawText(safe(`${s.title.toUpperCase()} (to be completed by the Bank)`), { x: M, y: top - 9.8, size: 7.5, font: bold, color: GREY });
+    } else {
+      page.drawRectangle({ x: M, y: top - 13, width: W - 2 * M, height: 12, color: TINT });
+      page.drawRectangle({ x: M, y: top - 13, width: 3, height: 12, color: ACCENT });
+      page.drawText(safe(`${si + 1}   ${s.title.toUpperCase()}`), { x: M + 8, y: top - 9.8, size: 7.5, font: bold, color: ACCENT });
+    }
     top -= 17;
+    for (const line of note) { page.drawText(line, { x: M, y: top - 7.5, size: 7.5, font, color: INK }); top -= 9.5; }
+    if (note.length) top -= 4;
 
     for (const row of rows) {
       const h = height(row);
       if (top - h < BOTTOM) newPage();
       for (const c of layout(row)) place(c.f, c.x, c.w, true);
-      top -= h + 6;
+      top -= h + 5;
+    }
+    // Signature, date and company stamp: lines to sign on paper after printing.
+    if (s.signoff) {
+      const line = (x: number, w: number, label: string) => {
+        page.drawLine({ start: { x, y: top - 34 }, end: { x: x + w, y: top - 34 }, thickness: 0.75, color: INK });
+        page.drawText(label, { x, y: top - 43, size: 7, font, color: GREY });
+      };
+      line(M, 190, "Authorised signature(s)");
+      line(M + 210, 110, "Date");
+      page.drawRectangle({ x: W - M - 150, y: top - 56, width: 150, height: 54, borderColor: INK, borderWidth: 0.75, borderDashArray: [2, 2] });
+      page.drawText("Company stamp", { x: W - M - 146, y: top - 52, size: 7, font, color: GREY });
+      top -= SIGN;
     }
     top -= 1;
   });

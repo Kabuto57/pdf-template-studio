@@ -110,8 +110,6 @@ Your reply: the results of the acceptance checks, then the PDF file LC-Applicati
 {"id": "contact_name", "section": "Applicant", "label": "Contact party for this application & confirmation of FX rate: Name", "kind": "text", "half": false, "required": true, "max": 35}
 {"id": "contact_tel", "section": "Applicant", "label": "Contact party: Tel no", "kind": "text", "half": true, "required": true, "max": 15, "format": "phone"}
 {"id": "contact_fax", "section": "Applicant", "label": "Contact party: Fax no", "kind": "text", "half": true, "max": 15, "format": "phone"}
-{"id": "dc_no", "section": "For Bank Use", "label": "DC no", "kind": "text", "half": true}
-{"id": "bank_code", "section": "For Bank Use", "label": "Bank code", "kind": "text", "half": true}
 {"id": "advising_bank_name", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Name", "kind": "text", "half": false, "max": 35}
 {"id": "advising_bank_address_1", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Address", "kind": "text", "half": false, "max": 35}
 {"id": "advising_bank_address_2", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Address (line 2)", "kind": "text", "half": false, "max": 35}
@@ -205,5 +203,7 @@ Your reply: the results of the acceptance checks, then the PDF file LC-Applicati
 {"id": "advance_payment_account", "section": "Charges, Confirmation and Settlement", "label": "Account no for advance payment", "kind": "text", "half": true, "requiredIf": [{"field": "advance_payment", "values": ["true"]}], "max": 20, "format": "account"}
 {"id": "debit_issuance_charges", "section": "Charges, Confirmation and Settlement", "label": "Please debit all DC issuance charges to our account with you", "kind": "check"}
 {"id": "issuance_charges_account", "section": "Charges, Confirmation and Settlement", "label": "Account no for DC issuance charges", "kind": "text", "half": true, "required": true, "max": 17, "format": "account"}
-{"id": "authorised_person", "section": "Signature", "label": "Authorised person(s) & company stamp", "kind": "text", "half": false}
+{"id": "authorised_person", "section": "Declaration and Signature", "label": "Name and title of authorised person(s)", "kind": "text", "half": false}
+{"id": "dc_no", "section": "For Bank Use Only", "label": "DC no", "kind": "text", "half": true}
+{"id": "bank_code", "section": "For Bank Use Only", "label": "Bank code", "kind": "text", "half": true}
 == END OF SPEC ==

@@ -32,7 +32,13 @@ export interface Field {
  */
 export interface Rule { field: string; values: string[]; not?: boolean }
 
-export interface Section { title: string; fields: Field[] }
+export interface Section {
+  title: string;
+  fields: Field[];
+  note?: string;       // a paragraph under the heading, e.g. the applicant's declaration
+  signoff?: boolean;   // the PDF adds signature, date and company-stamp lines after the questions
+  bankOnly?: boolean;  // filled in by the bank: drawn as a shaded "for bank use only" panel
+}
 
 /** A whole form. */
 export interface Template {
