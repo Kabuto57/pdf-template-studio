@@ -85,7 +85,7 @@ function across() {
 // Clears a question's box, so an answer can't stay behind in a question that doesn't apply.
 function clear(f, kind) {
   if (kind == "check" || kind == "checks" || kind == "radio") { if (f.value != "Off") f.value = "Off"; }
-  else if (f.type == "combobox" && /__list$/.test(f.name)) { if (f.currentValueIndices != 0) f.currentValueIndices = 0; } // a date list: back to "Pick a date"
+  else if (f.type == "combobox" && /__list$/.test(f["name"])) { if (f.currentValueIndices != 0) f.currentValueIndices = 0; } // a date list: back to "Pick a date"
   else if (f.value !== "" && f.value != null) f.value = "";
 }
 
