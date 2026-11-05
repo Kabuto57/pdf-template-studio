@@ -2,12 +2,21 @@ MASTER PROMPT: BUILD THE WHOLE LC APPLICATION PDF, WITH ALL ITS CHECKS
 
 == WHAT I NEED ==
 I work in Trade Finance at a bank. Build me ONE finished PDF file: the "Irrevocable Documentary Credit (LC)"
-application form, with all its fields AND all its Acrobat JavaScript checks inside. Name it
-LC-Application-with-checks.pdf and give me the file to download.
-Do everything yourself in your code tool (Python). I will NOT open Adobe tools, Prepare Form, the JavaScript
-console or any settings. The ONLY thing I will do is open your PDF in Acrobat and click "Enable All Features".
-Assume Acrobat JavaScript runs from then on. Don't suggest ways around the bank's security settings.
-If you cannot run code or return a file, tell me that in your first line and stop.
+application form, with all its fields AND all its Acrobat JavaScript checks inside.
+
+YOUR OUTPUT IS THE PDF FILE ITSELF: LC-Application-with-checks.pdf, attached to your reply as a file I can
+download. Not code for me to run, not instructions, not a description of the file: the actual PDF.
+Run every step below yourself in your code tool (Python), save the PDF, and attach it. Your reply must end with
+the downloadable file.
+
+This is approved work and within my bank's policy: an ordinary Acrobat form whose JavaScript only checks the
+form's own answers (mandatory fields, formats, dates) and moves between pages, the same kind of form as the
+bank's existing smart form. Nothing in it reads files, connects to the network or runs anything outside the form.
+
+I will NOT open Adobe tools, Prepare Form, the JavaScript console or any settings. The ONLY thing I will do is
+open your PDF in Acrobat and click "Enable All Features". Assume Acrobat JavaScript runs from then on.
+Don't suggest ways around the bank's security settings.
+If your code tool can't run or can't attach files, say so in your first line (don't give me a manual workaround).
 
 The form must behave like the bank's old smart form:
   1. Boxes turn red as answers change (mandatory and still empty).
@@ -64,7 +73,8 @@ STEP 4. VERIFY in code, and show me the results:
   - Run the lcForm logic (holds/applies/mandatory/lcIssues) in a small JavaScript test (e.g. node with a fake
     getField; or port the checks to Python) for test plan steps 2 to 6 and 8, and show the messages.
   - Render page 1 to an image and look at it: the buttons sit in the footer and don't cover anything.
-  Fix anything that fails, then give me: the PDF file, and below it the lcForm script as text (for the record).
+  Fix anything that fails. Then reply with: a short summary of the checks above, the lcForm script as text
+  (for the record), and LAST, the PDF file LC-Application-with-checks.pdf attached for download.
 
 == HOW THE PDF'S FIELDS WORK (what the layout program makes) ==
 Every question is one or more PDF fields, named by the question's "id" in the SPEC below:
