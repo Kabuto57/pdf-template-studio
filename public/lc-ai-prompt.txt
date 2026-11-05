@@ -11,8 +11,10 @@ I need you to write the Adobe Acrobat JavaScript that gives this PDF the same be
   4. A "Check form" button that lists every problem and puts the cursor on the first one.
   5. A "Reset form" button (asks to confirm first).
   6. "Previous page" / "Next page" buttons.
-I will add your scripts myself in Adobe Acrobat Pro (Prepare Form and Document JavaScripts), so give me
-exact copy-paste blocks and click-by-click steps. Write for Acrobat DC on Windows. Use only the Acrobat
+I have attached the PDF. GIVE ME BACK THE FINISHED PDF FILE with all the JavaScript already inside it, ready to
+open in Acrobat (named LC-Application-with-checks.pdf). Build it by writing and running a Python program in your
+code tool (see "HOW TO BUILD THE FINISHED PDF" below). If you cannot run code or return files, say so first,
+then give me the manual steps instead (see "IF YOU CAN'T RETURN A FILE"). The scripts are for Acrobat DC on Windows. Use only the Acrobat
 JavaScript API (Doc, Field, app, util, event, color). No external libraries, no network, no privileged calls
 (no app.trustedFunction, no folder-level scripts, no file access), so it runs as an ordinary document script.
 
@@ -72,8 +74,8 @@ Messages are "<label> <message>", e.g. "Term: days is mandatory because Drafts a
   Rule in words: '<label of F> is "<V>"' (or 'is ticked' / 'is not ticked' for "true"/"false"; 'is filled in' for the not-blank rule),
   several joined with " or ".
 
-== WHAT TO WRITE ==
-A. ONE document-level script (Tools > JavaScript > Document JavaScripts, name it "lcForm"):
+== WHAT THE JAVASCRIPT MUST CONTAIN ==
+A. ONE document-level script named "lcForm":
    - The SPEC below as a JavaScript array (convert it exactly; every field and rule).
    - Helpers: answer(id), isFilled(id), holds(rule), applies(f), mandatory(f).
    - lcPaint(): for every question, apply locking, red/normal colours. Must be fast (it runs after every change)
@@ -86,19 +88,18 @@ A. ONE document-level script (Tools > JavaScript > Document JavaScripts, name it
    - lcKeys(format): returns a Keystroke function that rejects keys not allowed by the format (event.rc = false),
      and upper-cases letters for text fields.
    - At the end of the script: lcPaint(); so the form is right as soon as it opens.
-B. ONE hidden helper text field named "__rules" (anywhere, tiny, hidden) whose Calculate script is: lcPaint();
+B. ONE hidden helper text field named "__rules" (tiny, hidden) whose Calculate script is: lcPaint();
    Acrobat runs every Calculate script after any field changes, so this re-paints the form on every answer.
-   Tell me how to make sure it's in the calculation order.
-C. Buttons. Give the exact steps to add, on page 1 and then "Duplicate across pages" for the rest:
-   "Check form" (Mouse Up -> Run a JavaScript: lcCheck();), "Reset form" (lcReset();),
-   "Previous page" (this.pageNum--;), "Next page" (this.pageNum++;). Put them in the footer
-   (bottom margin, y about 10-30 pt from the bottom; there is free space right of the footer note).
-   Mark them "Visible but doesn't print".
-D. Per-field settings I set by hand (give me the list of field names for each):
-   - Date fields: Format > Date > dd/mm/yyyy.
-   - Fields with "format": Keystroke custom script, e.g. for amount: lcKeys("amount")(); (or your best equivalent).
-   - Text/long fields: Validate custom script calling one shared function, if you need one.
-   Keep the number of hand edits as small as possible; prefer logic inside lcPaint/lcIssues.
+   It must be in the form's calculation order (/AcroForm /CO).
+C. Push buttons on EVERY page, in the footer: y from 8 to 24 pt (from the bottom of the A4 page), x between
+   250 and 520 pt (the footer note is left of 250, the page number right of 520); each about 64 x 16 pt with
+   4 pt gaps; visible on screen but not printed:
+   "Check form" (lcCheck();), "Reset form" (lcReset();), "Previous page" (this.pageNum--;), "Next page" (this.pageNum++;).
+D. Per-field actions:
+   - Date fields: Format AFDate_FormatEx("dd/mm/yyyy"); Keystroke AFDate_KeystrokeEx("dd/mm/yyyy");
+     (this gives Acrobat's calendar pop-up).
+   - Fields with "format": a Keystroke script that rejects keys the format doesn't allow, e.g. lcKeys("amount")();
+   - Text/long fields without "format": a Keystroke script that upper-cases letters and rejects non-SWIFT characters.
 E. A test plan I can follow (at least these):
    1. Open the blank form: always-mandatory boxes red; "Drafts at" and "Term: days" locked and grey.
    2. Tick "Drafts for 100% invoice value at", then Drafts at = Term -> Term: days and the term options unlock and turn red; Drafts at = Sight -> locked and cleared again.
@@ -110,7 +111,40 @@ E. A test plan I can follow (at least these):
    8. Fill everything correctly -> "Everything is filled in correctly."
 F. Explain any limitation honestly (for example, if something can't be done in AcroForm JavaScript).
 
-ASSUME JAVASCRIPT RUNS: I add these scripts myself in Acrobat Pro on my own laptop, and when the form opens I click
+== HOW TO BUILD THE FINISHED PDF (in your code tool, Python) ==
+Use pypdf (pip install pypdf) to open my attached PDF and write a new one. Don't redraw the pages: keep every
+page, field, name, position and colour as it is, and only ADD the JavaScript, the helper field and the buttons.
+  1. writer = PdfWriter(clone_from="LC-Application-reportlab.pdf")
+  2. Document-level script: writer.add_js(<the lcForm script>)  (goes in /Names /JavaScript).
+  3. Field actions: on each field's dictionary (the radio group / parent for radios), set /AA with
+     /K (Keystroke), /F (Format), /V (Validate) or /C (Calculate) as {/S /JavaScript /JS (<script>)}.
+     Note: for a field whose widget is its own dictionary, put /AA there; for kids, on the parent field.
+  4. Helper field "__rules": a new text field (/FT /Tx, /T (__rules)) whose widget is on page 1 with /F 2 (hidden),
+     a tiny /Rect, /AA /C = lcPaint(); . Add it to /AcroForm /Fields and to /AcroForm /CO.
+  5. Buttons: new push-button widgets (/FT /Btn, /Ff 65536, /F 0 = shown on screen but not printed, since the
+     Print flag (4) is off), /MK << /CA (Check form) /BG [0.16 0.24 0.36] >>, /DA (/Helv 8 Tf 1 1 1 rg), /A JavaScript action.
+     Give each one a normal appearance stream (/AP /N) drawing the caption, so they show without regeneration.
+     Use unique names per page (e.g. __btn_check_1 ... __btn_next_5). Add them to /Annots and /AcroForm /Fields.
+     Make sure /AcroForm /DR has /Helv (Helvetica) and /ZaDb (ZapfDingbats).
+  6. Keep /NeedAppearances false (the existing fields already have appearances).
+  7. Don't remove or change the private /FormTemplate entry in the document catalog (the bank's workbench reads it).
+  8. Save as LC-Application-with-checks.pdf.
+Then VERIFY in code before giving it to me, and show me the results:
+  - It opens with pypdf; same number of pages (5) and every original field name still there.
+  - /Names /JavaScript contains lcForm; "__rules" is in /AcroForm /CO; 4 buttons on each page.
+  - Run the lcForm script's pure logic (holds/applies/mandatory/lcIssues) in a small JavaScript test
+    (e.g. node, with a fake getField) against test plan steps 2 to 6 and 8, and show the messages.
+Return: the PDF file, the full Python program you ran, and the lcForm script as text.
+
+== IF YOU CAN'T RETURN A FILE ==
+Give me the scripts as copy-paste blocks and the click-by-click Acrobat Pro steps instead:
+Tools > JavaScript > Document JavaScripts (add "lcForm"); Prepare Form > add the hidden "__rules" text field with
+Calculate script lcPaint(); and check Edit Fields > Set Field Calculation Order; add the 4 buttons on page 1
+(Properties > Actions > Mouse Up > Run a JavaScript; Options: Visible but doesn't print) then right-click >
+Duplicate Across Pages; date fields Properties > Format > Date > dd/mm/yyyy; and the list of fields that need
+each Keystroke script.
+
+ASSUME JAVASCRIPT RUNS: I open the PDF you give me in Acrobat on my own laptop, and when the form opens I click
 "Enable All Features" (or the yellow bar's Options > Trust this document). Assume Acrobat JavaScript runs from then on.
 So: run lcPaint() as soon as the form opens (end of the document script), and make every check work live in Acrobat.
 Don't suggest ways around the bank's security settings.
