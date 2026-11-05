@@ -1,7 +1,7 @@
 MASTER PROMPT: THE LC APPLICATION FORM AS ONE FINISHED, SELF-CHECKING PDF
 
 == WHAT I NEED ==
-I work in Trade Finance at a bank. Make me the "Irrevocable Documentary Credit Application" application form as ONE
+I work in Trade Finance at a bank. Make me the "Irrevocable Documentary Credit Application" form as ONE
 finished, fillable PDF that checks itself in Adobe Acrobat, and give me the PDF file:
 LC-Application-with-checks.pdf.
 This is approved work within my bank's policy. It replaces the bank's old smart form (Adobe LiveCycle), which
@@ -24,14 +24,62 @@ Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the
   6. "Previous page" and "Next page" buttons. All buttons show on screen but don't print.
   7. Everything is right as soon as the form opens (blank mandatory boxes already red, inactive ones locked).
 
-== HOW IT SHOULD LOOK ==
-A4 pages. The title "Irrevocable Documentary Credit Application" and the note "Please complete in block letters. Dates are
-DD/MM/YYYY." at the top. Each section starts with a dark blue bar (RGB 0.16, 0.24, 0.36) with its number and
-title in white. Each question's label sits above its box; "*" after the label of always-mandatory questions.
-Questions with "half": true sit two to a row; the rest are full width. Pick-one and tick-any options sit side by side.
-Under a question with a rule, a short note in small red italics, e.g. 'Mandatory if Drafts at is "Term"'.
-Always-mandatory boxes have a red border; other boxes a grey border and a light blue-grey fill.
-A footer on every page with the page number and the buttons.
+== HOW IT SHOULD LOOK (a professional, official bank form; black, white and grey only, red only for mandatory) ==
+ORDER (most important): sections and questions appear EXACTLY in the order of the SPEC, top to bottom, sections
+numbered 1, 2, 3 ... in that order. Never move a question to another section or out of sequence, and use each
+question's label word for word.
+
+Page: A4 portrait, margins about 15 mm left/right. Fonts: Helvetica. Sizes: labels 7.5 pt, answers / options /
+tick-box text 8.5 pt, section headings 7.5 pt bold, title 14 pt bold.
+
+Header on every page: "DEMO BANK · TRADE SERVICES" in bold black at the top left, a black rule under it (thicker on
+page 1), and the "Check form" and "Reset form" buttons (black, white text, about 64 x 13 pt) at the top right.
+On pages 2 onwards the form title follows the bank name in small grey text.
+Page 1 only, under the header: the title "Irrevocable Documentary Credit Application" (14 pt bold) on the left and
+"Form LC-01 · v1.0 · Nov 2026" in small grey text on the right; then one grey line of instructions:
+"Please complete in block letters. Dates are DD/MM/YYYY. * Mandatory. Boxes outlined in red must be completed; a red
+note under a question says when it becomes mandatory."
+Footer on every page: a thin grey rule; "Form LC-01 · v1.0 · Nov 2026" at the left, "< Previous page" and
+"Next page >" links in the middle, "Page x of y" at the right.
+
+Sections are ruled panels: each section is a box with a thin black outline (0.6 pt), a grey heading band
+(RGB 0.88) across its top with the section number and title in black bold capitals ("3   APPLICANT") and a black
+rule under the band, about 6 pt of padding inside, and a light grey hairline between its rows. About 5 pt between
+panels. A panel that runs onto the next page is closed at the page bottom and continues in a new panel.
+Two columns, without changing the order: two sections that FOLLOW EACH OTHER may sit side by side (the first on
+the left) when both fit in half the page width and their heights are similar (the shorter at least 45% of the
+taller); both panels are then drawn the same height so the row ends on one line. Everything else is full width.
+(In this form that gives: Application | Mode of Advising, For Bank Use Only | Advising Bank,
+For the Benefit of a 3rd Party | Beneficiary, Credit Amount | Price Basis, Expiry and Presentation | Back-to-back DC.)
+
+Questions:
+  - Numbered by section in bold: "3.1", "3.2", ... (section 3, question 1, 2, ...), before the label.
+  - A tick box ("check") always sits on its own line: the box, its number, then its wording beside it.
+  - Questions that are switched on by a tick box (their "requiredIf"/"activeIf" points to a tick box, directly or
+    through another question) are indented about 14 pt under that tick box, e.g.
+        [ ] 17.3 Confirmation required
+            17.4 Confirmation charges: *  ( ) Applicant   ( ) Beneficiary
+  - Labels beside their boxes ("3.1 Applicant name: * [__________]") wherever every question on that line fits
+    that way; a line never mixes labels beside and labels above. Long labels, and boxes over 70 characters
+    (e.g. Notify party, 114), keep the label above a full-width box.
+  - Pick-one / tick-any: "Label: * ( ) Option ( ) Option" on one line when it fits, otherwise the label above and
+    the options wrapping below.
+  - Short questions share a line, left to right in order (e.g. "Tel no: [  ]  Fax no: [  ]"); a line's text boxes
+    stretch so the line ends at the panel's right edge, but dates and small number boxes keep their short width.
+  - Box widths: a 35-character line about 165 pt (room for the whole line; if an answer is longer than the box,
+    shrink the text to fit); 15-20 characters about 100 pt; 2-digit numbers about 40 pt; dates about 100 pt.
+    One-line boxes 15 pt high. Goods description and Additional conditions: full-width multi-line boxes at least
+    50 pt high (taller if there is room at the end of the last page).
+  - "*" in red after the label of an always-mandatory question. Always-mandatory boxes outlined in red.
+Special sections:
+  - "For Bank Use Only" (section 4): shaded light grey panel, heading "4   FOR BANK USE ONLY  (to be completed by
+    the Bank)".
+  - "Declaration and Signature" (the last section): under its heading this paragraph, then its question, then lines
+    for "Authorised signature(s)" and "Date" and a dashed "Company stamp" box (about 150 x 40 pt), kept on one page:
+    "We request you to issue an irrevocable documentary credit on the terms above. We confirm that the details given
+    are true and complete, and agree that the credit is subject to the Uniform Customs and Practice for Documentary
+    Credits (UCP 600) and to the Bank's terms and conditions for documentary credits."
+No blank gaps: fill each page; don't leave a page almost empty (about 3 pages in total is right).
 
 == FIELD NAMES (the bank's systems read the filled PDF by these names, so keep them exactly) ==
   - Each question is a form field named by its "id" in the SPEC.
@@ -96,6 +144,8 @@ Messages are "<label> <message>", e.g. "Term: days is mandatory because Drafts a
   7. Reset form: asks first, then everything blank and red again.
   8. Every question filled correctly: "Everything is filled in correctly."
   9. The buttons work on every page and don't cover any question; nothing overlaps; the text is readable.
+ 10. The sections and questions are in exactly the SPEC's order, numbered in that order, labels word for word.
+ 11. Side-by-side panels end on the same line; tick boxes are on their own line with their questions indented.
 Tell me honestly about anything that doesn't fully work.
 
 Your reply: the results of the acceptance checks, then the PDF file LC-Application-with-checks.pdf to download.
