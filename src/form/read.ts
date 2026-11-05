@@ -25,7 +25,7 @@ export async function extractFields(doc: PDFDocument): Promise<Extracted> {
       f instanceof PDFTextField ? f.getText() ?? "" :
       f instanceof PDFRadioGroup ? f.getSelected() ?? "" :
       f instanceof PDFCheckBox ? f.isChecked() :
-      f instanceof PDFDropdown || f instanceof PDFOptionList ? f.getSelected().join(", ") :
+      f instanceof PDFDropdown || f instanceof PDFOptionList ? f.getSelected().join(", ").trim() :
       "";
     raw.set(name, value);
     const flags = (f.acroField.getWidgets()[0]?.dict.lookup(PDFName.of("F")) as PDFNumber | undefined)?.asNumber() ?? 0;

@@ -9,7 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "pdfs": "vitest run scripts/lc-pdfs",
-    "make-script": "rolldown scripts/make-lc-pdf.ts --format esm --platform node --minify --file public/make-lc-pdf.mjs"
+    "make-script": "rolldown scripts/make-lc-pdf.ts --format esm --platform node --minify --file public/make-lc-pdf.txt"
   },
   "dependencies": {
     "ajv": "^8.20.0",

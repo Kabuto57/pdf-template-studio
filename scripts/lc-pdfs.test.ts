@@ -20,6 +20,8 @@ it.skipIf(!process.env.LC_PDFS && process.env.npm_lifecycle_event !== "pdfs")("b
   mkdirSync("public/samples", { recursive: true }); // the workbench's sample applications, filled in
   for (const s of SAMPLES) writeFileSync(`public/samples/${s.file}`, await samplePdf(s));
   // The JSON Schema, and Ajv's checker for it as plain JavaScript (the site can't compile one while it runs).
+  // The form itself (questions, options, rules) as JSON, for builders in other languages (public/make_lc_pdf.py).
+  writeFileSync("public/lc-template.json", JSON.stringify(LC.template, null, 2) + "\n");
   const schema = toSchema(LC.template);
   writeFileSync("public/lc-application.schema.json", JSON.stringify(schema, null, 2) + "\n");
   const ajv = new Ajv2020({ allErrors: true, strict: false, code: { source: true, esm: true } });
