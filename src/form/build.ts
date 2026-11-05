@@ -19,7 +19,7 @@ import { ACCENT, GREY, H, INK, M, RED, RULE, TINT, W, WHITE, finishForm, tip, wr
 import { addRedFrames, type Blocks } from "./red-frames";
 import { activeRules, isRequired } from "./rules";
 import { stamp } from "./stored-template";
-import { hasOptions, safe, subId, type Field, type Section, type Template, type Values } from "./types";
+import { hasOptions, safe, subId, type Field, type Section, type Template, type Value, type Values } from "./types";
 import { fillBase } from "./upload";
 
 export type Mode = "both" | "javascript" | "no-javascript";
@@ -94,7 +94,7 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
    * 4. Lays out one question at (x, top) in width w. Draws it only when `draw` (otherwise just measures it).
    * Returns the height it takes.
    */
-  function place(f: Field, x: number, w: number, draw: boolean): number {
+  function place(f: Field, x: number, w: number, draw: boolean, inline = false): number {
     const answer = values[f.id], required = isRequired(f, values);
     // Acrobat outlines "required" boxes in red itself. Only always-mandatory boxes get the flag: the others get the
     // red frame (red-frames.ts), which follows the tick; both would draw two red lines.
@@ -123,27 +123,65 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
       return Math.max(11, lines.length * 10);
     }
 
+    // Pick one / tick any whose label and options fit on one line: "Confirmation charges: *  ( ) Applicant  ( ) Beneficiary".
+    const no = number.get(f.id) ?? "", noW = no ? bold.widthOfTextAtSize(no, LABEL) + 4 : 0;
+    const inlineW = noW + font.widthOfTextAtSize(`${safe(f.label)}:`, TEXT) + (required ? 8 : 0) + 10;
+    const choices = f.kind === "radio" || f.kind === "checks"; // (a drop-down list has options too, but is one box)
+    if (choices && inlineW + (f.options ?? []).reduce((sum, o) => sum + optionWidth(o), 0) <= w) {
+      const options = f.options ?? [], ox = x + inlineW;
+      if (draw) {
+        if (no) page.drawText(no, { x, y: top - 9, size: LABEL, font: bold, color: ACCENT });
+        blocks.set(f.id, { page, label: { x: x + noW, y: top - 9, text: `${safe(f.label)}:` } });
+        page.drawText(`${safe(f.label)}:`, { x: x + noW, y: top - 9, size: TEXT, font, color: INK });
+        if (required) page.drawText("*", { x: x + noW + font.widthOfTextAtSize(`${safe(f.label)}:`, TEXT) + 2, y: top - 9, size: 8.5, font: bold, color: RED });
+        const group = f.kind === "radio" ? form.createRadioGroup(f.id) : undefined;
+        if (group) { tip(group, f.label); if (flag) group.enableRequired(); }
+        let cx = ox;
+        options.forEach((option, i) => {
+          const box = { x: cx, y: top - 10.5, width: 9, height: 9, ...look };
+          if (group) group.addOptionToPage(safe(option), page, box);
+          else {
+            const tickBox = form.createCheckBox(subId(f.id, i));
+            tickBox.addToPage(page, box);
+            tip(tickBox, `${f.label}: ${option}`);
+            if (Array.isArray(answer) && answer.includes(option)) tickBox.check();
+          }
+          page.drawText(safe(option), { x: cx + 12, y: top - 9, size: TEXT, font, color: INK });
+          cx += optionWidth(option);
+        });
+        if (group && typeof answer === "string" && options.includes(answer)) group.select(safe(answer));
+        blocks.get(f.id)!.box = [ox - 3, top - 13, cx - ox - 4, 16]; // all the options, framed as one
+      }
+      return 13;
+    }
+
+    // A one-line box whose label is short enough: the label beside it, "Name: [          ]", as on the smart form.
+    // (Only when the whole line is set this way, so a line never mixes labels beside and above their boxes.)
+    const said = shown(f), labelW = inlineLabelW(f);
+    if (inline && canInline(f, w)) {
+      if (draw) {
+        if (no) page.drawText(no, { x, y: top - 10.5, size: LABEL, font: bold, color: ACCENT });
+        blocks.set(f.id, { page, label: { x: x + noW, y: top - 10.5, text: `${said}:` } });
+        page.drawText(`${said}:`, { x: x + noW, y: top - 10.5, size: LABEL, font, color: INK });
+        if (required) page.drawText("*", { x: x + noW + font.widthOfTextAtSize(`${said}:`, LABEL) + 2, y: top - 10.5, size: 8.5, font: bold, color: RED });
+        drawBox(f, x + labelW, top - 1 - BOX, w - labelW, BOX, answer, look, flag);
+      }
+      return BOX + 2;
+    }
+
     // Everything else: the label on top (with a red * if mandatory), the box(es) below.
     if (draw) {
-      const no = number.get(f.id) ?? "", lx = x + (no ? bold.widthOfTextAtSize(no, LABEL) + 4 : 0);
+      const lx = x + noW;
       if (no) page.drawText(no, { x, y: top - 7, size: LABEL, font: bold, color: ACCENT });
-      blocks.set(f.id, { page, label: { x: lx, y: top - 7, text: safe(f.label) } });
-      page.drawText(safe(f.label), { x: lx, y: top - 7, size: LABEL, font, color: INK });
-      if (required) page.drawText("*", { x: lx + font.widthOfTextAtSize(safe(f.label), LABEL) + 2, y: top - 7, size: 8.5, font: bold, color: RED });
+      blocks.set(f.id, { page, label: { x: lx, y: top - 7, text: said } });
+      page.drawText(said, { x: lx, y: top - 7, size: LABEL, font, color: INK });
+      if (required) page.drawText("*", { x: lx + font.widthOfTextAtSize(said, LABEL) + 2, y: top - 7, size: 8.5, font: bold, color: RED });
     }
     let y = top - 10;
 
     // A drop-down list.
     if (f.kind === "select") {
-      if (draw) {
-        const list = form.createDropdown(f.id);
-        list.addOptions((f.options ?? []).map(safe));
-        tip(list, f.label);
-        if (flag) list.enableRequired();
-        if (typeof answer === "string" && f.options?.includes(answer)) list.select(safe(answer));
-        list.addToPage(page, { x, y: y - BOX, width: w, height: BOX, font, ...look });
-        list.setFontSize(TEXT);
-      }
+      if (draw) drawBox(f, x, y - BOX, w, BOX, answer, look, flag);
       return 10 + BOX;
     }
 
@@ -179,16 +217,30 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     // A date, or a text box (one line, or a paragraph).
     const h = f.kind === "long" ? 50 + (longExtra.get(f.id) ?? 0) : BOX;
     if (draw && f.kind === "long") longsOn.set(f.id, page);
-    if (draw && f.kind === "date") {
-      addDateLists(form, page, f.id, f.label, answer, { x, y: y - h, width: w, height: h }, font, TEXT, look, js);
-    } else if (draw) {
+    if (draw) drawBox(f, x, y - h, w, h, answer, look, flag);
+    return 10 + h;
+  }
+
+  /** The answer box itself: a drop-down list, a date, or a text box (one line or a paragraph), at (x, y) w by h. */
+  function drawBox(f: Field, x: number, y: number, w: number, h: number, answer: Value | undefined, look: object, flag: boolean) {
+    if (f.kind === "select") {
+      const list = form.createDropdown(f.id);
+      list.addOptions((f.options ?? []).map(safe));
+      tip(list, f.label);
+      if (flag) list.enableRequired();
+      if (typeof answer === "string" && f.options?.includes(answer)) list.select(safe(answer));
+      list.addToPage(page, { x, y, width: w, height: h, font, ...look });
+      list.setFontSize(TEXT);
+    } else if (f.kind === "date") {
+      addDateLists(form, page, f.id, f.label, answer, { x, y, width: w, height: h }, font, TEXT, look, js);
+    } else {
       const box = form.createTextField(f.id);
       if (f.kind === "long") box.enableMultiline();
       if (flag) box.enableRequired();
       tip(box, f.label);
       if (f.max) box.setMaxLength(f.max);
       if (typeof answer === "string" && answer) box.setText(safe(answer).slice(0, f.max));
-      box.addToPage(page, { x, y: y - h, width: w, height: h, font, ...look });
+      box.addToPage(page, { x, y, width: w, height: h, font, ...look });
       // A one-line box narrower than a full line of its text: an answer that doesn't fit is shrunk to fit, so a long
       // name or address still shows in full, on screen and printed. Here for answers already filled in; in Acrobat
       // by "auto" font size (set after the appearances are drawn, below).
@@ -197,9 +249,28 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
       if (f.kind === "text" && room < font.widthOfTextAtSize("N".repeat(f.max ?? 35), TEXT)) shrink.push(box);
       if (js) box.acroField.dict.set(PDFName.of("AA"), f.format ? formatActions(doc, js, f) : swiftActions(doc, js)); // Acrobat: refuse wrong keys
     }
-    return 10 + h;
   }
   const optionWidth = (option: string) => 12 + font.widthOfTextAtSize(safe(option), TEXT) + 10;
+  // The label as shown. Under a tick box, a repeated prefix is dropped: under "Packing list", "Packing list: copies"
+  // reads "Copies". (The field's tooltip and the error messages keep the full label.)
+  const shown = (f: Field) => {
+    const l = safe(f.label), i = l.indexOf(": ");
+    return under(f) && i > 0 ? l[i + 2].toUpperCase() + l.slice(i + 3) : l;
+  };
+  // A label beside its box ("Name: [   ]"), and whether a question can be set that way at width w.
+  const inlineLabelW = (f: Field) => (number.has(f.id) ? bold.widthOfTextAtSize(number.get(f.id)!, LABEL) + 4 : 0) + font.widthOfTextAtSize(`${shown(f)}:`, LABEL) + (f.required || f.requiredIf ? 7 : 0) + 6;
+  const canInline = (f: Field, w: number) =>
+    (f.kind === "text" || f.kind === "date" || f.kind === "select") && (f.max ?? 35) <= 70 && // a very long line keeps its full width
+    inlineLabelW(f) <= w * 0.65 && w - inlineLabelW(f) >= Math.min(boxNeed(f), 110);
+  /** How wide a question's box(es) need to be. */
+  const boxNeed = (f: Field) =>
+    f.kind === "long" ? Infinity :
+    f.kind === "check" ? 0 :
+    f.kind === "date" ? 96 :
+    f.kind === "select" ? Math.max(...(f.options ?? []).map(o => font.widthOfTextAtSize(safe(o), TEXT))) + 24 :
+    hasOptions(f.kind) ? (f.options ?? []).reduce((sum, o) => sum + optionWidth(o), 0) :
+    f.format === "number" || (f.max ?? 99) <= 3 ? 40 :
+    (f.max ?? 35) <= 20 ? 100 : (f.max ?? 35) <= 35 ? 165 : (f.max ?? 0) <= 70 ? 330 : Infinity;
 
   // 3. The sections, on a grid of 12 narrow columns. Each question takes the width it needs: a little for a number,
   //    a date or a currency, a third of the page for a 35-character name or address line (room for the whole line),
@@ -209,20 +280,15 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   const colW = (W - 2 * M - (COLS - 1) * CGAP) / COLS;
   const spanWidth = (n: number) => n * colW + (n - 1) * CGAP;
   const triggers = new Set(t.sections.flatMap(s => s.fields).flatMap(f => [...(f.requiredIf ?? []), ...(f.activeIf ?? [])]).map(r => r.field));
-  const span = (f: Field) => {
+  const span = (f: Field, above = false) => {
     const label = font.widthOfTextAtSize(safe(f.label), f.kind === "check" ? TEXT : LABEL) + (f.kind === "check" ? 16 : 10) + 18; // + its number
-    const box =
-      f.kind === "long" ? Infinity :
-      f.kind === "check" ? 0 :
-      f.kind === "date" ? 96 :
-      f.kind === "select" ? Math.max(...(f.options ?? []).map(o => font.widthOfTextAtSize(safe(o), TEXT))) + 24 :
-      hasOptions(f.kind) ? (f.options ?? []).reduce((sum, o) => sum + optionWidth(o), 0) :
-      f.format === "number" || (f.max ?? 99) <= 3 ? 40 :
-      (f.max ?? 35) <= 20 ? 100 : (f.max ?? 35) <= 35 ? 165 : (f.max ?? 0) <= 70 ? 330 : Infinity;
+    const box = boxNeed(f);
     // A tick box that switches on other boxes takes at least a third of the line, so the boxes after it line up
     // from one row to the next (originals, copies, ...).
     const least = f.kind === "check" && triggers.has(f.id) ? COLS / 3 : 1;
-    for (let n = least; n < COLS; n++) if (spanWidth(n) >= Math.max(label, box)) return n;
+    const need = f.kind === "radio" || f.kind === "checks" ? label + box + 12 : // options sit beside their label when they fit
+      f.kind === "long" || above ? Math.max(label, box) : Math.max(label, Math.min(inlineLabelW(f) + box, label + box));
+    for (let n = least; n < COLS; n++) if (spanWidth(n) >= need) return n;
     return COLS;
   };
 
@@ -234,20 +300,32 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   const BAND = 13;         // the heading band
   const SECTION_GAP = 6;   // between boxes
   const inner = (a: Area) => { const w = a.w - 2 * PAD, cw = (w - (a.cols - 1) * CGAP) / a.cols; return { x: a.x + PAD, w, sw: (n: number) => n * cw + (n - 1) * CGAP }; };
+  // A tick box sits on a line of its own, and the questions it switches on (and theirs, in turn) are indented under
+  // it, like the smart form: "[ ] Confirmation required" then, indented, "Confirmation charges: ( ) Applicant ...".
+  const byId = new Map(t.sections.flatMap(s => s.fields).map(f => [f.id, f]));
+  const under = (f: Field, seen = new Set<string>()): boolean => [...(f.requiredIf ?? []), ...(f.activeIf ?? [])].some(r => {
+    const p = byId.get(r.field);
+    if (!p || seen.has(p.id)) return false;
+    seen.add(p.id);
+    return p.kind === "check" || under(p, seen);
+  });
+  const INDENT = 14;
   const lines = (s: Section, cols: number) => {
     const rows: Field[][] = [];
-    let used = cols;
+    let used = cols, last: Field | undefined;
     for (const f of s.fields) {
-      const n = Math.min(cols, span(f));
-      if (used + n > cols || triggers.has(f.id) || f.kind === "check") { rows.push([]); used = 0; }
+      const n = Math.min(cols, span(f) + (under(f) ? 1 : 0));
+      if (used + n > cols || triggers.has(f.id) || f.kind === "check" || last?.kind === "check" || (last && under(last) !== under(f))) { rows.push([]); used = 0; }
       rows[rows.length - 1].push(f);
       used += n;
+      last = f;
     }
     return rows;
   };
   // Columns left over at the end of a line go to its text boxes and lists (not dates or numbers, which keep their
   // own short width), shared out evenly, so most lines end on the box's right edge.
-  const layout = (row: Field[], a: Area) => {
+  const layout = (row: Field[], area: Area) => {
+    const a = under(row[0]) ? { ...area, x: area.x + INDENT, w: area.w - INDENT } : area; // indented under its tick box
     const { x: x0, sw } = inner(a);
     const n = row.map(f => Math.min(a.cols, span(f)));
     const grow = row.map(f => f.kind === "long" || f.kind === "select" || (f.kind === "text" && f.format !== "number" && (f.max ?? 99) > 3));
@@ -255,7 +333,9 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     if (k) row.forEach((_, i) => { if (grow[i]) { const add = Math.ceil(spare / k--); n[i] += add; spare -= add; } });
     return row.map((f, i) => { const w = sw(n[i]), at = x; x += w + CGAP; return { f, x: at, w }; });
   };
-  const rowHeight = (row: Field[], a: Area) => Math.max(...layout(row, a).map(c => place(c.f, c.x, c.w, false)));
+  // A line's labels go beside their boxes when every question on it can be set that way.
+  const inlineRow = (row: Field[], a: Area) => layout(row, a).every(c => c.f.kind === "radio" || c.f.kind === "checks" || canInline(c.f, c.w));
+  const rowHeight = (row: Field[], a: Area) => { const inl = inlineRow(row, a); return Math.max(...layout(row, a).map(c => place(c.f, c.x, c.w, false, inl))); };
   const SIGN = 62; // the signature, date and stamp lines
   const noteOf = (s: Section, a: Area) => (s.note ? wrap(s.note, font, 7.5, inner(a).w) : []);
   const sectionHeight = (s: Section, a: Area) => {
@@ -283,7 +363,8 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
       const h = rowHeight(row, a);
       if (breaks && top - h < BOTTOM) { top -= 1; outline(); newPage(); boxTop = top; top -= 5; } // the box carries on over the page
       if (i > 0) page.drawLine({ start: { x: cx, y: top + 3 }, end: { x: cx + cw, y: top + 3 }, thickness: 0.4, color: RULE }); // between rows
-      for (const c of layout(row, a)) place(c.f, c.x, c.w, true);
+      const inl = inlineRow(row, a);
+      for (const c of layout(row, a)) place(c.f, c.x, c.w, true, inl);
       top -= h + 5;
     });
     // Signature, date and company stamp: lines to sign on paper after printing.
@@ -313,7 +394,7 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   const LEFT: Area = { x: M, w: halfW, cols: COLS / 2 }, RIGHT: Area = { ...LEFT, x: M + halfW + SECTION_GAP };
   const halfOK = (s: Section) => !s.note && !s.signoff && !s.bankOnly &&
     bold.widthOfTextAtSize(`${s.title.toUpperCase()}`, 6) + 30 < halfW &&
-    s.fields.every(f => f.kind !== "long" && (hasOptions(f.kind) ? (f.options ?? []).every(o => optionWidth(o) < inner(LEFT).w) : f.kind === "check" || span(f) <= COLS / 2)) &&
+    s.fields.every(f => f.kind !== "long" && (hasOptions(f.kind) ? (f.options ?? []).every(o => optionWidth(o) < inner(LEFT).w) : f.kind === "check" || span(f, true) <= COLS / 2)) &&
     sectionHeight(s, LEFT) < 300;
   for (let si = 0; si < t.sections.length;) {
     if (!halfOK(t.sections[si]) || !t.sections[si + 1] || !halfOK(t.sections[si + 1])) { drawSection(t.sections[si], si, FULL, true); si++; continue; }

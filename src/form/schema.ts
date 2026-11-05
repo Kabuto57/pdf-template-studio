@@ -79,7 +79,7 @@ export function toSchema(t: Template): Schema {
 
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: `https://kabuto57.github.io/pdf-template-studio/${t.title === "Irrevocable Documentary Credit (LC)" ? "lc-application" : "form"}.schema.json`,
+    $id: `https://kabuto57.github.io/pdf-template-studio/${t.title === "Irrevocable Documentary Credit Application" ? "lc-application" : "form"}.schema.json`,
     title: t.title,
     type: "object",
     required: all.filter(f => f.required).map(f => f.id),

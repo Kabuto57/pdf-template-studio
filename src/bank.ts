@@ -6,7 +6,7 @@ import { buildPdf } from "./pdf";
 import { OPS_ADDRESS } from "./mailbox";
 
 const CATEGORIES: [string, string[]][] = [
-  ["Import", ["Irrevocable Documentary Credit (LC)", "Amendment to Original Documentary Credit"]],
+  ["Import", ["Irrevocable Documentary Credit Application", "Amendment to Original Documentary Credit"]],
   [
     "Export",
     [
@@ -25,7 +25,7 @@ const lcRow = () =>
     h(
       "span",
       { className: "name" },
-      h("b", {}, "Irrevocable Documentary Credit (LC)"),
+      h("b", {}, "Irrevocable Documentary Credit Application"),
       h("span", { className: "tag" }, "UPDATED"),
       h("small", {}, "Fill online (every answer checked as you type), or download the PDF: the JavaScript version checks everything in Acrobat; the no-JavaScript version works in any viewer."),
     ),

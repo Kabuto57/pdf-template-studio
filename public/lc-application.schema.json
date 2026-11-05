@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kabuto57.github.io/pdf-template-studio/lc-application.schema.json",
-  "title": "Irrevocable Documentary Credit (LC)",
+  "title": "Irrevocable Documentary Credit Application",
   "type": "object",
   "required": [
     "application_date",
