@@ -80,6 +80,7 @@ Special sections:
     are true and complete, and agree that the credit is subject to the Uniform Customs and Practice for Documentary
     Credits (UCP 600) and to the Bank's terms and conditions for documentary credits."
 No blank gaps: fill each page; don't leave a page almost empty (about 3 pages in total is right).
+(The "half" values in the SPEC are older layout hints: follow the width rules above instead.)
 
 == FIELD NAMES (the bank's systems read the filled PDF by these names, so keep them exactly) ==
   - Each question is a form field named by its "id" in the SPEC.
