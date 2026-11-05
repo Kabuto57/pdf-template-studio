@@ -218,14 +218,14 @@ ${always ? 'else app.alert("All mandatory questions are answered and every answe
   // "Reset form": asks first, then clears every answer back to how the form started, and re-checks.
   const reset = `if (app.alert("Are you sure you want to reset the form? All your answers will be cleared.", 2, 2) == 4) {
 this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lcRules == "function") lcRules(this); }`;
-  // Each button is one field with a widget per page: at the top right of page 1, or (toolbar) just above the footer
-  // of every page, beside "Reset form".
+  // Each button is one field with a widget per page: at the top right of page 1, or (toolbar) at the left of the
+  // footer of every page, beside "Reset form".
   const style = { font, textColor: WHITE, backgroundColor: INK, borderColor: INK };
   const buttons: [string, string, string][] = [["__check_form", "Check form", report(true)], ...(toolbar ? [["__reset_form", "Reset form", reset]] as [string, string, string][] : [])];
   buttons.forEach(([name, caption, code], i) => {
     const button = form.createButton(name);
     for (const p of toolbar ?? [page])
-      button.addToPage(caption, p, toolbar ? { x: W - M - 76 * (buttons.length - i) + 4, y: 40, width: 72, height: 14, ...style } : { x: W - M - 84, y: H - 44, width: 84, height: 18, ...style });
+      button.addToPage(caption, p, toolbar ? { x: M + 68 * i, y: 19, width: 64, height: 13, ...style } : { x: W - M - 84, y: H - 44, width: 84, height: 18, ...style });
     button.setFontSize(toolbar ? 8 : 9);
     for (const w of button.acroField.getWidgets()) {
       w.dict.set(PDFName.of("A"), js(code));         // A = on click

@@ -12,10 +12,10 @@
 //                    follow the answers, locking, typing filters, calendar dates, "Check form", warnings before
 //                    save/print. Assumes JavaScript is on; with it off, only the page links and lists work.
 //   "both":          the two together (the studio's preview and the samples).
-import { PDFDocument, PDFHexString, PDFName, PDFPage, StandardFonts } from "pdf-lib";
+import { PDFDocument, PDFHexString, PDFName, PDFPage, PDFString, StandardFonts } from "pdf-lib";
 import { addChecks, formatActions, swiftActions } from "./acrobat-script";
 import { addDateLists } from "./dates";
-import { BOTTOM, GAP, GREY, H, INK, M, RED, RULE, W, WHITE, finishForm, tip, wrap } from "./look";
+import { GREY, H, INK, M, RED, RULE, W, WHITE, finishForm, tip, wrap } from "./look";
 import { addRedFrames, type Blocks } from "./red-frames";
 import { activeRules, isRequired } from "./rules";
 import { stamp } from "./stored-template";
@@ -24,7 +24,13 @@ import { fillBase } from "./upload";
 
 export type Mode = "both" | "javascript" | "no-javascript";
 
-const BOX = 17; // height of a one-line answer box
+// Sizes, kept small so the LC fits on two pages while staying readable.
+const BOTTOM = 42;   // start a new page below this height (the footer is under it)
+const BOX = 13;      // height of a one-line answer box
+const LABEL = 7;     // question labels
+const TEXT = 8;      // answers, options and tick-box wording
+const COLS = 12;     // the page is a grid of 12 narrow columns; each question takes as many as it needs
+const CGAP = 4;      // gap between columns
 
 /** Makes the blank form, or (with values) a filled one. */
 export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "both"): Promise<Uint8Array> {
@@ -43,20 +49,21 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
 
   // 2. Title and instructions. `top` is the pen: it starts near the top of the page and moves down.
   let page: PDFPage = doc.addPage([W, H]), top = 0;
-  const newPage = () => { page = doc.addPage([W, H]); top = H - M; };
-  page.drawText(safe(t.title.toUpperCase()), { x: M, y: H - 62, size: 16, font: bold, color: INK });
-  page.drawLine({ start: { x: M, y: H - 72 }, end: { x: W - M, y: H - 72 }, thickness: 1.5, color: INK });
-  top = H - 80;
-  for (const line of wrap(t.note, font, 8.5, W - 2 * M)) {
-    page.drawText(line, { x: M, y: top - 9, size: 8.5, font, color: INK });
-    top -= 11.5;
+  const newPage = () => { page = doc.addPage([W, H]); top = H - 26; };
+  page.drawText(safe(t.title.toUpperCase()), { x: M, y: H - 40, size: 13, font: bold, color: INK });
+  page.drawLine({ start: { x: M, y: H - 47 }, end: { x: W - M, y: H - 47 }, thickness: 1.2, color: INK });
+  top = H - 50;
+  for (const line of wrap(t.note, font, 7.5, W - 2 * M)) {
+    page.drawText(line, { x: M, y: top - 8, size: 7.5, font, color: INK });
+    top -= 10;
   }
-  top -= 10;
+  top -= 4;
 
   // Box styles. A mandatory box is outlined in red (not only starred) until it is answered.
   const plain = { borderColor: INK, borderWidth: 0.75, backgroundColor: WHITE };
   const mandatory = { ...plain, borderColor: RED, borderWidth: 1.25 };
   const blocks: Blocks = new Map(); // where each question was drawn, for the red frames
+  const shrink: ReturnType<typeof form.createTextField>[] = []; // boxes whose text shrinks to fit in Acrobat
 
   /**
    * 4. Lays out one question at (x, top) in width w. Draws it only when `draw` (otherwise just measures it).
@@ -74,25 +81,25 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
 
     // A single tick box: the box, then its label beside it.
     if (f.kind === "check") {
-      const lines = wrap(f.label, font, 9, w - 16);
+      const lines = wrap(f.label, font, TEXT, w - 14);
       if (draw) {
         const box = form.createCheckBox(f.id);
-        box.addToPage(page, { x, y: top - 11, width: 10, height: 10, ...look });
+        box.addToPage(page, { x, y: top - 10, width: 9, height: 9, ...look });
         tip(box, f.label);
         if (required) { if (flag) box.enableRequired(); page.drawText("*", { x: x - 7, y: top - 10, size: 9, font: bold, color: RED }); }
         if (answer === true) box.check();
-        lines.forEach((l, i) => page.drawText(l, { x: x + 16, y: top - 9 - i * 11, size: 9, font, color: INK }));
+        lines.forEach((l, i) => page.drawText(l, { x: x + 14, y: top - 8 - i * 10, size: TEXT, font, color: INK }));
       }
-      return Math.max(12, lines.length * 11);
+      return Math.max(11, lines.length * 10);
     }
 
     // Everything else: the label on top (with a red * if mandatory), the box(es) below.
     if (draw) {
-      blocks.set(f.id, { page, label: { x, y: top - 8, text: safe(f.label) } });
-      page.drawText(safe(f.label), { x, y: top - 8, size: 8, font, color: INK });
-      if (required) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), 8) + 2, y: top - 8, size: 9, font: bold, color: RED });
+      blocks.set(f.id, { page, label: { x, y: top - 6.5, text: safe(f.label) } });
+      page.drawText(safe(f.label), { x, y: top - 6.5, size: LABEL, font, color: INK });
+      if (required) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), LABEL) + 2, y: top - 6.5, size: 8, font: bold, color: RED });
     }
-    let y = top - 11;
+    let y = top - 9;
 
     // A drop-down list.
     if (f.kind === "select") {
@@ -103,9 +110,9 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
         if (flag) list.enableRequired();
         if (typeof answer === "string" && f.options?.includes(answer)) list.select(safe(answer));
         list.addToPage(page, { x, y: y - BOX, width: w, height: BOX, font, ...look });
-        list.setFontSize(9);
+        list.setFontSize(TEXT);
       }
-      return 11 + BOX;
+      return 9 + BOX;
     }
 
     // Pick one (radio buttons) or tick any (one tick box per option), wrapping onto more lines when needed.
@@ -115,10 +122,10 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
       if (group) { tip(group, f.label); if (flag) group.enableRequired(); }
       let cx = x, right = x;
       options.forEach((option, i) => {
-        const span = 14 + font.widthOfTextAtSize(safe(option), 9) + 14;
-        if (cx > x && cx + span > x + w) { cx = x; y -= 14; } // next line
+        const span = optionWidth(option);
+        if (cx > x && cx + span > x + w) { cx = x; y -= 12; } // next line
         if (draw) {
-          const box = { x: cx, y: y - 11, width: 10, height: 10, ...look };
+          const box = { x: cx, y: y - 10.5, width: 9, height: 9, ...look };
           if (group) {
             group.addOptionToPage(safe(option), page, box);
           } else {
@@ -127,20 +134,20 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
             tip(tickBox, `${f.label}: ${option}`);
             if (Array.isArray(answer) && answer.includes(option)) tickBox.check();
           }
-          page.drawText(safe(option), { x: cx + 14, y: y - 9.5, size: 9, font, color: INK });
+          page.drawText(safe(option), { x: cx + 12, y: y - 9, size: TEXT, font, color: INK });
         }
         right = Math.max(right, cx + span - 10);
         cx += span;
       });
       if (group && typeof answer === "string" && options.includes(answer)) group.select(safe(answer));
-      if (draw) blocks.get(f.id)!.box = [x - 3, y - 14, right - x + 6, top - 11 - y + 17]; // all the options, framed as one
-      return top - y + 13;
+      if (draw) blocks.get(f.id)!.box = [x - 3, y - 13, right - x + 6, top - 9 - y + 16]; // all the options, framed as one
+      return top - y + 12;
     }
 
     // A date, or a text box (one line, or a paragraph).
-    const h = f.kind === "long" ? 40 : BOX;
+    const h = f.kind === "long" ? 30 : BOX;
     if (draw && f.kind === "date") {
-      addDateLists(form, page, f.id, f.label, answer, { x, y: y - h, width: Math.min(w, 200), height: h }, font, 9, look, js);
+      addDateLists(form, page, f.id, f.label, answer, { x, y: y - h, width: Math.min(w, 200), height: h }, font, TEXT, look, js);
     } else if (draw) {
       const box = form.createTextField(f.id);
       if (f.kind === "long") box.enableMultiline();
@@ -149,47 +156,75 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
       if (f.max) box.setMaxLength(f.max);
       if (typeof answer === "string" && answer) box.setText(safe(answer).slice(0, f.max));
       box.addToPage(page, { x, y: y - h, width: w, height: h, font, ...look });
-      box.setFontSize(9);
+      // A one-line box narrower than a full line of its text: an answer that doesn't fit is shrunk to fit, so a long
+      // name or address still shows in full, on screen and printed. Here for answers already filled in; in Acrobat
+      // by "auto" font size (set after the appearances are drawn, below).
+      const text = f.kind === "text" && typeof answer === "string" ? safe(answer).replace(/\s+/g, " ") : "", room = w - 6;
+      box.setFontSize(Math.min(TEXT, text ? TEXT * room / Math.max(room, font.widthOfTextAtSize(text, TEXT)) : TEXT));
+      if (f.kind === "text" && room < font.widthOfTextAtSize("N".repeat(f.max ?? 35), TEXT)) shrink.push(box);
       if (js) box.acroField.dict.set(PDFName.of("AA"), f.format ? formatActions(doc, js, f) : swiftActions(doc, js)); // Acrobat: refuse wrong keys
     }
-    return 11 + h;
+    return 9 + h;
   }
+  const optionWidth = (option: string) => 12 + font.widthOfTextAtSize(safe(option), TEXT) + 10;
 
-  // 3. The sections.
-  const half = (W - 2 * M - GAP) / 2;
-  // To save pages, a one-line text box of up to 35 characters (a SWIFT line) also goes half width, beside its
-  // neighbour, when its label fits on one line there: names and address lines pair up.
-  const isHalf = (f: Field) => !!f.half || (f.kind === "text" && !!f.max && f.max <= 35 && font.widthOfTextAtSize(safe(f.label), 8) <= half - 8);
-  const widthOf = (f: Field) => isHalf(f) ? half : W - 2 * M;
+  // 3. The sections, on a grid of 12 narrow columns. Each question takes the width it needs: a little for a number,
+  //    a date or a currency, a third of the page for a 35-character name or address line, more for long text or
+  //    many options. Questions fill a line left to
+  //    right; a question that other questions depend on (a tick box, "Drafts at", "Shipment from") starts a new line,
+  //    so it sits with the boxes it switches on, as on the bank's own form.
+  const colW = (W - 2 * M - (COLS - 1) * CGAP) / COLS;
+  const spanWidth = (n: number) => n * colW + (n - 1) * CGAP;
+  const triggers = new Set(t.sections.flatMap(s => s.fields).flatMap(f => [...(f.requiredIf ?? []), ...(f.activeIf ?? [])]).map(r => r.field));
+  const span = (f: Field) => {
+    const label = font.widthOfTextAtSize(safe(f.label), f.kind === "check" ? TEXT : LABEL) + (f.kind === "check" ? 16 : 10);
+    const box =
+      f.kind === "long" ? Infinity :
+      f.kind === "check" ? 0 :
+      f.kind === "date" ? 96 :
+      f.kind === "select" ? Math.max(...(f.options ?? []).map(o => font.widthOfTextAtSize(safe(o), TEXT))) + 24 :
+      hasOptions(f.kind) ? (f.options ?? []).reduce((sum, o) => sum + optionWidth(o), 0) :
+      f.format === "number" || (f.max ?? 99) <= 3 ? 40 :
+      (f.max ?? 35) <= 35 ? 120 : (f.max ?? 0) <= 70 ? 330 : Infinity;
+    // A tick box that switches on other boxes takes at least a third of the line, so the boxes after it line up
+    // from one row to the next (originals, copies, ...).
+    const least = f.kind === "check" && triggers.has(f.id) ? COLS / 3 : 1;
+    for (let n = least; n < COLS; n++) if (spanWidth(n) >= Math.max(label, box)) return n;
+    return COLS;
+  };
   t.sections.forEach((s, si) => {
-    // Pair up neighbouring half-width questions into one row.
     const rows: Field[][] = [];
+    let used = COLS;
     for (const f of s.fields) {
-      const last = rows[rows.length - 1];
-      if (isHalf(f) && last?.length === 1 && isHalf(last[0])) last.push(f); else rows.push([f]);
+      const n = span(f);
+      if (used + n > COLS || triggers.has(f.id)) { rows.push([]); used = 0; }
+      rows[rows.length - 1].push(f);
+      used += n;
     }
-    const height = (row: Field[]) => Math.max(...row.map(f => place(f, M, widthOf(f), false)));
+    // Where each question of a row goes, and the row's height.
+    const layout = (row: Field[]) => { let x = M; return row.map(f => { const w = spanWidth(span(f)), at = x; x += w + CGAP; return { f, x: at, w }; }); };
+    const height = (row: Field[]) => Math.max(...layout(row).map(c => place(c.f, c.x, c.w, false)));
 
     // The black section bar, "1.  APPLICATION" (on a new page if not even its first row fits).
-    if (top - 34 - (rows[0] ? height(rows[0]) : 0) < BOTTOM) newPage();
-    page.drawRectangle({ x: M, y: top - 18, width: W - 2 * M, height: 16, color: INK });
-    page.drawText(safe(`${si + 1}.  ${s.title.toUpperCase()}`), { x: M + 6, y: top - 13.5, size: 9, font: bold, color: WHITE });
-    top -= 24;
+    if (top - 18 - (rows[0] ? height(rows[0]) : 0) < BOTTOM) newPage();
+    page.drawRectangle({ x: M, y: top - 11, width: W - 2 * M, height: 10, color: INK });
+    page.drawText(safe(`${si + 1}.  ${s.title.toUpperCase()}`), { x: M + 5, y: top - 8.7, size: 7, font: bold, color: WHITE });
+    top -= 13;
 
     for (const row of rows) {
       const h = height(row);
       if (top - h < BOTTOM) newPage();
-      row.forEach((f, i) => place(f, M + i * (half + GAP), widthOf(f), true));
-      top -= h + 6;
+      for (const c of layout(row)) place(c.f, c.x, c.w, true);
+      top -= h + 2;
     }
-    top -= 2;
+    top -= 1;
   });
 
   // 5. Footers: the title, and "Page x of y".
   const pages = doc.getPages();
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: M, y: 36 }, end: { x: W - M, y: 36 }, thickness: 0.5, color: RULE });
-    p.drawText(safe(t.title), { x: M, y: 24, size: 7.5, font, color: GREY });
+    if (mode !== "javascript") p.drawText(safe(t.title), { x: M, y: 24, size: 7.5, font, color: GREY }); // the buttons sit here otherwise
     const n = `Page ${i + 1} of ${pages.length}`;
     p.drawText(n, { x: W - M - font.widthOfTextAtSize(n, 7.5), y: 24, size: 7.5, font, color: GREY });
     // "< Previous page" / "Next page >": plain PDF links, so they work in every viewer, JavaScript on or off.
@@ -217,6 +252,13 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
     if (v) f.acroField.dict.set(PDFName.of("DV"), v);
   }
   form.updateFieldAppearances(font);
+  // Font size 0 = Acrobat sizes the text to fit as it is typed. Set in the dictionaries directly, after the
+  // appearances are drawn, so pdf-lib keeps the 8 pt look for the box as it is now.
+  for (const box of shrink)
+    for (const d of [box.acroField.dict, ...box.acroField.getWidgets().map(w => w.dict)]) {
+      const da = d.lookup(PDFName.of("DA"));
+      if (da instanceof PDFString) d.set(PDFName.of("DA"), PDFString.of(da.asString().replace(/[\d.]+ Tf/, "0 Tf")));
+    }
   finishForm(doc, font);
   return doc.save();
 }
