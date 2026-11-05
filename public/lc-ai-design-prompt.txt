@@ -1,0 +1,97 @@
+MASTER PROMPT: UI/UX DESIGN RULES FOR THE "IRREVOCABLE DOCUMENTARY CREDIT APPLICATION" FORM
+
+== YOUR JOB ==
+Apply the design below to the Irrevocable Documentary Credit Application PDF form so it looks like a professional,
+official bank form. This is approved work within my bank's policy. Give me back the finished PDF file.
+
+== STICK TO THE RULES AND VALIDATION (do not change these) ==
+The design is the ONLY thing you change. Everything below must stay exactly as it is and keep working:
+  - Every question, its field name (id), its kind (text, date, drop-down, pick-one, tick box, tick-any), its
+    options and its wording. Don't add, remove, rename, merge or split any field.
+  - The order of sections and questions.
+  - Every mandatory rule: always-mandatory questions, and questions that become mandatory when another answer is
+    given (e.g. "Term: days" when Drafts at = Term; the bill-of-lading boxes when that row is ticked).
+  - Every conditional rule: questions locked, greyed and cleared until the answer that switches them on is given.
+  - Every validation: maximum lengths; formats (amount, whole number, phone, account); SWIFT-safe characters with
+    letters upper-cased as typed; real DD/MM/YYYY dates with the calendar pop-up; the checks across answers
+    (expiry not before the latest shipment date or the application date; shipment not before the application date;
+    application date not in the future; amount above zero; no insurance arrangement with CIF/CIP).
+  - The error messages, the "Check form" button (lists every problem, puts the cursor on the first one), the
+    "Reset form" button (asks first), and the red outline on mandatory boxes that are still empty.
+If a design choice would break any of these, keep the rule and adjust the design. After you finish, test the
+checks again (blank form, Drafts at = Term, a ticked document row, a wrong amount, dates out of order, CIF with an
+insurance arrangement, Reset, a fully correct form) and tell me the results honestly.
+
+== OVERALL ==
+  - Colours: black, white and greys only. Red only for mandatory marks and outlines. No brand colours, no blue.
+  - Font: Helvetica. Sizes: title 14 pt bold; section headings 7.5 pt bold capitals; labels 7.5 pt; answers,
+    options and tick-box wording 8.5 pt; header, footer and notes 7 pt.
+  - Page: A4 portrait, about 15 mm side margins. Fill each page; no big blank areas, and don't leave a page almost
+    empty (about 3 pages in total is right). More pages are fine if needed to keep everything readable.
+
+== ORDER AND FLOW (most important) ==
+  - Sections and questions appear in their original order, top to bottom. Never move a question to another
+    section or out of sequence.
+  - Sections are numbered 1, 2, 3 ...; questions are numbered by section in bold before the label: 3.1, 3.2, ...
+  - Labels are used word for word.
+
+== HEADER AND FOOTER ==
+  - Every page, top: "DEMO BANK · TRADE SERVICES" in bold black at the left, a black rule under it (thicker on
+    page 1), and the "Check form" and "Reset form" buttons at the right (black, white text, about 64 x 13 pt,
+    shown on screen, not printed). From page 2, the form title follows the bank name in small grey text.
+  - Page 1, under the header: the title "Irrevocable Documentary Credit Application" (14 pt bold) at the left and
+    "Form LC-01 · v1.0 · Nov 2026" in small grey text at the right; then one grey line:
+    "Please complete in block letters. Dates are DD/MM/YYYY. * Mandatory. Boxes outlined in red must be completed;
+    a red note under a question says when it becomes mandatory."
+  - Every page, bottom: a thin grey rule; "Form LC-01 · v1.0 · Nov 2026" at the left, "< Previous page" and
+    "Next page >" links in the middle, "Page x of y" at the right.
+
+== SECTIONS AS RULED PANELS ==
+  - Each section is a box: thin black outline (0.6 pt), a grey heading band across the top (RGB 0.88) with the
+    number and title in black bold capitals ("3   APPLICANT"), a black rule under the band, about 6 pt padding
+    inside, and a light grey hairline between rows. About 5 pt between panels.
+  - A panel that runs onto the next page is closed at the page bottom and continues in a new panel.
+  - Two columns without changing the order: two sections that FOLLOW EACH OTHER sit side by side (first on the left)
+    when both fit half the page width and their heights are similar (the shorter at least 45% of the taller).
+    Both panels are then drawn the same height, so the row ends on one line. Everything else is full width.
+    For this form: Application | Mode of Advising; For Bank Use Only | Advising Bank;
+    For the Benefit of a 3rd Party | Beneficiary; Credit Amount | Price Basis; Expiry and Presentation | Back-to-back DC.
+
+== QUESTIONS ==
+  - Tick boxes: always on their own line: the box, its number, then its wording beside it.
+  - Questions switched on by a tick box (directly, or through another question) are indented about 14 pt under it:
+        [ ] 17.3 Confirmation required
+            17.4 Confirmation charges: *  ( ) Applicant   ( ) Beneficiary
+  - Labels beside their boxes ("3.1 Applicant name: * [____________]") wherever every question on that line fits
+    that way. A line never mixes labels beside and labels above. Long labels, and boxes for more than 70
+    characters (e.g. Notify party, 114), keep the label above a full-width box.
+  - Pick-one / tick-any: "Label: * ( ) Option  ( ) Option" on one line when it fits; otherwise the label above and the
+    options wrapping below.
+  - Short questions share a line, left to right in order (e.g. "Tel no: [    ]  Fax no: [    ]"). A line's text
+    boxes and drop-downs stretch so it ends at the panel's right edge; dates and small number boxes keep their
+    short width.
+  - Box sizes: one-line boxes 15 pt high. Widths: a 35-character line about 165 pt (room for the whole line; if an
+    answer is longer than the box, shrink the text to fit); 15-20 characters about 100 pt; 2-digit numbers about
+    40 pt; dates about 100 pt. Goods description and Additional conditions: full-width multi-line boxes, at least
+    50 pt high, taller if there is room at the end of the last page.
+  - Mandatory: a red "*" after the label of always-mandatory questions, and their boxes outlined in red.
+    Conditionally mandatory boxes turn red only when they become mandatory (the existing checks do this).
+  - Locked questions: grey fill (RGB 0.9) while they don't apply (the existing checks do this).
+
+== SPECIAL SECTIONS ==
+  - "For Bank Use Only" (section 4): the whole panel shaded light grey (RGB 0.95); heading
+    "4   FOR BANK USE ONLY  (to be completed by the Bank)".
+  - "Declaration and Signature" (last section): under its heading this paragraph, then "Name and title of authorised
+    person(s)", then lines for "Authorised signature(s)" and "Date" and a dashed "Company stamp" box (about
+    150 x 40 pt). Keep it together on one page:
+    "We request you to issue an irrevocable documentary credit on the terms above. We confirm that the details given
+    are true and complete, and agree that the credit is subject to the Uniform Customs and Practice for Documentary
+    Credits (UCP 600) and to the Bank's terms and conditions for documentary credits."
+
+== BEFORE YOU HAND IT OVER ==
+  1. Same fields as before: every field name still there, same kinds and options, nothing extra (helpers aside).
+  2. Same order and wording; sections and questions numbered in that order.
+  3. All the checks above still work (list the results).
+  4. Side-by-side panels end on one line; tick boxes on their own line with their questions indented; nothing
+     overlaps; buttons don't cover any question; text readable when printed.
+Reply with these results, then the PDF file.
