@@ -110,10 +110,10 @@ E. A test plan I can follow (at least these):
    8. Fill everything correctly -> "Everything is filled in correctly."
 F. Explain any limitation honestly (for example, if something can't be done in AcroForm JavaScript).
 
-IMPORTANT ABOUT MY LAPTOP: Acrobat JavaScript is switched off by the bank's policy on my laptop. I'm asking my IT team
-how this form can be trusted the same way as the old smart form (privileged location or certified document).
-Write the scripts anyway; they must work as soon as JavaScript is allowed for this document. Don't suggest ways
-around the bank's security settings.
+ASSUME JAVASCRIPT RUNS: I add these scripts myself in Acrobat Pro on my own laptop, and when the form opens I click
+"Enable All Features" (or the yellow bar's Options > Trust this document). Assume Acrobat JavaScript runs from then on.
+So: run lcPaint() as soon as the form opens (end of the document script), and make every check work live in Acrobat.
+Don't suggest ways around the bank's security settings.
 
 == SPEC: every question, in form order (one JSON object per line) ==
 {"id": "application_date", "section": "Application", "label": "Date", "kind": "date", "required": true}
