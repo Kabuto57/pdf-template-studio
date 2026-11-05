@@ -1,8 +1,9 @@
 MASTER PROMPT: ACROBAT JAVASCRIPT FOR THE LC APPLICATION FORM
 
 == WHO I AM AND WHAT I NEED ==
-I work in Trade Finance at a bank. I have a PDF form for the "Irrevocable Documentary Credit (LC)" application:
-LC-Application-reportlab.pdf (5 pages, A4, an ordinary AcroForm PDF, no XFA, no JavaScript yet).
+I work in Trade Finance at a bank. I have attached the PDF form for the "Irrevocable Documentary Credit (LC)"
+application. The form is FINISHED: layout, fields, colours and wording are all done (an ordinary AcroForm PDF,
+no XFA). DO NOT change the design. Your job is ONLY the scripting part.
 It replaces the bank's old Adobe LiveCycle (XFA) smart form, whose checks were JavaScript.
 I need you to write the Adobe Acrobat JavaScript that gives this PDF the same behaviour as the old smart form:
   1. Boxes turn red as answers change (mandatory and still empty).
@@ -11,12 +12,19 @@ I need you to write the Adobe Acrobat JavaScript that gives this PDF the same be
   4. A "Check form" button that lists every problem and puts the cursor on the first one.
   5. A "Reset form" button (asks to confirm first).
   6. "Previous page" / "Next page" buttons.
-I have attached the PDF. GIVE ME BACK THE FINISHED PDF FILE with all the JavaScript already inside it, ready to
+GIVE ME BACK THE SAME PDF FILE with all the JavaScript already inside it, ready to
 open in Acrobat (named LC-Application-with-checks.pdf). Build it by writing and running a Python program in your
 code tool (see "HOW TO BUILD THE FINISHED PDF" below). If you cannot run code or return files, say so first,
 then give me the manual steps instead (see "IF YOU CAN'T RETURN A FILE"). The scripts are for Acrobat DC on Windows. Use only the Acrobat
 JavaScript API (Doc, Field, app, util, event, color). No external libraries, no network, no privileged calls
 (no app.trustedFunction, no folder-level scripts, no file access), so it runs as an ordinary document script.
+
+== FIRST: CHECK MY PDF ==
+Before writing anything, open the attached PDF in your code tool and list its fields (name, type, page). Match them
+to the SPEC below and show me a short table: SPEC questions found, missing, and PDF fields not in the SPEC.
+The description below is how the form normally looks; if my PDF differs (for example dates as three drop-downs
+for day, month and year, or a drop-down whose blank choice is "" instead of " "), follow MY PDF and tell me.
+Never rename, move, delete or restyle existing fields.
 
 == HOW THE PDF IS BUILT (the field names are fixed; don't rename anything) ==
 Every question is one or more PDF fields, named by the question's "id" in the SPEC below:
@@ -114,7 +122,8 @@ F. Explain any limitation honestly (for example, if something can't be done in A
 == HOW TO BUILD THE FINISHED PDF (in your code tool, Python) ==
 Use pypdf (pip install pypdf) to open my attached PDF and write a new one. Don't redraw the pages: keep every
 page, field, name, position and colour as it is, and only ADD the JavaScript, the helper field and the buttons.
-  1. writer = PdfWriter(clone_from="LC-Application-reportlab.pdf")
+If my PDF already has page buttons or links, keep them and don't add duplicates.
+  1. writer = PdfWriter(clone_from=<my attached PDF>)
   2. Document-level script: writer.add_js(<the lcForm script>)  (goes in /Names /JavaScript).
   3. Field actions: on each field's dictionary (the radio group / parent for radios), set /AA with
      /K (Keystroke), /F (Format), /V (Validate) or /C (Calculate) as {/S /JavaScript /JS (<script>)}.
@@ -130,7 +139,7 @@ page, field, name, position and colour as it is, and only ADD the JavaScript, th
   7. Don't remove or change the private /FormTemplate entry in the document catalog (the bank's workbench reads it).
   8. Save as LC-Application-with-checks.pdf.
 Then VERIFY in code before giving it to me, and show me the results:
-  - It opens with pypdf; same number of pages (5) and every original field name still there.
+  - It opens with pypdf; same number of pages and every original field name still there.
   - /Names /JavaScript contains lcForm; "__rules" is in /AcroForm /CO; 4 buttons on each page.
   - Run the lcForm script's pure logic (holds/applies/mandatory/lcIssues) in a small JavaScript test
     (e.g. node, with a fake getField) against test plan steps 2 to 6 and 8, and show the messages.
