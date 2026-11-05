@@ -1,0 +1,77 @@
+MASTER PROMPT: MAKE THE CHECK FORM, RESET FORM, PREVIOUS PAGE AND NEXT PAGE BUTTONS WORK
+
+== THE PROBLEM ==
+I have attached the "Irrevocable Documentary Credit Application" PDF. The "Check form", "Reset form", "Previous page"
+and "Next page" buttons do nothing when clicked. Fix ONLY the buttons, and make sure nothing that already works
+breaks (re-check the REGRESSION CHECKLIST below before handing it back). Give me back the SAME PDF (same design,
+fields, names, scripts), named LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open
+it in Adobe Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's security
+settings. Don't redraw or rebuild the pages.
+
+== STEP 1: FIND THE CAUSE (check each, and tell me which you found) ==
+  A. The "buttons" are only drawn shapes and text on the page, not real button fields, so there is nothing to click.
+  B. The action is on the wrong object or the wrong event: it must be a JavaScript action that runs on Mouse Up, on
+     the button's WIDGET annotation (the /A entry of the widget, or /AA /U), on every copy of the button on every page.
+  C. The button is covered by something else that takes the click: another field or annotation on top of it (for
+     example the hidden helper field "__checks", a text box, or a link), or a drawn rectangle placed over it.
+  D. The button is read-only, hidden (annotation flags Hidden / NoView), or locked by a script.
+  E. The script it calls is missing or misnamed: the buttons call lcRules, which must exist as a document-level
+     script named "lcRules" (one copy only).
+  F. The script has an error (Acrobat stops silently). Open the JavaScript console in a test run, or run the code in
+     a stand-in, and show any errors.
+
+== WHAT EACH BUTTON MUST BE ==
+Every button is a real push-button field (field type Btn with the Pushbutton flag, /Ff 65536), with one widget on
+each page where it appears (either one field with a widget per page, or separate fields such as __btn_check_1,
+__btn_check_2 ...; names starting with "__" so the bank's systems skip them). Each widget:
+  - sits on top (nothing else overlaps it), is visible on screen and does not print (Print flag off), not read-only;
+  - keeps its current look (black box, white text) from my design;
+  - has a Mouse Up JavaScript action with EXACTLY this text:
+
+"Check form":
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("This form is not ready to send. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them before you send the form.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else app.alert("All mandatory questions are answered and every answer is in the right format. You can save the form and send it.", 3);
+
+"Reset form":
+if (app.alert("Are you sure you want to reset the form? All your answers will be cleared.", 2, 2) == 4) {
+this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lcRules == "function") lcRules(this); }
+
+"Previous page":
+if (this.pageNum > 0) this.pageNum--;
+
+"Next page":
+if (this.pageNum < this.numPages - 1) this.pageNum++;
+
+(If my PDF has no "Previous page" / "Next page" buttons and only text links, either add real buttons next to the
+page number in the footer, styled like the other buttons, or give the links a Go To Page action to the previous /
+next page. Tell me which you did.)
+
+Reset form must reset only the answers: the buttons themselves and the hidden helper fields keep working afterwards.
+Starting answers after Reset: if the form had them (Mode of advising = Full Swift; Presentation period = 21; "All bank
+charges are for account of" ticked with Beneficiary; post-shipment financing ticked; "Please debit all DC issuance
+charges" ticked), keep them as the fields' default values so Reset brings them back.
+
+== REGRESSION CHECKLIST (check ALL of these on the final file; mark each PASS or FAIL) ==
+  1. Each of the four buttons is a real push-button with its Mouse Up action, on every page where it appears,
+     with nothing on top of it.
+  2. Check form on the blank form: one message listing the missing always-mandatory answers (Date, Applicant name,
+     Applicant address, Contact party Name, Tel no, Beneficiary's name and address, Currency, Amount, Price basis,
+     Partial shipment, Transhipment, Date of expiry, Goods description, Account no for DC issuance charges,
+     Financing), then the cursor is in the first one (Date).
+  3. Check form on a fully correct form: "All mandatory questions are answered ...".
+  4. Reset form: asks first; No changes nothing; Yes clears every answer, brings back the starting answers, and the
+     red / locked state is the blank-form state again.
+  5. Previous page / Next page move one page back / forward and do nothing on the first / last page.
+  6. The document script "lcRules" is present once; the date boxes still have their calendar (Format
+     AFDate_FormatEx("dd/mm/yyyy"), Keystroke AFDate_KeystrokeEx("dd/mm/yyyy"), no other keystroke filter).
+  7. Typing filters on the other boxes are still there; every field name is unchanged.
+  8. Conditional questions still work: tick "Drafts for 100% invoice value at" -> Drafts at clickable and red;
+     Drafts at = Term -> Term days / days after / prepay unlock and turn red; untick -> grey and cleared.
+Test the logic in code against a stand-in for Acrobat (with this.pageNum, numPages, getField, resetForm, app.alert)
+and show the results. Reply with: the cause(s) you found, results 1 to 8, and LAST the PDF file. Tell me honestly
+if anything fails or could not be tested.
