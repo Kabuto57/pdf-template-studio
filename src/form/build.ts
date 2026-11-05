@@ -25,7 +25,7 @@ import { fillBase } from "./upload";
 export type Mode = "both" | "javascript" | "no-javascript";
 
 // Sizes, kept small so the LC fits on three pages while staying readable.
-const BOTTOM = 42;   // start a new page below this height (the footer is under it)
+const BOTTOM = 39;   // start a new page below this height (the footer is under it)
 const BOX = 15;      // height of a one-line answer box
 const LABEL = 7.5;   // question labels
 const TEXT = 8.5;    // answers, options and tick-box wording
@@ -294,7 +294,7 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   type Area = { x: number; w: number; cols: number };
   const PAD = 6;           // inside the box, around the questions
   const BAND = 13;         // the heading band
-  const SECTION_GAP = 6;   // between boxes
+  const SECTION_GAP = 5;   // between boxes
   const inner = (a: Area) => { const w = a.w - 2 * PAD, cw = (w - (a.cols - 1) * CGAP) / a.cols; return { x: a.x + PAD, w, sw: (n: number) => n * cw + (n - 1) * CGAP }; };
   // A tick box sits on a line of its own, and the questions it switches on (and theirs, in turn) are indented under
   // it, like the smart form: "[ ] Confirmation required" then, indented, "Confirmation charges: ( ) Applicant ...".
@@ -332,28 +332,29 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   // A line's labels go beside their boxes when every question on it can be set that way.
   const inlineRow = (row: Field[], a: Area) => layout(row, a).every(c => c.f.kind === "radio" || c.f.kind === "checks" || canInline(c.f, c.w));
   const rowHeight = (row: Field[], a: Area) => { const inl = inlineRow(row, a); return Math.max(...layout(row, a).map(c => place(c.f, c.x, c.w, false, inl))); };
-  const SIGN = 62; // the signature, date and stamp lines
+  const SIGN = 46; // the signature, date and stamp lines
   const noteOf = (s: Section, a: Area) => (s.note ? wrap(s.note, font, 7.5, inner(a).w) : []);
   const sectionHeight = (s: Section, a: Area) => {
     const note = noteOf(s, a);
-    return BAND + 4 + note.length * 9.5 + (note.length ? 4 : 0) + lines(s, a.cols).reduce((sum, r) => sum + rowHeight(r, a) + 5, 0) + (s.signoff ? SIGN : 0) + 1;
+    return BAND + 4 + note.length * 9 + (note.length ? 4 : 0) + lines(s, a.cols).reduce((sum, r) => sum + rowHeight(r, a) + 4, 0) + (s.signoff ? SIGN : 0) + 1;
   };
 
   /** Draws one section's box at (a.x, top). `breaks`: may continue on a new page between rows. */
-  function drawSection(s: Section, si: number, a: Area, breaks: boolean) {
+  function drawSection(s: Section, si: number, a: Area, breaks: boolean, bottom?: number) {
     const rows = lines(s, a.cols), note = noteOf(s, a), whole = sectionHeight(s, a), { x: cx, w: cw } = inner(a);
     // On a new page if not even its first row fits. The sign-off and the bank's panel are kept whole on one page.
     if (breaks && top - ((s.signoff || s.bankOnly) ? whole : BAND + 12 + (rows[0] ? rowHeight(rows[0], a) : 0)) < BOTTOM) newPage();
     let boxTop = top;
     const outline = () => page.drawRectangle({ x: a.x, y: top, width: a.w, height: boxTop - top, borderColor: INK, borderWidth: 0.6 });
-    if (s.bankOnly) page.drawRectangle({ x: a.x, y: top - whole, width: a.w, height: whole, color: rgb(0.95, 0.95, 0.95) }); // the bank's panel is shaded
+    const fill = bottom !== undefined ? Math.max(whole, top - bottom) : whole;
+    if (s.bankOnly) page.drawRectangle({ x: a.x, y: top - fill, width: a.w, height: fill, color: rgb(0.95, 0.95, 0.95) }); // the bank's panel is shaded
     // The heading band: "3   APPLICANT" in black on grey, shrunk a little if it's too long for the box.
     page.drawRectangle({ x: a.x, y: top - BAND, width: a.w, height: BAND, color: TINT });
     page.drawLine({ start: { x: a.x, y: top - BAND }, end: { x: a.x + a.w, y: top - BAND }, thickness: 0.6, color: INK });
     const heading = safe(`${si + 1}   ${s.title.toUpperCase()}${s.bankOnly ? "  (to be completed by the Bank)" : ""}`);
     page.drawText(heading, { x: a.x + PAD, y: top - 9.3, size: Math.min(7.5, 7.5 * (a.w - 2 * PAD) / bold.widthOfTextAtSize(heading, 7.5)), font: bold, color: INK });
     top -= BAND + 4;
-    for (const line of note) { page.drawText(line, { x: cx, y: top - 7.5, size: 7.5, font, color: INK }); top -= 9.5; }
+    for (const line of note) { page.drawText(line, { x: cx, y: top - 7.5, size: 7.5, font, color: INK }); top -= 9; }
     if (note.length) top -= 4;
     rows.forEach((row, i) => {
       const h = rowHeight(row, a);
@@ -361,21 +362,22 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
       if (i > 0) page.drawLine({ start: { x: cx, y: top + 3 }, end: { x: cx + cw, y: top + 3 }, thickness: 0.4, color: RULE }); // between rows
       const inl = inlineRow(row, a);
       for (const c of layout(row, a)) place(c.f, c.x, c.w, true, inl);
-      top -= h + 5;
+      top -= h + 4;
     });
     // Signature, date and company stamp: lines to sign on paper after printing.
     if (s.signoff) {
       const line = (x: number, w: number, label: string) => {
-        page.drawLine({ start: { x, y: top - 34 }, end: { x: x + w, y: top - 34 }, thickness: 0.75, color: INK });
-        page.drawText(label, { x, y: top - 43, size: 7, font, color: GREY });
+        page.drawLine({ start: { x, y: top - 28 }, end: { x: x + w, y: top - 28 }, thickness: 0.75, color: INK });
+        page.drawText(label, { x, y: top - 36, size: 7, font, color: GREY });
       };
       line(cx, 190, "Authorised signature(s)");
       line(cx + 210, 110, "Date");
-      page.drawRectangle({ x: cx + cw - 150, y: top - 56, width: 150, height: 54, borderColor: INK, borderWidth: 0.75, borderDashArray: [2, 2] });
-      page.drawText("Company stamp", { x: cx + cw - 146, y: top - 52, size: 7, font, color: GREY });
+      page.drawRectangle({ x: cx + cw - 150, y: top - 43, width: 150, height: 41, borderColor: INK, borderWidth: 0.75, borderDashArray: [2, 2] });
+      page.drawText("Company stamp", { x: cx + cw - 146, y: top - 39, size: 7, font, color: GREY });
       top -= SIGN;
     }
     top -= 1;
+    if (bottom !== undefined) top = Math.min(top, bottom); // as tall as the panel beside it
     outline();
     top -= SECTION_GAP;
   }
@@ -400,12 +402,11 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     // and the next section carries on from it.
     if (top - h < BOTTOM && top - sectionHeight(a, FULL) - SECTION_GAP >= BOTTOM) { drawSection(a, si, FULL, true); continue; }
     if (top - h < BOTTOM) newPage();
-    const start = top;
-    drawSection(a, si, LEFT, false);
-    const leftEnd = top;
+    // Both panels drawn to the same height, so a row of panels ends on one line.
+    const start = top, bottom = start - Math.max(ha, hb);
+    drawSection(a, si, LEFT, false, bottom);
     top = start;
-    drawSection(b, si + 1, RIGHT, false);
-    top = Math.min(leftEnd, top);
+    drawSection(b, si + 1, RIGHT, false, bottom);
     si++;
   }
 
