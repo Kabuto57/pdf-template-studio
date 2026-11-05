@@ -127,6 +127,22 @@
         }
       ]
     },
+    "applicant_address_4": {
+      "title": "Applicant address (line 4)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
     "contact_name": {
       "title": "Contact party for this application & confirmation of FX rate: Name",
       "type": "string",
@@ -401,6 +417,22 @@
     },
     "beneficiary_address_3": {
       "title": "Beneficiary's address (line 3)",
+      "type": "string",
+      "allOf": [
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 35,
+          "description": "is longer than 35 characters"
+        }
+      ]
+    },
+    "beneficiary_address_4": {
+      "title": "Beneficiary's address (line 4)",
       "type": "string",
       "allOf": [
         {

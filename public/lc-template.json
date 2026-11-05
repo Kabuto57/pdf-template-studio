@@ -66,6 +66,13 @@
           "max": 35
         },
         {
+          "id": "applicant_address_4",
+          "label": "Applicant address (line 4)",
+          "kind": "text",
+          "half": false,
+          "max": 35
+        },
+        {
           "id": "contact_name",
           "label": "Contact party for this application & confirmation of FX rate: Name",
           "kind": "text",
@@ -205,6 +212,13 @@
         {
           "id": "beneficiary_address_3",
           "label": "Beneficiary's address (line 3)",
+          "kind": "text",
+          "half": false,
+          "max": 35
+        },
+        {
+          "id": "beneficiary_address_4",
+          "label": "Beneficiary's address (line 4)",
           "kind": "text",
           "half": false,
           "max": 35

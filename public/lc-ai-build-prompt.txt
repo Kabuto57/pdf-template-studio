@@ -107,6 +107,7 @@ Your reply: the results of the acceptance checks, then the PDF file LC-Applicati
 {"id": "applicant_address_1", "section": "Applicant", "label": "Applicant address", "kind": "text", "half": false, "required": true, "max": 35}
 {"id": "applicant_address_2", "section": "Applicant", "label": "Applicant address (line 2)", "kind": "text", "half": false, "max": 35}
 {"id": "applicant_address_3", "section": "Applicant", "label": "Applicant address (line 3)", "kind": "text", "half": false, "max": 35}
+{"id": "applicant_address_4", "section": "Applicant", "label": "Applicant address (line 4)", "kind": "text", "half": false, "max": 35}
 {"id": "contact_name", "section": "Applicant", "label": "Contact party for this application & confirmation of FX rate: Name", "kind": "text", "half": false, "required": true, "max": 35}
 {"id": "contact_tel", "section": "Applicant", "label": "Contact party: Tel no", "kind": "text", "half": true, "required": true, "max": 15, "format": "phone"}
 {"id": "contact_fax", "section": "Applicant", "label": "Contact party: Fax no", "kind": "text", "half": true, "max": 15, "format": "phone"}
@@ -124,6 +125,7 @@ Your reply: the results of the acceptance checks, then the PDF file LC-Applicati
 {"id": "beneficiary_address_1", "section": "Beneficiary", "label": "Beneficiary's address", "kind": "text", "half": false, "required": true, "max": 35}
 {"id": "beneficiary_address_2", "section": "Beneficiary", "label": "Beneficiary's address (line 2)", "kind": "text", "half": false, "max": 35}
 {"id": "beneficiary_address_3", "section": "Beneficiary", "label": "Beneficiary's address (line 3)", "kind": "text", "half": false, "max": 35}
+{"id": "beneficiary_address_4", "section": "Beneficiary", "label": "Beneficiary's address (line 4)", "kind": "text", "half": false, "max": 35}
 {"id": "beneficiary_contact", "section": "Beneficiary", "label": "Contact person", "kind": "text", "half": false, "max": 35}
 {"id": "beneficiary_tel", "section": "Beneficiary", "label": "Tel no", "kind": "text", "half": true, "max": 15, "format": "phone"}
 {"id": "beneficiary_fax", "section": "Beneficiary", "label": "Fax no", "kind": "text", "half": true, "max": 15, "format": "phone"}

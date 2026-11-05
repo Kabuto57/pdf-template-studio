@@ -11,7 +11,8 @@ describe("LC in the bank's layout", () => {
     const pdf = await buildLcPdf(LC_SAMPLE);
     const names = new Set((await PDFDocument.load(pdf)).getForm().getFields().map(f => f.getName()));
     const missing = LC.template.sections.flatMap(s => s.fields).filter(f => !names.has(f.kind === "checks" ? `${f.id}__0` : f.kind === "date" ? `${f.id}__list` : f.id)).map(f => f.id);
-    expect(missing).toEqual([]);
+    // The bank's layout has 3 address lines, as the smart form does; the 4th line is only in the new design.
+    expect(missing).toEqual(["applicant_address_4", "beneficiary_address_4"]);
     const { data } = await extractPdf(pdf);
     for (const [k, v] of Object.entries(LC_SAMPLE)) expect([k, data[k]]).toEqual([k, v]);
   });

@@ -66,7 +66,7 @@ export function compare(c: Customer, data: Record<string, unknown>): Match[] {
     if (form) out.push({ id, label, form, record, ok });
   };
   add("applicant_name", "Name", s("applicant_name"), c.name, true);
-  const addr = ["applicant_address_1", "applicant_address_2", "applicant_address_3"].map(s).filter(Boolean).join(", ");
+  const addr = ["applicant_address_1", "applicant_address_2", "applicant_address_3", "applicant_address_4"].map(s).filter(Boolean).join(", ");
   add("applicant_address_1", "Address", addr, c.address.join(", "), norm(addr) === norm(c.address.join("")));
   add("contact_tel", "Tel no", s("contact_tel"), c.tel, norm(s("contact_tel")) === norm(c.tel));
   for (const [id, label] of [

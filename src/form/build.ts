@@ -310,7 +310,7 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     const rows: Field[][] = [];
     let used = cols, last: Field | undefined;
     for (const f of s.fields) {
-      const n = Math.min(cols, span(f) + (under(f) ? 1 : 0));
+      const n = Math.min(cols, span(f));
       if (used + n > cols || triggers.has(f.id) || f.kind === "check" || last?.kind === "check" || (last && under(last) !== under(f))) { rows.push([]); used = 0; }
       rows[rows.length - 1].push(f);
       used += n;
