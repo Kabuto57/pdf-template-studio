@@ -1,0 +1,54 @@
+MASTER PROMPT: BRING BACK THE CALENDAR ON THE DATE BOXES, AND KEEP EVERYTHING ELSE WORKING
+
+== THE PROBLEM ==
+I have attached the "Irrevocable Documentary Credit Application" PDF. The date boxes no longer show Acrobat's calendar
+pop-up. Fix ONLY that, and make sure nothing that already works breaks (each earlier fix broke something else, so you
+must re-check everything in the REGRESSION CHECKLIST below before handing it back). Give me back the SAME PDF (same
+design, fields, names, scripts), named LC-Application-with-checks.pdf. This is approved work within my bank's
+policy. I open it in Adobe Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's
+security settings. Don't redraw or rebuild the pages.
+
+== THE DATE BOXES ==
+There are exactly four: application_date, latest_shipment_date, expiry_date, draft_date.
+Acrobat shows its calendar only when ALL of these are true for each of them:
+  1. It is a plain one-line TEXT field (not a drop-down, not multi-line, not "comb", no character limit).
+  2. Its Format action (/AA /F) is exactly:      AFDate_FormatEx("dd/mm/yyyy");
+  3. Its Keystroke action (/AA /K) is exactly:   AFDate_KeystrokeEx("dd/mm/yyyy");
+     and NOTHING else. In particular NOT the upper-case / SWIFT typing filter: that filter is for ordinary text
+     boxes only. If the filter replaced or was added to the date's Keystroke action, that is why the calendar is gone.
+  4. No Validate action that rejects the value, and no Calculate action on the date box itself.
+  5. The On Blur action may stay:  lcRules(this);
+  6. Visible, and not read-only when it applies (draft_date is locked until Drafts at = "Date"; that is correct).
+Most likely causes: (a) the typing filter was put on the date boxes; (b) the Format action is missing or not the
+exact text above; (c) the date box was turned into a drop-down or a multi-line/comb field; (d) a document script
+hides it (if a script sets display = hidden on these four, remove that; an older script called lcDates only touches
+fields named <date>__list and must leave these four visible).
+Tell me which cause(s) you found.
+
+== REGRESSION CHECKLIST (check ALL of these on the final file, and show me the results) ==
+Structure (inspect the file):
+  1. The four date boxes have exactly the Format and Keystroke actions above, and are text fields.
+  2. Typing filters on the OTHER boxes are still there: amount [^0-9.,]; whole numbers [^0-9]; phone [^0-9+() -];
+     account [^0-9-]; every other text box upper-cases and refuses non-SWIFT characters. None on the date boxes.
+  3. Document-level script "lcRules" is present (one copy; no older duplicate scripts).
+  4. Every tick box / pick-one option / tick-any box has Mouse Up: lcRules(this); every text box, date box and
+     drop-down has On Blur: lcRules(this); the hidden "__checks" field has Calculate: lcRules(this) and is in the
+     calculation order.
+  5. "Check form", "Reset form", "Previous page", "Next page" buttons have their actions on every page.
+  6. No field has the PDF ReadOnly flag set permanently; Required flag only on always-mandatory fields (or none).
+  7. Every field name is unchanged.
+Behaviour (test the logic in code against a stand-in for Acrobat's fields, and describe what Acrobat will show):
+  8. Clicking a date box shows the calendar; typing 31/02/2026 is refused; picking a date shows dd/mm/yyyy.
+  9. Blank form: only the always-mandatory empty boxes are red (Date, Applicant name, Applicant address, Contact
+     party Name, Tel no, Beneficiary's name and address, Currency, Amount, Price basis, Partial shipment,
+     Transhipment, Date of expiry, Goods description, Account no for DC issuance charges, and Financing).
+ 10. Tick "Drafts for 100% invoice value at": Drafts at becomes clickable and red. Drafts at = Date: the Date box
+     (draft_date) unlocks, is red, and its calendar works. Drafts at = Term: Term days / days after / prepay unlock
+     and turn red, the Date box locks and clears.
+ 11. Tick a document row (e.g. Packing list): its originals/copies unlock and turn red; untick: grey and cleared.
+ 12. Expiry 31/12/2026 with latest shipment 15/01/2027: Check form reports "Date of expiry ... is before the latest
+     shipment date". Amount "1,25,000.0.0": "Amount is not an amount".
+ 13. Check form lists problems and puts the cursor on the first; Reset form asks first, then clears to the
+     blank-form state.
+Reply with: the cause(s) you found, the results of 1 to 13 (mark each PASS or FAIL), and LAST the PDF file.
+Tell me honestly if anything fails or could not be tested.
