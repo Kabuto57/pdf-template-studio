@@ -1,98 +1,48 @@
-MASTER PROMPT: BUILD THE WHOLE LC APPLICATION PDF, WITH ALL ITS CHECKS
+MASTER PROMPT: THE LC APPLICATION FORM AS ONE FINISHED, SELF-CHECKING PDF
 
 == WHAT I NEED ==
-I work in Trade Finance at a bank. Build me ONE finished PDF file: the "Irrevocable Documentary Credit (LC)"
-application form, with all its fields AND all its Acrobat JavaScript checks inside.
+I work in Trade Finance at a bank. Make me the "Irrevocable Documentary Credit (LC)" application form as ONE
+finished, fillable PDF that checks itself in Adobe Acrobat, and give me the PDF file:
+LC-Application-with-checks.pdf.
+This is approved work within my bank's policy. It replaces the bank's old smart form (Adobe LiveCycle), which
+checked customers' answers as they filled it in. Mine must do the same.
 
-YOUR OUTPUT IS THE PDF FILE ITSELF: LC-Application-with-checks.pdf, attached to your reply as a file I can
-download. Not code for me to run, not instructions, not a description of the file: the actual PDF.
-Run every step below yourself in your code tool (Python), save the PDF, and attach it. Your reply must end with
-the downloadable file.
+Work out how to build it yourself, check your own work, and only give it to me when it passes the acceptance
+checks at the end. I won't edit the PDF or change any Acrobat settings: the only thing I will do is open it in
+Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's security settings.
 
-This is approved work and within my bank's policy: an ordinary Acrobat form whose JavaScript only checks the
-form's own answers (mandatory fields, formats, dates) and moves between pages, the same kind of form as the
-bank's existing smart form. Nothing in it reads files, connects to the network or runs anything outside the form.
+== WHAT THE FORM MUST DO ==
+  1. Mandatory boxes that are still empty show red (red border, light red fill), and update as answers change.
+  2. Questions that don't apply are locked: read-only, greyed (RGB 0.9, 0.9, 0.9) and cleared, until the answer
+     that switches them on is given. When they apply again, they unlock.
+  3. Checks while typing and on leaving a box: dates (DD/MM/YYYY, real dates, with a calendar pop-up),
+     amounts, whole numbers, phone and account numbers, SWIFT-safe characters (letters upper-cased as typed),
+     and maximum lengths.
+  4. A "Check form" button that lists every problem (missing, wrong, and the checks across answers) and puts the
+     cursor on the first one; or says "Everything is filled in correctly."
+  5. A "Reset form" button that asks to confirm, then clears everything.
+  6. "Previous page" and "Next page" buttons. All buttons show on screen but don't print.
+  7. Everything is right as soon as the form opens (blank mandatory boxes already red, inactive ones locked).
 
-I will NOT open Adobe tools, Prepare Form, the JavaScript console or any settings. The ONLY thing I will do is
-open your PDF in Acrobat and click "Enable All Features". Assume Acrobat JavaScript runs from then on.
-Don't suggest ways around the bank's security settings.
-If your code tool can't run or can't attach files, say so in your first line (don't give me a manual workaround).
+== HOW IT SHOULD LOOK ==
+A4 pages. The title "Irrevocable Documentary Credit (LC)" and the note "Please complete in block letters. Dates are
+DD/MM/YYYY." at the top. Each section starts with a dark blue bar (RGB 0.16, 0.24, 0.36) with its number and
+title in white. Each question's label sits above its box; "*" after the label of always-mandatory questions.
+Questions with "half": true sit two to a row; the rest are full width. Pick-one and tick-any options sit side by side.
+Under a question with a rule, a short note in small red italics, e.g. 'Mandatory if Drafts at is "Term"'.
+Always-mandatory boxes have a red border; other boxes a grey border and a light blue-grey fill.
+A footer on every page with the page number and the buttons.
 
-The form must behave like the bank's old smart form:
-  1. Boxes turn red as answers change (mandatory and still empty).
-  2. Questions that don't apply are locked (read-only, greyed, cleared) until the answer that switches them on is given.
-  3. Date and format checks (dates DD/MM/YYYY and real, amounts, whole numbers, phone, account, SWIFT characters, max length).
-  4. A "Check form" button that lists every problem and puts the cursor on the first one.
-  5. A "Reset form" button (asks to confirm first).
-  6. "Previous page" / "Next page" buttons.
-The scripts are for Acrobat DC on Windows. Use only the Acrobat JavaScript API (Doc, Field, app, util, event, color).
-No external libraries, no network, no privileged calls (no app.trustedFunction, no folder-level scripts, no file
-access), so it runs as an ordinary document script.
-
-== HOW TO BUILD IT (follow these steps in order) ==
-STEP 1. Save the SPEC at the end of this prompt (the lines between "== SPEC" and "== END OF SPEC ==") as spec.jsonl,
-  then turn it into lc-template.json with this Python:
-
-    import json
-    sections = []
-    for line in open("spec.jsonl", encoding="utf-8"):
-        if not line.strip():
-            continue
-        f = json.loads(line)
-        title = f.pop("section")
-        if not sections or sections[-1]["title"] != title:
-            sections.append({"title": title, "fields": []})
-        sections[-1]["fields"].append(f)
-    json.dump({"title": "Irrevocable Documentary Credit (LC)",
-               "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
-               "sections": sections}, open("lc-template.json", "w", encoding="utf-8"), indent=2)
-
-STEP 2. pip install reportlab pypdf. Save the program in "THE LAYOUT PROGRAM" below EXACTLY as make_lc_pdf.py
-  (don't change it) and run:  python make_lc_pdf.py lc-template.json
-  It writes LC-Application-reportlab.pdf: 5 A4 pages with every field, already laid out and styled (no JavaScript yet).
-  This is the finished design. Don't redraw or restyle it.
-
-STEP 3. Write the JavaScript described in "WHAT THE JAVASCRIPT MUST CONTAIN", then add it to that PDF with pypdf:
-  1. writer = PdfWriter(clone_from="LC-Application-reportlab.pdf")
-  2. Document-level script: writer.add_js(<the lcForm script>)  (goes in /Names /JavaScript).
-  3. Field actions: on each field's dictionary (for radio groups: the parent field), set /AA with
-     /K (Keystroke), /F (Format), /V (Validate) or /C (Calculate) as {/S /JavaScript /JS (<script>)}.
-  4. Helper field "__rules": a new text field (/FT /Tx, /T (__rules)) with its widget on page 1, /F 2 (hidden),
-     a tiny /Rect, /AA /C = lcPaint(); . Add it to /AcroForm /Fields and to /AcroForm /CO.
-  5. Buttons on every page: push-button widgets (/FT /Btn, /Ff 65536, /F 0 = on screen, not printed),
-     /MK << /CA (<caption>) /BG [0.16 0.24 0.36] >>, /DA (/Helv 8 Tf 1 1 1 rg), /A JavaScript action, and a
-     normal appearance stream (/AP /N) that draws the caption in white on the dark blue, so they show at once.
-     Unique names per page (__btn_check_1 ... __btn_next_5). Add them to each page's /Annots and to /AcroForm /Fields.
-     Make sure /AcroForm /DR has /Helv (Helvetica) and /ZaDb (ZapfDingbats).
-  6. Keep /NeedAppearances false. Keep the private /FormTemplate entry in the document catalog as it is.
-  7. Save as LC-Application-with-checks.pdf.
-
-STEP 4. VERIFY in code, and show me the results:
-  - It opens with pypdf: 5 pages, every field name from the SPEC present (tick-any options as <id>__0, <id>__1, ...).
-  - /Names /JavaScript contains lcForm; "__rules" is in /AcroForm /CO; 4 buttons on each page.
-  - Run the lcForm logic (holds/applies/mandatory/lcIssues) in a small JavaScript test (e.g. node with a fake
-    getField; or port the checks to Python) for test plan steps 2 to 6 and 8, and show the messages.
-  - Render page 1 to an image and look at it: the buttons sit in the footer and don't cover anything.
-  Fix anything that fails. Then reply with: a short summary of the checks above, the lcForm script as text
-  (for the record), and LAST, the PDF file LC-Application-with-checks.pdf attached for download.
-
-== HOW THE PDF'S FIELDS WORK (what the layout program makes) ==
-Every question is one or more PDF fields, named by the question's "id" in the SPEC below:
-  - kind "text", "long", "date": a text field named <id>. "long" is multi-line. Dates are plain text fields (DD/MM/YYYY).
-  - kind "select": a combo box named <id>. IMPORTANT: its blank choice is a single space " ". Treat " " as empty.
-  - kind "radio": a radio group named <id>. Each button's export value is the option text exactly (e.g. "Term").
-    Unanswered = value "Off". (Inside the file the export names are PDF names, e.g. Full#20Swift; Acrobat's
-    field.value gives "Full Swift". If you ever see "#20", treat it as a space.)
-  - kind "check": a single check box named <id>. Ticked = value is not "Off".
-  - kind "checks" ("tick any"): one check box per option, named <id>__0, <id>__1, ... in the order of "options".
-    The answer is the list of options whose box is ticked.
-Always-mandatory questions already have a red border and the PDF Required flag. Other borders are grey
-(RGB 0.55, 0.55, 0.55); text boxes are filled light blue-grey (RGB 0.96, 0.97, 0.99).
-Each conditional rule is also printed in small red text under its question, e.g. 'Mandatory if Drafts at is "Term"'.
-Any field whose name starts with "__" is a helper, not an answer (use that for any hidden helper field you add).
+== FIELD NAMES (the bank's systems read the filled PDF by these names, so keep them exactly) ==
+  - Each question is a form field named by its "id" in the SPEC.
+  - "text" / "long" (multi-line) / "date": a text field <id>.
+  - "select": a drop-down <id>. "radio": a pick-one group <id> whose option values are the option texts.
+  - "check": a single tick box <id>.
+  - "checks" (tick any): one tick box per option, named <id>__0, <id>__1, ... in the order of "options".
+  - Any extra field you need for your own purposes: name it starting with "__" (the bank's systems skip those).
 
 == THE RULES (exact meaning) ==
-An answer's value, for rules: text/date/select = the text (select " " = ""); radio = the option text or "" if "Off";
+An answer's value, for rules: text/date/select = the text ("" if blank); radio = the option text or "" if none picked;
 check = "true" or "false"; checks = the list of ticked option texts.
 A rule is {"field": F, "values": [V1, V2, ...], "not": optional true}.
   - It holds when the answer of F is one of the values. For a "checks" answer: when any ticked option is one of the values.
@@ -104,7 +54,7 @@ A rule is {"field": F, "values": [V1, V2, ...], "not": optional true}.
 If there is no "activeIf", the switching rules are the "requiredIf" rules that do NOT have "not": true.
   A question with no switching rules always applies.
 A question that doesn't apply must be: read-only, fill colour grey (RGB 0.9, 0.9, 0.9), and its answer cleared
-(text "", select " ", radio/check boxes "Off"). When it applies again: editable, normal fill colour.
+(text "", drop-down blank, nothing picked or ticked). When it applies again: editable, normal fill colour.
 Mandatory and empty (and applies) -> border red (color.red) and fill light red (RGB 1, 0.9, 0.9).
 Otherwise -> border back to its original colour (red if "required": true, grey otherwise), normal fill.
 "max": N  -> at most N characters (also set the field's character limit).
@@ -132,302 +82,23 @@ Messages are "<label> <message>", e.g. "Term: days is mandatory because Drafts a
   Rule in words: '<label of F> is "<V>"' (or 'is ticked' / 'is not ticked' for "true"/"false"; 'is filled in' for the not-blank rule),
   several joined with " or ".
 
-== WHAT THE JAVASCRIPT MUST CONTAIN ==
-A. ONE document-level script named "lcForm":
-   - The SPEC below as a JavaScript array (convert it exactly; every field and rule).
-   - Helpers: answer(id), isFilled(id), holds(rule), applies(f), mandatory(f).
-   - lcPaint(): for every question, apply locking, red/normal colours. Must be fast (it runs after every change)
-     and must not loop forever: guard with a flag, and only set a field property when it actually changes.
-   - lcIssues(): returns every problem (missing, wrong format, characters, max length, bad dates, the checks
-     across answers) as {id, message} in form order. Skip questions that don't apply.
-   - lcCheck(): runs lcIssues(); if none, app.alert "Everything is filled in correctly." (icon 3);
-     else app.alert with the count and the first 20 messages, then setFocus() on the first problem's field.
-   - lcReset(): app.alert confirm (nType 2); on Yes: this.resetForm(); then lcPaint().
-   - lcKeys(format): returns a Keystroke function that rejects keys not allowed by the format (event.rc = false),
-     and upper-cases letters for text fields.
-   - At the end of the script: lcPaint(); so the form is right as soon as it opens.
-B. ONE hidden helper text field named "__rules" (tiny, hidden) whose Calculate script is: lcPaint();
-   Acrobat runs every Calculate script after any field changes, so this re-paints the form on every answer.
-   It must be in the form's calculation order (/AcroForm /CO).
-C. Push buttons on EVERY page, in the footer: y from 8 to 24 pt (from the bottom of the A4 page), x between
-   250 and 520 pt (the footer note is left of 250, the page number right of 520); each about 64 x 16 pt with
-   4 pt gaps; visible on screen but not printed:
-   "Check form" (lcCheck();), "Reset form" (lcReset();), "Previous page" (this.pageNum--;), "Next page" (this.pageNum++;).
-D. Per-field actions:
-   - Date fields: Format AFDate_FormatEx("dd/mm/yyyy"); Keystroke AFDate_KeystrokeEx("dd/mm/yyyy");
-     (this gives Acrobat's calendar pop-up).
-   - Fields with "format": a Keystroke script that rejects keys the format doesn't allow, e.g. lcKeys("amount")();
-   - Text/long fields without "format": a Keystroke script that upper-cases letters and rejects non-SWIFT characters.
-E. The test plan (I will follow it in Acrobat; you check steps 2-6 and 8 in code first):
-   1. Open the blank form: always-mandatory boxes red; "Drafts at" and "Term: days" locked and grey.
-   2. Tick "Drafts for 100% invoice value at", then Drafts at = Term -> Term: days and the term options unlock and turn red; Drafts at = Sight -> locked and cleared again.
-   3. Tick "Full set of Clean on Board marine bills of lading" -> its "Made out to", "Marked Freight", "Notify party" turn red.
-   4. Amount "1,25,000.0.0" -> Check form says "Amount is not an amount".
-   5. Expiry 31/12/2026, latest shipment 15/01/2027 -> "Date of expiry ... is before the latest shipment date".
-   6. Price basis CIF + an insurance arrangement -> the insurance message.
-   7. Reset form -> asks, then everything blank and red again.
-   8. Fill everything correctly -> "Everything is filled in correctly."
-F. Explain any limitation honestly (for example, if something can't be done in AcroForm JavaScript).
 
+== ACCEPTANCE CHECKS (run these on your finished PDF before giving it to me, and show me the results) ==
+  0. Every question in the SPEC is in the PDF with its exact field name; nothing extra except "__" fields.
+  1. Blank form: always-mandatory boxes red; "Drafts at" and "Term: days" locked and grey.
+  2. Tick "Drafts for 100% invoice value at", then Drafts at = Term: Term: days, days after and the term options
+     unlock and turn red. Drafts at = Sight: they lock and clear again.
+  3. Tick "Full set of Clean on Board marine bills of lading": Made out to, Marked Freight, Notify party turn red.
+  4. Amount "1,25,000.0.0": Check form says "Amount is not an amount".
+  5. Expiry 31/12/2026 and latest shipment 15/01/2027: "Date of expiry (in beneficiary's country) is before the
+     latest shipment date".
+  6. Price basis CIF and an insurance arrangement picked: the insurance message.
+  7. Reset form: asks first, then everything blank and red again.
+  8. Every question filled correctly: "Everything is filled in correctly."
+  9. The buttons work on every page and don't cover any question; nothing overlaps; the text is readable.
+Tell me honestly about anything that doesn't fully work.
 
-== THE LAYOUT PROGRAM (save EXACTLY as make_lc_pdf.py) ==
-"""THE LC APPLICATION PDF, BUILT WITH PYTHON (reportlab)
-
-    pip install reportlab
-    python make_lc_pdf.py                    # reads lc-template.json from the website
-    python make_lc_pdf.py lc-template.json   # or from a file
-
-Writes LC-Application-reportlab.pdf: the same questions, options and rules as the website's form
-(public/lc-template.json, written from src/lc.ts by `npm run pdfs`), as an ordinary PDF form with no JavaScript.
-
-What it checks without JavaScript (so it behaves the same with Acrobat's JavaScript switched off):
-  - always-mandatory questions: red box + the PDF "required" flag
-  - mandatory-when / only-when questions: the condition printed under the question, in red / grey
-  - max characters, drop-downs and pick-one lists (only the bank's options can be chosen)
-What needs JavaScript in any PDF, so it isn't here: turning boxes red as answers change, locking questions
-that don't apply, a "Check form" button, date and format checks. The Fill online page and the Trade Ops
-workbench check all of those.
-Field names match the website's PDF (tick-any options are <id>__<n>), so the workbench reads it the same way.
-"""
-import json
-import sys
-import urllib.request
-
-from reportlab.lib.colors import Color, black, white
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase import pdfdoc
-from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.pdfgen.canvas import Canvas
-
-URL = "https://kabuto57.github.io/pdf-template-studio/lc-template.json"
-OUT = "LC-Application-reportlab.pdf"
-
-W, H = A4
-M = 36                      # page margin
-CW = W - 2 * M              # content width
-GAP = 12                    # between two half-width questions
-RED = Color(0.85, 0.1, 0.1)
-GREY = Color(0.55, 0.55, 0.55)
-BAR = Color(0.16, 0.24, 0.36)
-SHADE = Color(0.96, 0.97, 0.99)
-LABEL, LEAD = 7.5, 9.0      # label font size and line height
-BOX = 16                    # one-line box height
-TICK = 10                   # tick box / radio size
-
-PLAIN = {"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-", "…": "..."}
-
-
-def plain(s):
-    """Text the standard PDF fonts can draw (Latin-1)."""
-    s = "".join(PLAIN.get(c, c) for c in s)
-    return s.encode("latin-1", "replace").decode("latin-1")
-
-
-def wrap(text, width, font="Helvetica", size=LABEL):
-    """Words split into lines that fit `width`."""
-    lines, line = [], ""
-    for word in plain(text).split():
-        test = f"{line} {word}".strip()
-        if line and stringWidth(test, font, size) > width:
-            lines.append(line)
-            line = word
-        else:
-            line = test
-    return lines + [line] if line else lines
-
-
-def build(t):
-    fields = [f for s in t["sections"] for f in s["fields"]]
-    label_of = {f["id"]: f["label"] for f in fields}
-
-    def say(rules):
-        """'Bill of lading is ticked or Drafts at is "Term"', as on the website."""
-        out = []
-        for r in rules:
-            label = label_of.get(r["field"], r["field"])
-            if len(label) > 60:
-                label = label[:57].rsplit(" ", 1)[0] + "..."
-            vs = " or ".join("ticked" if v == "true" else "not ticked" if v == "false" else f'"{v}"' for v in r["values"])
-            if r["values"] == [""]:  # "is not blank"
-                out.append(f"{label} is {'filled in' if r.get('not') else 'blank'}")
-            else:
-                out.append(f"{label} is {'not ' if r.get('not') else ''}{vs}")
-        return " or ".join(out)
-
-    def hint(f):
-        if f.get("requiredIf"):
-            return f"Mandatory if {say(f['requiredIf'])}", RED
-        if f.get("activeIf"):
-            return f"Only if {say(f['activeIf'])}", GREY
-        return None
-
-    def option_rows(f, width):
-        """Pick-one / tick-any options laid out left to right, wrapping: [[(x, text), ...], ...]."""
-        rows, row, x = [], [], 0
-        for o in f["options"]:
-            w = TICK + 4 + stringWidth(plain(o), "Helvetica", LABEL) + 12
-            if row and x + w > width:
-                rows.append(row)
-                row, x = [], 0
-            row.append((x, o))
-            x += w
-        return rows + [row] if row else rows
-
-    def height(f, width):
-        """How tall a question is: label, condition, then its box(es)."""
-        label = wrap(f["label"] + (" *" if f.get("required") else ""), width - (TICK + 4 if f["kind"] == "check" else 0))
-        h = len(label) * LEAD + (LEAD if hint(f) else 0)
-        kind = f["kind"]
-        if kind in ("radio", "checks"):
-            return h + len(option_rows(f, width)) * (TICK + 5) + 10
-        if kind == "check":
-            return max(h, TICK) + 6
-        return h + 2 + (BOX * 3 if kind == "long" else BOX) + 6
-
-    c = Canvas(OUT, pagesize=A4)
-    c.setTitle(plain(t["title"]))
-    form = c.acroForm
-    page = [1]
-
-    def footer():
-        c.setFont("Helvetica", 7)
-        c.setFillColor(GREY)
-        c.drawRightString(W - M, M / 2, f"Page {page[0]}")
-        c.drawString(M, M / 2, "Red box or * = mandatory. Red note = mandatory in that case.")
-
-    def new_page():
-        footer()
-        c.showPage()
-        page[0] += 1
-        return H - M
-
-    def draw(f, x, y, width):
-        """One question with its top-left corner at (x, y)."""
-        kind, req = f["kind"], bool(f.get("required"))
-        border = RED if req else GREY
-        flags = "required" if req else ""
-        tip = plain(f["label"])
-        c.setFillColor(black)
-        c.setFont("Helvetica", LABEL)
-        if kind == "check":
-            form.checkbox(name=f["id"], tooltip=tip, x=x, y=y - TICK, size=TICK, buttonStyle="check",
-                          borderColor=border, fillColor=white, borderWidth=1, fieldFlags=flags)
-            x, width = x + TICK + 4, width - TICK - 4
-        lines = wrap(f["label"] + (" *" if req else ""), width)
-        for line in lines:
-            y -= LEAD
-            c.drawString(x, y + 2, line)
-        h = hint(f)
-        if h:
-            y -= LEAD
-            c.setFont("Helvetica-Oblique", LABEL - 0.5)
-            c.setFillColor(h[1])
-            c.drawString(x, y + 2, wrap(h[0], width, "Helvetica-Oblique", LABEL - 0.5)[0])
-            c.setFillColor(black)
-        if kind == "check":
-            return
-        y -= 2
-        if kind in ("radio", "checks"):
-            for row in option_rows(f, width):
-                y -= TICK + 5
-                for i, (ox, o) in enumerate(row):
-                    n = f["options"].index(o)
-                    if kind == "radio":
-                        form.radio(name=f["id"], tooltip=tip, value=plain(o), selected=False, x=x + ox, y=y,
-                                   size=TICK, buttonStyle="circle", shape="circle", borderColor=border,
-                                   fillColor=white, borderWidth=1, fieldFlags="radio noToggleToOff " + flags)
-                    else:
-                        form.checkbox(name=f"{f['id']}__{n}", tooltip=plain(o), x=x + ox, y=y, size=TICK,
-                                      buttonStyle="check", borderColor=border, fillColor=white, borderWidth=1)
-                    c.setFont("Helvetica", LABEL)
-                    c.drawString(x + ox + TICK + 4, y + 2, plain(o))
-            return
-        bh = BOX * 3 if kind == "long" else BOX
-        y -= bh
-        common = dict(name=f["id"], tooltip=tip + (" (DD/MM/YYYY)" if kind == "date" else ""), x=x, y=y,
-                      width=width, height=bh, borderColor=border, fillColor=SHADE, borderWidth=1, fontSize=8)
-        if kind == "select":
-            # ponytail: reportlab can't make a drop-down with nothing picked (crashes on value=""), so the blank
-            # choice is a space; the workbench trims it back to "".
-            form.choice(value=" ", options=[" "] + [plain(o) for o in f["options"]], fieldFlags=("combo " + flags).strip(), **common)
-        else:
-            form.textfield(maxlen=10 if kind == "date" else f.get("max") or 0,
-                           fieldFlags=(("multiline " if kind == "long" else "") + flags).strip(), **common)
-            if kind == "date":
-                c.setFont("Helvetica", 6.5)
-                c.setFillColor(GREY)
-                c.drawRightString(x + width - 4, y + 5, "DD/MM/YYYY")
-
-    # Title and instructions.
-    y = H - M
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(M, y - 14, plain(t["title"]))
-    y -= 24
-    c.setFont("Helvetica", LABEL)
-    for line in wrap(t.get("note", ""), CW):
-        y -= LEAD
-        c.drawString(M, y, line)
-    y -= 8
-
-    for si, s in enumerate(t["sections"]):
-        # Questions in rows: two half-width questions side by side, the rest full width.
-        rows, pending = [], []
-        for f in s["fields"]:
-            if f.get("half"):
-                pending.append(f)
-                if len(pending) == 2:
-                    rows.append(pending)
-                    pending = []
-            else:
-                if pending:
-                    rows.append(pending)
-                    pending = []
-                rows.append([f])
-        if pending:
-            rows.append(pending)
-
-        def row_height(row):
-            width = CW if len(row) == 1 and not row[0].get("half") else (CW - GAP) / 2
-            return max(height(f, width) for f in row)
-
-        if y - 22 - row_height(rows[0]) < M:  # keep the heading with its first row
-            y = new_page()
-        c.setFillColor(BAR)
-        c.rect(M, y - 16, CW, 16, stroke=0, fill=1)
-        c.setFillColor(white)
-        c.setFont("Helvetica-Bold", 9)
-        c.drawString(M + 6, y - 11.5, plain(f"{si + 1}. {s['title']}"))
-        y -= 22
-        for row in rows:
-            rh = row_height(row)
-            if y - rh < M:
-                y = new_page()
-            width = CW if len(row) == 1 and not row[0].get("half") else (CW - GAP) / 2
-            for i, f in enumerate(row):
-                draw(f, M + i * (width + GAP), y, width)
-            y -= rh
-        y -= 4
-    footer()
-    # The form itself, stored inside the PDF like the website's PDFs do (src/form/stored-template.ts), so the
-    # Trade Ops workbench knows every question, section and rule from the PDF alone.
-    cat = c._doc.Catalog
-    cat.__NoDefault__ = cat.__Refs__ = [*pdfdoc.PDFCatalog.__NoDefault__, "FormTemplate"]
-    cat.FormTemplate = pdfdoc.PDFStream(content=json.dumps({**t, "uploaded": False}).encode(), filters=[pdfdoc.PDFZCompress])
-    c.save()
-
-
-if __name__ == "__main__":
-    src = sys.argv[1] if len(sys.argv) > 1 else URL
-    if src.startswith("http"):
-        with urllib.request.urlopen(src) as r:
-            template = json.load(r)
-    else:
-        with open(src, encoding="utf-8") as fh:
-            template = json.load(fh)
-    build(template)
-    print(f"Wrote {OUT}")
-
-== END OF THE LAYOUT PROGRAM ==
+Your reply: the results of the acceptance checks, then the PDF file LC-Application-with-checks.pdf to download.
 
 == SPEC: every question, in form order (one JSON object per line) ==
 {"id": "application_date", "section": "Application", "label": "Date", "kind": "date", "half": true, "required": true}
