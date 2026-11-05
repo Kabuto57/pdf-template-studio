@@ -35,6 +35,18 @@ const CGAP = 4;      // gap between columns
 /** Makes the blank form, or (with values) a filled one. */
 export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "both"): Promise<Uint8Array> {
   if (t.base) return fillBase(t, values); // an uploaded PDF: fill its own fields instead
+  // Laid out once, then again with the room left at the end of the last page shared out to the paragraph boxes
+  // (e.g. additional conditions) on that page, so the form ends without a blank stretch. Kept only if the page
+  // count stays the same.
+  // Only the boxes already on the last page grow, so nothing earlier moves.
+  const first = await layoutPdf(t, values, mode, new Map());
+  if (!first.lastLongs.length || first.spare < 20) return first.bytes;
+  const each = Math.min(90, Math.floor((first.spare - 10) / first.lastLongs.length)); // ponytail: capped so one box doesn't dwarf the rest
+  const second = await layoutPdf(t, values, mode, new Map(first.lastLongs.map(id => [id, each])));
+  return second.pages === first.pages ? second.bytes : first.bytes;
+}
+
+async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map<string, number>) {
 
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -74,6 +86,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
   const mandatory = { ...plain, borderColor: RED, borderWidth: 1.25 };
   const blocks: Blocks = new Map(); // where each question was drawn, for the red frames
   const shrink: ReturnType<typeof form.createTextField>[] = []; // boxes whose text shrinks to fit in Acrobat
+  const longsOn = new Map<string, PDFPage>(); // the page each paragraph box landed on
   // Every question numbered by section, "3.1", "3.2", ..., so a question can be referred to ("see 14.3").
   const number = new Map(t.sections.flatMap((s, si) => s.bankOnly ? [] : s.fields.map((f, qi) => [f.id, `${si + 1}.${qi + 1}`] as const)));
 
@@ -161,7 +174,8 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
     }
 
     // A date, or a text box (one line, or a paragraph).
-    const h = f.kind === "long" ? 50 : BOX;
+    const h = f.kind === "long" ? 50 + (longExtra.get(f.id) ?? 0) : BOX;
+    if (draw && f.kind === "long") longsOn.set(f.id, page);
     if (draw && f.kind === "date") {
       addDateLists(form, page, f.id, f.label, answer, { x, y: y - h, width: w, height: h }, font, TEXT, look, js);
     } else if (draw) {
@@ -278,9 +292,10 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
   }
 
   // Two columns where it fits: sections that work at half width (no paragraph boxes, every box, option and heading
-  // fits half the page) are set in two columns, like the panels on the bank's smart form (Applicant beside Advising
-  // Bank, Credit Amount beside Price Basis). Each next section goes under whichever column is shorter, as long as
-  // that doesn't leave a long gap, so short sections stack beside a tall one. Wide sections take the full width.
+  // fits half the page) flow down two columns like a newspaper, like the panels on the bank's smart form (Applicant
+  // beside Advising Bank, Credit Amount beside Price Basis). Each goes into whichever column has more room left,
+  // so the columns stay level and there are few gaps; when neither has room, a new page starts. Wide sections, and
+  // a lone half-width one, take the full width.
   const HALF = COLS / 2, half = spanWidth(HALF), right = M + half + CGAP;
   const halfOK = (s: Section) => !s.note && !s.signoff && !s.bankOnly &&
     bold.widthOfTextAtSize(`${s.title.toUpperCase()}`, 6) + 30 < half &&
@@ -288,21 +303,16 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
     sectionHeight(s, HALF) < 300;
   for (let si = 0; si < t.sections.length;) {
     if (!halfOK(t.sections[si]) || !t.sections[si + 1] || !halfOK(t.sections[si + 1])) { drawSection(t.sections[si], si, COLS, M, true); si++; continue; }
-    // Fill two columns: [section index, ...] for each, and their heights.
-    const cols: number[][] = [[si], [si + 1]], hs = [sectionHeight(t.sections[si], HALF), sectionHeight(t.sections[si + 1], HALF)];
-    let next = si + 2;
-    while (next < t.sections.length && halfOK(t.sections[next])) {
-      const c = hs[0] <= hs[1] ? 0 : 1, h = sectionHeight(t.sections[next], HALF);
-      if (hs[c] + h > hs[1 - c] + 40 || hs[c] + h > H - 120) break; // would leave a long gap, or be too tall for a page
-      cols[c].push(next); hs[c] += h; next++;
+    const ends = [top, top]; // where each column has got to
+    for (; si < t.sections.length && halfOK(t.sections[si]); si++) {
+      const h = sectionHeight(t.sections[si], HALF);
+      let c = ends[0] >= ends[1] ? 0 : 1;
+      if (ends[c] - h < BOTTOM) { newPage(); ends[0] = ends[1] = top; c = 0; }
+      top = ends[c];
+      drawSection(t.sections[si], si, HALF, c ? right : M, false);
+      ends[c] = top;
     }
-    // Not enough room left on this page for the columns, but the first section fits full width: fill the gap with it.
-    if (top - Math.max(...hs) < BOTTOM && top - sectionHeight(t.sections[si], COLS) >= BOTTOM) { drawSection(t.sections[si], si, COLS, M, true); si++; continue; }
-    if (top - Math.max(...hs) < BOTTOM) newPage();
-    const start = top;
-    cols.forEach((list, c) => { top = start; for (const i of list) drawSection(t.sections[i], i, HALF, c ? right : M, false); });
-    top = start - Math.max(...hs);
-    si = next;
+    top = Math.min(...ends);
   }
 
   // 5. Footers: the title, and "Page x of y".
@@ -345,5 +355,6 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
       if (da instanceof PDFString) d.set(PDFName.of("DA"), PDFString.of(da.asString().replace(/[\d.]+ Tf/, "0 Tf")));
     }
   finishForm(doc, font);
-  return doc.save();
+  const last = doc.getPages()[doc.getPageCount() - 1];
+  return { bytes: await doc.save(), pages: doc.getPageCount(), spare: top - BOTTOM, lastLongs: [...longsOn].filter(([, p]) => p === last).map(([id]) => id) };
 }
