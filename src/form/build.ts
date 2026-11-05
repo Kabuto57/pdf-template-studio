@@ -112,7 +112,10 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
         const box = form.createCheckBox(f.id);
         box.addToPage(page, { x, y: top - 10, width: 9, height: 9, ...look });
         tip(box, f.label);
-        if (required) { if (flag) box.enableRequired(); page.drawText("*", { x: x - 7, y: top - 10, size: 9, font: bold, color: RED }); }
+        if (required) { // the red * after the label's first line
+          if (flag) box.enableRequired();
+          page.drawText("*", { x: x + 14 + noW + font.widthOfTextAtSize(lines[0] ?? "", TEXT) + 2, y: top - 8, size: 8.5, font: bold, color: RED });
+        }
         if (answer === true) box.check();
         if (no) page.drawText(no, { x: x + 14, y: top - 8, size: LABEL, font: bold, color: ACCENT });
         lines.forEach((l, i) => page.drawText(l, { x: x + 14 + noW, y: top - 8 - i * 10, size: TEXT, font, color: INK }));
@@ -222,8 +225,15 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     for (let n = least; n < COLS; n++) if (spanWidth(n) >= Math.max(label, box)) return n;
     return COLS;
   };
-  // A section in a column `cols` wide (12 = the full page, 6 = half), starting at x0. Its questions in lines,
-  // where each one goes, and how tall each line is.
+
+  // Each section is a ruled box, like the panels on the bank's smart form: an outline, a grey heading band with a
+  // rule under it, and a light line between its rows. `Area` is where a section's box goes: its left edge, its
+  // width and how many grid columns its content has (12 = the full page, 6 = half).
+  type Area = { x: number; w: number; cols: number };
+  const PAD = 6;           // inside the box, around the questions
+  const BAND = 13;         // the heading band
+  const SECTION_GAP = 6;   // between boxes
+  const inner = (a: Area) => { const w = a.w - 2 * PAD, cw = (w - (a.cols - 1) * CGAP) / a.cols; return { x: a.x + PAD, w, sw: (n: number) => n * cw + (n - 1) * CGAP }; };
   const lines = (s: Section, cols: number) => {
     const rows: Field[][] = [];
     let used = cols;
@@ -236,59 +246,61 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     return rows;
   };
   // Columns left over at the end of a line go to its text boxes and lists (not dates or numbers, which keep their
-  // own short width), shared out evenly, so most lines end on the column's right edge.
-  const layout = (row: Field[], cols: number, x0: number) => {
-    const n = row.map(f => Math.min(cols, span(f)));
+  // own short width), shared out evenly, so most lines end on the box's right edge.
+  const layout = (row: Field[], a: Area) => {
+    const { x: x0, sw } = inner(a);
+    const n = row.map(f => Math.min(a.cols, span(f)));
     const grow = row.map(f => f.kind === "long" || f.kind === "select" || (f.kind === "text" && f.format !== "number" && (f.max ?? 99) > 3));
-    let k = grow.filter(Boolean).length, spare = cols - n.reduce((a, b) => a + b, 0), x = x0;
+    let k = grow.filter(Boolean).length, spare = a.cols - n.reduce((p, q) => p + q, 0), x = x0;
     if (k) row.forEach((_, i) => { if (grow[i]) { const add = Math.ceil(spare / k--); n[i] += add; spare -= add; } });
-    return row.map((f, i) => { const w = spanWidth(n[i]), at = x; x += w + CGAP; return { f, x: at, w }; });
+    return row.map((f, i) => { const w = sw(n[i]), at = x; x += w + CGAP; return { f, x: at, w }; });
   };
-  const rowHeight = (row: Field[], cols: number, x0: number) => Math.max(...layout(row, cols, x0).map(c => place(c.f, c.x, c.w, false)));
+  const rowHeight = (row: Field[], a: Area) => Math.max(...layout(row, a).map(c => place(c.f, c.x, c.w, false)));
   const SIGN = 62; // the signature, date and stamp lines
-  const noteOf = (s: Section, width: number) => (s.note ? wrap(s.note, font, 7.5, width - 8) : []);
-  const sectionHeight = (s: Section, cols: number) => {
-    const note = noteOf(s, spanWidth(cols));
-    return 17 + note.length * 9.5 + (note.length ? 4 : 0) + lines(s, cols).reduce((sum, r) => sum + rowHeight(r, cols, M) + 5, 0) + (s.signoff ? SIGN : 0);
+  const noteOf = (s: Section, a: Area) => (s.note ? wrap(s.note, font, 7.5, inner(a).w) : []);
+  const sectionHeight = (s: Section, a: Area) => {
+    const note = noteOf(s, a);
+    return BAND + 4 + note.length * 9.5 + (note.length ? 4 : 0) + lines(s, a.cols).reduce((sum, r) => sum + rowHeight(r, a) + 5, 0) + (s.signoff ? SIGN : 0) + 1;
   };
 
-  /** Draws one section at (x0, top), `cols` columns wide. `breaks`: may move to a new page between lines. */
-  function drawSection(s: Section, si: number, cols: number, x0: number, breaks: boolean) {
-    const width = spanWidth(cols), rows = lines(s, cols), note = noteOf(s, width), whole = sectionHeight(s, cols);
-    // The heading, "3  APPLICANT": a light band with a navy edge (on a new page if not even its first line fits).
-    // The sign-off and the bank's panel are kept whole on one page.
-    if (breaks && top - ((s.signoff || s.bankOnly) ? whole : 18 + (rows[0] ? rowHeight(rows[0], cols, x0) : 0)) < BOTTOM) newPage();
-    if (s.bankOnly) { // a shaded, outlined panel, set apart from the customer's part
-      page.drawRectangle({ x: x0 - 6, y: top - whole - 4, width: width + 12, height: whole + 4, color: rgb(0.95, 0.95, 0.95), borderColor: RULE, borderWidth: 0.75 });
-      page.drawText(safe(`${s.title.toUpperCase()} (to be completed by the Bank)`), { x: x0, y: top - 9.8, size: 7.5, font: bold, color: GREY });
-    } else {
-      page.drawRectangle({ x: x0, y: top - 13, width, height: 12, color: TINT });
-      page.drawRectangle({ x: x0, y: top - 13, width: 3, height: 12, color: ACCENT });
-      const heading = safe(`${si + 1}   ${s.title.toUpperCase()}`); // shrunk a little if it's too long for the column
-      page.drawText(heading, { x: x0 + 8, y: top - 9.8, size: Math.min(7.5, 7.5 * (width - 14) / bold.widthOfTextAtSize(heading, 7.5)), font: bold, color: ACCENT });
-    }
-    top -= 17;
-    for (const line of note) { page.drawText(line, { x: x0, y: top - 7.5, size: 7.5, font, color: INK }); top -= 9.5; }
+  /** Draws one section's box at (a.x, top). `breaks`: may continue on a new page between rows. */
+  function drawSection(s: Section, si: number, a: Area, breaks: boolean) {
+    const rows = lines(s, a.cols), note = noteOf(s, a), whole = sectionHeight(s, a), { x: cx, w: cw } = inner(a);
+    // On a new page if not even its first row fits. The sign-off and the bank's panel are kept whole on one page.
+    if (breaks && top - ((s.signoff || s.bankOnly) ? whole : BAND + 12 + (rows[0] ? rowHeight(rows[0], a) : 0)) < BOTTOM) newPage();
+    let boxTop = top;
+    const outline = () => page.drawRectangle({ x: a.x, y: top, width: a.w, height: boxTop - top, borderColor: INK, borderWidth: 0.6 });
+    if (s.bankOnly) page.drawRectangle({ x: a.x, y: top - whole, width: a.w, height: whole, color: rgb(0.95, 0.95, 0.95) }); // the bank's panel is shaded
+    // The heading band: "3   APPLICANT" in black on grey, shrunk a little if it's too long for the box.
+    page.drawRectangle({ x: a.x, y: top - BAND, width: a.w, height: BAND, color: TINT });
+    page.drawLine({ start: { x: a.x, y: top - BAND }, end: { x: a.x + a.w, y: top - BAND }, thickness: 0.6, color: INK });
+    const heading = safe(s.bankOnly ? `${s.title.toUpperCase()}  (to be completed by the Bank)` : `${si + 1}   ${s.title.toUpperCase()}`);
+    page.drawText(heading, { x: a.x + PAD, y: top - 9.3, size: Math.min(7.5, 7.5 * (a.w - 2 * PAD) / bold.widthOfTextAtSize(heading, 7.5)), font: bold, color: INK });
+    top -= BAND + 4;
+    for (const line of note) { page.drawText(line, { x: cx, y: top - 7.5, size: 7.5, font, color: INK }); top -= 9.5; }
     if (note.length) top -= 4;
-    for (const row of rows) {
-      const h = rowHeight(row, cols, x0);
-      if (breaks && top - h < BOTTOM) newPage();
-      for (const c of layout(row, cols, x0)) place(c.f, c.x, c.w, true);
+    rows.forEach((row, i) => {
+      const h = rowHeight(row, a);
+      if (breaks && top - h < BOTTOM) { top -= 1; outline(); newPage(); boxTop = top; top -= 5; } // the box carries on over the page
+      if (i > 0) page.drawLine({ start: { x: cx, y: top + 3 }, end: { x: cx + cw, y: top + 3 }, thickness: 0.4, color: RULE }); // between rows
+      for (const c of layout(row, a)) place(c.f, c.x, c.w, true);
       top -= h + 5;
-    }
+    });
     // Signature, date and company stamp: lines to sign on paper after printing.
     if (s.signoff) {
       const line = (x: number, w: number, label: string) => {
         page.drawLine({ start: { x, y: top - 34 }, end: { x: x + w, y: top - 34 }, thickness: 0.75, color: INK });
         page.drawText(label, { x, y: top - 43, size: 7, font, color: GREY });
       };
-      line(x0, 190, "Authorised signature(s)");
-      line(x0 + 210, 110, "Date");
-      page.drawRectangle({ x: x0 + width - 150, y: top - 56, width: 150, height: 54, borderColor: INK, borderWidth: 0.75, borderDashArray: [2, 2] });
-      page.drawText("Company stamp", { x: x0 + width - 146, y: top - 52, size: 7, font, color: GREY });
+      line(cx, 190, "Authorised signature(s)");
+      line(cx + 210, 110, "Date");
+      page.drawRectangle({ x: cx + cw - 150, y: top - 56, width: 150, height: 54, borderColor: INK, borderWidth: 0.75, borderDashArray: [2, 2] });
+      page.drawText("Company stamp", { x: cx + cw - 146, y: top - 52, size: 7, font, color: GREY });
       top -= SIGN;
     }
     top -= 1;
+    outline();
+    top -= SECTION_GAP;
   }
 
   // Two columns where it fits: sections that work at half width (no paragraph boxes, every box, option and heading
@@ -296,20 +308,27 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   // beside Advising Bank, Credit Amount beside Price Basis). Each goes into whichever column has more room left,
   // so the columns stay level and there are few gaps; when neither has room, a new page starts. Wide sections, and
   // a lone half-width one, take the full width.
-  const HALF = COLS / 2, half = spanWidth(HALF), right = M + half + CGAP;
+  const FULL: Area = { x: M, w: W - 2 * M, cols: COLS };
+  const halfW = (W - 2 * M - SECTION_GAP) / 2;
+  const LEFT: Area = { x: M, w: halfW, cols: COLS / 2 }, RIGHT: Area = { ...LEFT, x: M + halfW + SECTION_GAP };
   const halfOK = (s: Section) => !s.note && !s.signoff && !s.bankOnly &&
-    bold.widthOfTextAtSize(`${s.title.toUpperCase()}`, 6) + 30 < half &&
-    s.fields.every(f => f.kind !== "long" && (hasOptions(f.kind) ? (f.options ?? []).every(o => optionWidth(o) < half) : f.kind === "check" || span(f) <= HALF)) &&
-    sectionHeight(s, HALF) < 300;
+    bold.widthOfTextAtSize(`${s.title.toUpperCase()}`, 6) + 30 < halfW &&
+    s.fields.every(f => f.kind !== "long" && (hasOptions(f.kind) ? (f.options ?? []).every(o => optionWidth(o) < inner(LEFT).w) : f.kind === "check" || span(f) <= COLS / 2)) &&
+    sectionHeight(s, LEFT) < 300;
   for (let si = 0; si < t.sections.length;) {
-    if (!halfOK(t.sections[si]) || !t.sections[si + 1] || !halfOK(t.sections[si + 1])) { drawSection(t.sections[si], si, COLS, M, true); si++; continue; }
+    if (!halfOK(t.sections[si]) || !t.sections[si + 1] || !halfOK(t.sections[si + 1])) { drawSection(t.sections[si], si, FULL, true); si++; continue; }
     const ends = [top, top]; // where each column has got to
     for (; si < t.sections.length && halfOK(t.sections[si]); si++) {
-      const h = sectionHeight(t.sections[si], HALF);
+      const h = sectionHeight(t.sections[si], LEFT) + SECTION_GAP;
       let c = ends[0] >= ends[1] ? 0 : 1;
-      if (ends[c] - h < BOTTOM) { newPage(); ends[0] = ends[1] = top; c = 0; }
+      if (ends[c] - h < BOTTOM) {
+        // No room in either column. If it fits full width under both columns, put it there; else a new page.
+        top = Math.min(...ends);
+        if (top - sectionHeight(t.sections[si], FULL) - SECTION_GAP >= BOTTOM) { drawSection(t.sections[si], si, FULL, false); ends[0] = ends[1] = top; continue; }
+        newPage(); ends[0] = ends[1] = top; c = 0;
+      }
       top = ends[c];
-      drawSection(t.sections[si], si, HALF, c ? right : M, false);
+      drawSection(t.sections[si], si, c ? RIGHT : LEFT, false);
       ends[c] = top;
     }
     top = Math.min(...ends);
