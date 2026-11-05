@@ -93,6 +93,24 @@
       ]
     },
     {
+      "title": "For Bank Use Only",
+      "bankOnly": true,
+      "fields": [
+        {
+          "id": "dc_no",
+          "label": "DC no",
+          "kind": "text",
+          "half": true
+        },
+        {
+          "id": "bank_code",
+          "label": "Bank code",
+          "kind": "text",
+          "half": true
+        }
+      ]
+    },
+    {
       "title": "Advising Bank (at Issuing Bank's option, if no nomination)",
       "fields": [
         {
@@ -1539,24 +1557,6 @@
           "label": "Name and title of authorised person(s)",
           "kind": "text",
           "half": false
-        }
-      ]
-    },
-    {
-      "title": "For Bank Use Only",
-      "bankOnly": true,
-      "fields": [
-        {
-          "id": "dc_no",
-          "label": "DC no",
-          "kind": "text",
-          "half": true
-        },
-        {
-          "id": "bank_code",
-          "label": "Bank code",
-          "kind": "text",
-          "half": true
         }
       ]
     }

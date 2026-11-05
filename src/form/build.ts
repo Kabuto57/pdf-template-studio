@@ -88,7 +88,7 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   const shrink: ReturnType<typeof form.createTextField>[] = []; // boxes whose text shrinks to fit in Acrobat
   const longsOn = new Map<string, PDFPage>(); // the page each paragraph box landed on
   // Every question numbered by section, "3.1", "3.2", ..., so a question can be referred to ("see 14.3").
-  const number = new Map(t.sections.flatMap((s, si) => s.bankOnly ? [] : s.fields.map((f, qi) => [f.id, `${si + 1}.${qi + 1}`] as const)));
+  const number = new Map(t.sections.flatMap((s, si) => s.fields.map((f, qi) => [f.id, `${si + 1}.${qi + 1}`] as const)));
 
   /**
    * 4. Lays out one question at (x, top) in width w. Draws it only when `draw` (otherwise just measures it).
@@ -251,12 +251,8 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     }
   }
   const optionWidth = (option: string) => 12 + font.widthOfTextAtSize(safe(option), TEXT) + 10;
-  // The label as shown. Under a tick box, a repeated prefix is dropped: under "Packing list", "Packing list: copies"
-  // reads "Copies". (The field's tooltip and the error messages keep the full label.)
-  const shown = (f: Field) => {
-    const l = safe(f.label), i = l.indexOf(": ");
-    return under(f) && i > 0 ? l[i + 2].toUpperCase() + l.slice(i + 3) : l;
-  };
+  // The label as shown: the question's full wording, as on the bank's form.
+  const shown = (f: Field) => safe(f.label);
   // A label beside its box ("Name: [   ]"), and whether a question can be set that way at width w.
   const inlineLabelW = (f: Field) => (number.has(f.id) ? bold.widthOfTextAtSize(number.get(f.id)!, LABEL) + 4 : 0) + font.widthOfTextAtSize(`${shown(f)}:`, LABEL) + (f.required || f.requiredIf ? 7 : 0) + 6;
   const canInline = (f: Field, w: number) =>
@@ -354,7 +350,7 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     // The heading band: "3   APPLICANT" in black on grey, shrunk a little if it's too long for the box.
     page.drawRectangle({ x: a.x, y: top - BAND, width: a.w, height: BAND, color: TINT });
     page.drawLine({ start: { x: a.x, y: top - BAND }, end: { x: a.x + a.w, y: top - BAND }, thickness: 0.6, color: INK });
-    const heading = safe(s.bankOnly ? `${s.title.toUpperCase()}  (to be completed by the Bank)` : `${si + 1}   ${s.title.toUpperCase()}`);
+    const heading = safe(`${si + 1}   ${s.title.toUpperCase()}${s.bankOnly ? "  (to be completed by the Bank)" : ""}`);
     page.drawText(heading, { x: a.x + PAD, y: top - 9.3, size: Math.min(7.5, 7.5 * (a.w - 2 * PAD) / bold.widthOfTextAtSize(heading, 7.5)), font: bold, color: INK });
     top -= BAND + 4;
     for (const line of note) { page.drawText(line, { x: cx, y: top - 7.5, size: 7.5, font, color: INK }); top -= 9.5; }
@@ -384,35 +380,33 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     top -= SECTION_GAP;
   }
 
-  // Two columns where it fits: sections that work at half width (no paragraph boxes, every box, option and heading
-  // fits half the page) flow down two columns like a newspaper, like the panels on the bank's smart form (Applicant
-  // beside Advising Bank, Credit Amount beside Price Basis). Each goes into whichever column has more room left,
-  // so the columns stay level and there are few gaps; when neither has room, a new page starts. Wide sections, and
-  // a lone half-width one, take the full width.
+  // Two columns where it fits, without changing the order: two sections that follow each other and both work at
+  // half width (no paragraph boxes; every box, option and heading fits half the page) sit side by side, the first
+  // on the left, like the panels on the bank's smart form. Everything else takes the full width, in order.
   const FULL: Area = { x: M, w: W - 2 * M, cols: COLS };
   const halfW = (W - 2 * M - SECTION_GAP) / 2;
   const LEFT: Area = { x: M, w: halfW, cols: COLS / 2 }, RIGHT: Area = { ...LEFT, x: M + halfW + SECTION_GAP };
-  const halfOK = (s: Section) => !s.note && !s.signoff && !s.bankOnly &&
+  const halfOK = (s: Section) => !s.note && !s.signoff &&
     bold.widthOfTextAtSize(`${s.title.toUpperCase()}`, 6) + 30 < halfW &&
     s.fields.every(f => f.kind !== "long" && (hasOptions(f.kind) ? (f.options ?? []).every(o => optionWidth(o) < inner(LEFT).w) : f.kind === "check" || span(f, true) <= COLS / 2)) &&
     sectionHeight(s, LEFT) < 300;
-  for (let si = 0; si < t.sections.length;) {
-    if (!halfOK(t.sections[si]) || !t.sections[si + 1] || !halfOK(t.sections[si + 1])) { drawSection(t.sections[si], si, FULL, true); si++; continue; }
-    const ends = [top, top]; // where each column has got to
-    for (; si < t.sections.length && halfOK(t.sections[si]); si++) {
-      const h = sectionHeight(t.sections[si], LEFT) + SECTION_GAP;
-      let c = ends[0] >= ends[1] ? 0 : 1;
-      if (ends[c] - h < BOTTOM) {
-        // No room in either column. If it fits full width under both columns, put it there; else a new page.
-        top = Math.min(...ends);
-        if (top - sectionHeight(t.sections[si], FULL) - SECTION_GAP >= BOTTOM) { drawSection(t.sections[si], si, FULL, false); ends[0] = ends[1] = top; continue; }
-        newPage(); ends[0] = ends[1] = top; c = 0;
-      }
-      top = ends[c];
-      drawSection(t.sections[si], si, c ? RIGHT : LEFT, false);
-      ends[c] = top;
-    }
-    top = Math.min(...ends);
+  for (let si = 0; si < t.sections.length; si++) {
+    const a = t.sections[si], b = t.sections[si + 1];
+    // Side by side only when they're of similar height, so the shorter doesn't leave a big hole under it.
+    const ha = b ? sectionHeight(a, LEFT) : 0, hb = b ? sectionHeight(b, RIGHT) : 0;
+    if (!(b && halfOK(a) && halfOK(b) && Math.min(ha, hb) >= 0.45 * Math.max(ha, hb))) { drawSection(a, si, FULL, true); continue; }
+    const h = Math.max(ha, hb) + SECTION_GAP;
+    // The pair doesn't fit the rest of the page, but the first fits full width: it goes there (order unchanged),
+    // and the next section carries on from it.
+    if (top - h < BOTTOM && top - sectionHeight(a, FULL) - SECTION_GAP >= BOTTOM) { drawSection(a, si, FULL, true); continue; }
+    if (top - h < BOTTOM) newPage();
+    const start = top;
+    drawSection(a, si, LEFT, false);
+    const leftEnd = top;
+    top = start;
+    drawSection(b, si + 1, RIGHT, false);
+    top = Math.min(leftEnd, top);
+    si++;
   }
 
   // 5. Footers: the title, and "Page x of y".

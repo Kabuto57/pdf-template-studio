@@ -41,6 +41,10 @@ const sections: Section[] = [
     text("contact_tel", "Contact party: Tel no", { ...req, max: 15, format: "phone" }),
     text("contact_fax", "Contact party: Fax no", { max: 15, format: "phone" }),
   ] },
+  { title: "For Bank Use Only", bankOnly: true, fields: [
+    text("dc_no", "DC no"),
+    text("bank_code", "Bank code"),
+  ] },
   { title: "Advising Bank (at Issuing Bank's option, if no nomination)", fields: [
     text("advising_bank_name", "Name", { half: false, max: 35 }),
     text("advising_bank_address_1", "Address", { half: false, max: 35 }),
@@ -177,10 +181,6 @@ const sections: Section[] = [
     fields: [
       text("authorised_person", "Name and title of authorised person(s)", { half: false }),
     ] },
-  { title: "For Bank Use Only", bankOnly: true, fields: [
-    text("dc_no", "DC no"),
-    text("bank_code", "Bank code"),
-  ] },
 ];
 
 export const LC: { code: string; template: Template; defaults: Values } = {

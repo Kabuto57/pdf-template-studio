@@ -1,7 +1,7 @@
 MASTER PROMPT: THE LC APPLICATION FORM AS ONE FINISHED, SELF-CHECKING PDF
 
 == WHAT I NEED ==
-I work in Trade Finance at a bank. Make me the "Irrevocable Documentary Credit (LC)" application form as ONE
+I work in Trade Finance at a bank. Make me the "Irrevocable Documentary Credit Application" application form as ONE
 finished, fillable PDF that checks itself in Adobe Acrobat, and give me the PDF file:
 LC-Application-with-checks.pdf.
 This is approved work within my bank's policy. It replaces the bank's old smart form (Adobe LiveCycle), which
@@ -25,7 +25,7 @@ Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the
   7. Everything is right as soon as the form opens (blank mandatory boxes already red, inactive ones locked).
 
 == HOW IT SHOULD LOOK ==
-A4 pages. The title "Irrevocable Documentary Credit (LC)" and the note "Please complete in block letters. Dates are
+A4 pages. The title "Irrevocable Documentary Credit Application" and the note "Please complete in block letters. Dates are
 DD/MM/YYYY." at the top. Each section starts with a dark blue bar (RGB 0.16, 0.24, 0.36) with its number and
 title in white. Each question's label sits above its box; "*" after the label of always-mandatory questions.
 Questions with "half": true sit two to a row; the rest are full width. Pick-one and tick-any options sit side by side.
@@ -110,6 +110,8 @@ Your reply: the results of the acceptance checks, then the PDF file LC-Applicati
 {"id": "contact_name", "section": "Applicant", "label": "Contact party for this application & confirmation of FX rate: Name", "kind": "text", "half": false, "required": true, "max": 35}
 {"id": "contact_tel", "section": "Applicant", "label": "Contact party: Tel no", "kind": "text", "half": true, "required": true, "max": 15, "format": "phone"}
 {"id": "contact_fax", "section": "Applicant", "label": "Contact party: Fax no", "kind": "text", "half": true, "max": 15, "format": "phone"}
+{"id": "dc_no", "section": "For Bank Use Only", "label": "DC no", "kind": "text", "half": true}
+{"id": "bank_code", "section": "For Bank Use Only", "label": "Bank code", "kind": "text", "half": true}
 {"id": "advising_bank_name", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Name", "kind": "text", "half": false, "max": 35}
 {"id": "advising_bank_address_1", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Address", "kind": "text", "half": false, "max": 35}
 {"id": "advising_bank_address_2", "section": "Advising Bank (at Issuing Bank's option, if no nomination)", "label": "Address (line 2)", "kind": "text", "half": false, "max": 35}
@@ -204,6 +206,4 @@ Your reply: the results of the acceptance checks, then the PDF file LC-Applicati
 {"id": "debit_issuance_charges", "section": "Charges, Confirmation and Settlement", "label": "Please debit all DC issuance charges to our account with you", "kind": "check"}
 {"id": "issuance_charges_account", "section": "Charges, Confirmation and Settlement", "label": "Account no for DC issuance charges", "kind": "text", "half": true, "required": true, "max": 17, "format": "account"}
 {"id": "authorised_person", "section": "Declaration and Signature", "label": "Name and title of authorised person(s)", "kind": "text", "half": false}
-{"id": "dc_no", "section": "For Bank Use Only", "label": "DC no", "kind": "text", "half": true}
-{"id": "bank_code", "section": "For Bank Use Only", "label": "Bank code", "kind": "text", "half": true}
 == END OF SPEC ==
