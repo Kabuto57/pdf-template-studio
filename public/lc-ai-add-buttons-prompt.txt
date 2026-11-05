@@ -1,0 +1,65 @@
+MASTER PROMPT: ADD THE "CHECK FORM" AND "RESET FORM" BUTTONS TO THE LC FORM
+
+== THE PROBLEM ==
+I have attached the "Irrevocable Documentary Credit Application" PDF. "Previous page" and "Next page" work, but the
+"Check form" and "Reset form" buttons are missing: they are not on the form at all. Add them, working, on every
+page. Change nothing else, and make sure everything that already works still works (REGRESSION CHECKLIST below).
+Give me back the SAME PDF (same design, fields, names, scripts), named LC-Application-with-checks.pdf. This is
+approved work within my bank's policy. I open it in Adobe Acrobat (Windows) and click "Enable All Features". Don't
+suggest ways around the bank's security settings. Don't redraw or rebuild the pages; only ADD the two buttons.
+
+== WHERE AND HOW THEY LOOK ==
+  - On EVERY page, in the header strip at the top right (to the right of "DEMO BANK · TRADE SERVICES", above the
+    header rule), side by side: "Check form" then "Reset form".
+  - Each about 64 pt wide x 13 pt high, 4 pt apart, the right one ending at the right page margin.
+  - Black box, white Helvetica text about 8 pt, centred; same style as the existing Previous/Next buttons.
+  - Nothing may overlap them (no text, field, link or drawn shape on top or underneath that takes the click). If
+    something is already in that spot, move the buttons into the nearest free space in the header, not into the form.
+  - Shown on screen, NOT printed (annotation Print flag off), not read-only.
+
+== WHAT THEY ARE ==
+Real push-button fields (field type Btn, Pushbutton flag /Ff 65536). Either one field per button with a widget on
+each page, or one field per page: __btn_check_1, __btn_check_2, ... and __btn_reset_1, __btn_reset_2, ... (names
+starting with "__" so the bank's systems skip them). Add each widget to its page's annotations and to the form's
+field list. Give each widget a normal appearance that shows its caption, so it is visible straight away.
+Each widget gets a Mouse Up action (Run a JavaScript; the widget's /A entry) with EXACTLY this text:
+
+"Check form":
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("This form is not ready to send. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them before you send the form.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else app.alert("All mandatory questions are answered and every answer is in the right format. You can save the form and send it.", 3);
+
+"Reset form":
+if (app.alert("Are you sure you want to reset the form? All your answers will be cleared.", 2, 2) == 4) {
+this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lcRules == "function") lcRules(this); }
+
+Both call the document-level script "lcRules", which is already in the PDF. Don't change it. If it is missing,
+stop and tell me (don't write a new one).
+Starting answers after Reset: Mode of advising = Full Swift; Presentation period = 21; "All bank charges are for
+account of" ticked with "Beneficiary, except charges at DC Issuing Bank's counter"; post-shipment financing ticked;
+"Please debit all DC issuance charges to our account with you" ticked. Set these as those fields' DEFAULT values
+(/DV) so Reset brings them back; every other field resets to blank.
+
+== REGRESSION CHECKLIST (check ALL on the final file; mark each PASS or FAIL) ==
+  1. "Check form" and "Reset form" are visible at the top right of EVERY page, clickable, nothing on top of them,
+     and not printed.
+  2. Check form on the blank form: one message listing the missing always-mandatory answers (Date, Applicant name,
+     Applicant address, Contact party Name, Tel no, Beneficiary's name and address, Currency, Amount, Price basis,
+     Partial shipment, Transhipment, Date of expiry, Goods description, Account no for DC issuance charges,
+     Financing); then the cursor is in Date.
+  3. Check form on a fully correct form: "All mandatory questions are answered ...".
+  4. Reset form: asks first; "No" changes nothing; "Yes" clears every answer, brings back the starting answers, and
+     the red / locked state is the blank-form state again. The buttons still work after a reset.
+  5. Previous page / Next page still work.
+  6. The date boxes still show the calendar (Format AFDate_FormatEx("dd/mm/yyyy"), Keystroke
+     AFDate_KeystrokeEx("dd/mm/yyyy"), no other keystroke filter on them).
+  7. Conditional questions still work: tick "Drafts for 100% invoice value at" -> Drafts at clickable and red;
+     Drafts at = Term -> Term days / days after / prepay unlock and turn red; untick -> grey and cleared.
+  8. Typing filters on the other boxes, every field name, and the page design are unchanged.
+Test the logic in code against a stand-in for Acrobat (this.getField, resetForm, app.alert, setFocus) and show the
+results. Reply with: what you added and where (page, position), results 1 to 8, and LAST the PDF file. Tell me
+honestly if anything fails or could not be tested.
