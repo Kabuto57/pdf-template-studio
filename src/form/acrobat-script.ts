@@ -1,9 +1,11 @@
 // CHECKS INSIDE THE PDF, FOR WHEN ACROBAT RUNS JAVASCRIPT
 // The same rules as rules.ts, written into the PDF as JavaScript for Adobe Acrobat / Reader (Chrome runs much of it too):
-//   - after every change: each question's "required" flag, red outline when blank or wrong, locked when it doesn't apply
-//   - a "Check form" button that lists what is missing or wrong
+//   - after every change: each question's "required" flag, red outline when blank or wrong, locked (and cleared) when
+//     it doesn't apply, and the checks across answers (dates in order, amount above zero, insurance against price basis)
+//   - a "Check form" button that lists what is missing or wrong and puts the cursor on the first one
+//   - a "Reset form" button (addToolbar)
 //   - a warning when saving or printing an incomplete form
-//   - typing filters on amount / phone / account / number boxes
+//   - typing filters on amount / phone / account / number boxes, and upper case + SWIFT characters on the rest
 // With JavaScript off, none of this runs; red-frames.ts and the workbench cover that case.
 import { PDFDict, PDFDocument, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFPage } from "pdf-lib";
 import { activeRules } from "./rules";
@@ -29,6 +31,12 @@ export const formatActions = (doc: PDFDocument, js: JS, f: Field) => {
   });
 };
 
+/** Typing filter for any other text box: letters upper-cased as typed (SWIFT messages are upper case), and
+ *  characters the bank's SWIFT messages can't carry refused, as in the bank's smart form. */
+export const swiftActions = (doc: PDFDocument, js: JS) => doc.context.obj({
+  K: js(`if (!event.willCommit) { event.change = event.change.toUpperCase(); if (/${BAD_CHARS}/.test(event.change)) { event.rc = false; app.beep(0); } }`),
+});
+
 /** What the script needs to know about one question. Short keys keep the script small. */
 interface Model {
   kind: Kind;
@@ -43,7 +51,7 @@ interface Model {
 }
 
 export function addChecks(doc: PDFDocument, form: Form, page: PDFPage, font: PDFFont, t: Template, js: JS,
-  underlined: Set<string> = new Set()) {
+  underlined: Set<string> = new Set(), toolbar?: PDFPage[]) {
   const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
   const asList = (rules: Rule[]) => rules.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]);
 
@@ -66,11 +74,13 @@ export function addChecks(doc: PDFDocument, form: Form, page: PDFPage, font: PDF
   }
   for (const f of all.filter(f => f.kind === "text" || f.kind === "long" || f.kind === "date")) // typed answers
     add(f).check = f.format ? [FORMATS[f.format].ok.source, FORMATS[f.format].say] : 1;
+  // In the form's order, so "Check form" lists the problems top to bottom and goes to the first one.
+  const ordered = Object.fromEntries(all.filter(f => model[f.id]).map(f => [f.id, model[f.id]]));
 
   // 2. The rules engine, stored once in the PDF. Every box and button calls lcRules(this).
   //    (Acrobat's JavaScript is old-style: var, no arrow functions.)
   const script = `function lcRules(d) {
-var M = ${JSON.stringify(model)};
+var M = ${JSON.stringify(ordered)};
 function has(list, x) { for (var i = 0; i < list.length; i++) if (list[i] == x) return true; return false; }
 
 // The answer to question id, read from the PDF's fields.
@@ -109,23 +119,48 @@ function wrong(id) {
   return m.check.length && !new RegExp(m.check[0]).test(s) ? m.check[1] : "";
 }
 
+// A real DD/MM/YYYY date as a Date, or null.
+function day(s) { var x = /^(\\d\\d)\\/(\\d\\d)\\/(\\d{4})$/.exec(s), k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? k : null; }
+function v(id) { return M[id] ? val(id) : ""; }
+
+// Checks across answers (the same as cross-checks in form/validate.ts). Skipped when a form doesn't have the fields.
+function across() {
+  var X = {}, A = day(v("application_date")), S = day(v("latest_shipment_date")), E = day(v("expiry_date")), a = v("amount"), pb = v("price_basis");
+  if (S && E && E < S) X.expiry_date = "is before the latest shipment date";
+  else if (A && E && E < A) X.expiry_date = "is before the application date";
+  if (A && S && S < A) X.latest_shipment_date = "is before the application date";
+  if (A && A.getTime() > new Date().getTime()) X.application_date = "is in the future";
+  if (/^[\\d,]+(\\.\\d+)?$/.test(a) && !(Number(a.replace(/,/g, "")) > 0)) X.amount = "must be more than zero";
+  if (v("insurance_arrangement") && (pb == "CIF" || pb == "CIP")) X.insurance_arrangement = "is only for FOB/CFR/FCA/CPT, but price basis is " + pb + " (the beneficiary insures)";
+  return X;
+}
+
+// Clears a question's box, so an answer can't stay behind in a question that doesn't apply.
+function clear(f, kind) {
+  if (kind == "check" || kind == "checks" || kind == "radio") { if (f.value != "Off") f.value = "Off"; }
+  else if (f.type == "combobox" && /__list$/.test(f.name)) { if (f.currentValueIndices != 0) f.currentValueIndices = 0; } // a date list: back to "Pick a date"
+  else if (f.value !== "" && f.value != null) f.value = "";
+}
+
 // Go through every question: work out its state, then colour (and lock) its boxes.
-var missing = [], bad = [], id, m, applies, required, problem, whatsWrong, names, i, f;
+var missing = [], bad = [], first = "", id, m, applies, required, problem, whatsWrong, names, i, f, X;
 try {
+X = across();
 for (id in M) {
   m = M[id]; if (!m.hasRule && !m.check && !m.activeIf) continue;
   applies = !m.activeIf || any(m.activeIf);
   required = m.hasRule && applies ? mandatory(id) : false;
   problem = required && (m.kind == "check" ? val(id) != "true" : empty(val(id)));
   if (problem) missing.push(m.label);
-  whatsWrong = applies ? wrong(id) : ""; if (whatsWrong) { bad.push(m.label + ": " + whatsWrong); problem = true; }
+  whatsWrong = applies ? wrong(id) || X[id] || "" : ""; if (whatsWrong) { bad.push(m.label + ": " + whatsWrong); problem = true; }
   names = [id]; if (m.kind == "checks") { names = []; for (i = 0; i < m.options.length; i++) names.push(id + "__" + i); }
   if (m.kind == "date" && !shown(id) && d.getField(id + "__list")) names = [id + "__list"];
+  if (problem && !first) first = names[0];
   for (i = 0; i < names.length; i++) {
     f = d.getField(names[i]); if (!f) continue;
     if (m.hasRule && m.kind != "checks") f.required = required;
     if (m.activeIf) f.readonly = !applies;                                                   // locked until it applies
-    if (!applies) { f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; } // grey
+    if (!applies) { clear(f, m.kind); f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; } // grey, cleared
     f.lineWidth = problem || !m.underlined ? 1 : 0;
     f.strokeColor = problem ? color.red : m.underlined ? color.transparent : color.black;    // red when blank or wrong
     f.fillColor = problem ? ["RGB", 1, 0.88, 0.88] : m.underlined ? color.transparent : color.white;
@@ -133,6 +168,7 @@ for (id in M) {
 }
 } catch (e) { console.println("lcRules: " + e); }
 missing.bad = bad;
+missing.first = first; // the field of the first problem, for "Check form" to go to
 return missing;
 }
 
@@ -176,13 +212,25 @@ if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lc
 function list(a) { return "- " + a.slice(0, 15).join("\\n- ") + (a.length > 15 ? "\\n- ... and " + (a.length - 15) + " more" : ""); }
 if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\\n" + list(m));
 if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\\n" + list(b));
-if (t.length) app.alert("This form is not ready to send. The boxes concerned are outlined in red.\\n\\n" + t.join("\\n\\n") + "\\n\\nPlease correct them before you send the form.", 1);
+if (t.length) { app.alert("This form is not ready to send. The boxes concerned are outlined in red.\\n\\n" + t.join("\\n\\n") + "\\n\\nPlease correct them before you send the form.", 1);
+  ${always ? "var g = m.first && this.getField(m.first); if (g) g.setFocus();" : ""} }
 ${always ? 'else app.alert("All mandatory questions are answered and every answer is in the right format. You can save the form and send it.", 3);' : ""}`;
-  const button = form.createButton("__check_form");
-  button.addToPage("Check form", page, { x: W - M - 84, y: H - 44, width: 84, height: 18, font, textColor: WHITE, backgroundColor: INK, borderColor: INK });
-  button.setFontSize(9);
-  const widget = button.acroField.getWidgets()[0].dict;
-  widget.set(PDFName.of("A"), js(report(true)));   // A = on click
-  widget.set(PDFName.of("F"), PDFNumber.of(0));    // shown on screen, not printed
+  // "Reset form": asks first, then clears every answer back to how the form started, and re-checks.
+  const reset = `if (app.alert("Are you sure you want to reset the form? All your answers will be cleared.", 2, 2) == 4) {
+this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lcRules == "function") lcRules(this); }`;
+  // Each button is one field with a widget per page: at the top right of page 1, or (toolbar) just above the footer
+  // of every page, beside "Reset form".
+  const style = { font, textColor: WHITE, backgroundColor: INK, borderColor: INK };
+  const buttons: [string, string, string][] = [["__check_form", "Check form", report(true)], ...(toolbar ? [["__reset_form", "Reset form", reset]] as [string, string, string][] : [])];
+  buttons.forEach(([name, caption, code], i) => {
+    const button = form.createButton(name);
+    for (const p of toolbar ?? [page])
+      button.addToPage(caption, p, toolbar ? { x: W - M - 76 * (buttons.length - i) + 4, y: 40, width: 72, height: 14, ...style } : { x: W - M - 84, y: H - 44, width: 84, height: 18, ...style });
+    button.setFontSize(toolbar ? 8 : 9);
+    for (const w of button.acroField.getWidgets()) {
+      w.dict.set(PDFName.of("A"), js(code));         // A = on click
+      w.dict.set(PDFName.of("F"), PDFNumber.of(0));  // shown on screen, not printed
+    }
+  });
   doc.catalog.set(PDFName.of("AA"), doc.context.obj({ WS: js(report(false)), WP: js(report(false)) })); // WS / WP = before save / print
 }

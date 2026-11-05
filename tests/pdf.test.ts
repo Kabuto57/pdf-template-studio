@@ -3,6 +3,7 @@ import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRa
 import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
 import { LC } from "../src/lc";
+import { activeRules } from "../src/form/rules";
 
 describe("pdf form", () => {
   it("round-trips every answer through a filled PDF", async () => {
@@ -129,6 +130,34 @@ it("the Check form button and the save / print warnings are valid scripts", asyn
   const alerts: string[] = [];
   new Function("app", `var lcRules = function () { return ["Amount"]; }; ${js(btn)}`)({ alert: (m: string) => alerts.push(m) });
   expect(alerts[0]).toContain("1 mandatory question is still blank");
+  // ... and puts the cursor on the first problem.
+  const focused: string[] = [];
+  new Function("app", `var lcRules = function () { var m = ["Amount"]; m.first = "amount"; return m; }; ${js(btn)}`)
+    .call({ getField: (n: string) => ({ setFocus: () => focused.push(n) }) }, { alert() {} });
+  expect(focused).toEqual(["amount"]);
+});
+
+describe("the JavaScript version", async () => {
+  const doc = await PDFDocument.load(await buildPdf(LC.template, LC.defaults, "javascript"));
+  const js = (o: unknown) => (((o as PDFDict).lookup(PDFName.of("JS"))) as PDFHexString).decodeText();
+  it("has Check form and Reset form on every page; Reset asks first, then clears and re-checks", () => {
+    for (const n of ["__check_form", "__reset_form"]) expect(doc.getForm().getButton(n).acroField.getWidgets()).toHaveLength(doc.getPageCount());
+    const reset = js(doc.getForm().getButton("__reset_form").acroField.getWidgets()[0].dict.lookup(PDFName.of("A")));
+    const calls: string[] = [], d = { resetForm: () => calls.push("reset") };
+    new Function("app", "lcRules", reset).call(d, { alert: () => 3 }, () => calls.push("rules")); // No
+    expect(calls).toEqual([]);
+    new Function("app", "lcRules", reset).call(d, { alert: () => 4 }, () => calls.push("rules")); // Yes
+    expect(calls).toEqual(["reset", "rules"]);
+    // Reset goes back to the starting answers (e.g. Full Swift), not to blank.
+    expect(doc.getForm().getRadioGroup("mode_of_advising").acroField.dict.get(PDFName.of("DV"))).toBeDefined();
+  });
+  it("text boxes: letters upper-cased as typed, characters SWIFT can't carry refused", () => {
+    const k = js((doc.getForm().getTextField("applicant_name").acroField.dict.lookup(PDFName.of("AA")) as PDFDict).lookup(PDFName.of("K")));
+    const type = (change: string) => { const event = { willCommit: false, change, rc: true }; new Function("event", "app", k)(event, { beep() {} }); return event; };
+    expect(type("tan & co")).toMatchObject({ change: "TAN & CO", rc: true });
+    expect(type("é").rc).toBe(false);
+    expect(type("*").rc).toBe(false);
+  });
 });
 
 describe("every conditional rule lights up its field (the PDF's own script)", async () => {
@@ -138,11 +167,18 @@ describe("every conditional rule lights up its field (the PDF's own script)", as
   // The answer that makes each rule apply, as Acrobat reports it (tick boxes "Yes"/"Off", radios their option).
   const trigger = (id: string, values: string[]) => byId.get(id)!.kind === "check" ? (values[0] === "true" ? "Yes" : "Off") : values[0];
   const cases = fields.flatMap(f => (f.requiredIf ?? []).filter(r => !r.not).map(r => [f.id, r.field, trigger(r.field, r.values)] as const));
+  // The trigger only counts when it applies itself (a locked question's answer is cleared), so switch on its own
+  // triggers too: "Drafts at = Term" needs "Drafts" ticked.
+  const chain = (id: string, value: string): Record<string, string> => {
+    const up = activeRules(byId.get(id)!)[0];
+    return { ...(up ? chain(up.field, trigger(up.field, up.values)) : {}), [id]: value };
+  };
   for (const [name, make] of [["new design", () => buildPdf(LC.template)], ["original look", () => buildLcPdf()]] as const) {
     const doc = await PDFDocument.load(await make()), lib = library(doc);
     it.each(cases)(`${name}: %s turns red when %s = %s`, (target, by, value) => {
       const state: Record<string, Fake> = {};
-      const acro = { getField: (n: string) => n in state ? state[n] : (state[n] = like(doc, n, n === by ? value : undefined)) };
+      const set = chain(by, value);
+      const acro = { getField: (n: string) => n in state ? state[n] : (state[n] = like(doc, n, set[n])) };
       new Function("color", "console", `${lib}; lcRules(this);`).call(acro, { red: "red", black: "black", white: "white", transparent: "none" }, { println() {} });
       const kind = byId.get(target)!.kind, shown = kind === "checks" ? state[`${target}__0`] : kind === "date" ? state[`${target}__list`] : state[target];
       expect(shown?.strokeColor).toBe("red");

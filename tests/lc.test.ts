@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRawStream, PDFString, decodePDFRawStream } from "pdf-lib";
-import { FORMATS, buildPdf, dateOptions, extractPdf, isActive, joinDate } from "../src/pdf";
+import { FORMATS, buildPdf, dateOptions, extractPdf, isActive, joinDate, type Field, type Values } from "../src/pdf";
+import { SAMPLES } from "../src/demo-applications";
+import { validateLc } from "../src/form/validate";
 import { LC, LC_SAMPLE } from "../src/lc";
 import { buildLcPdf } from "../src/lc-pdf";
 
@@ -144,7 +146,7 @@ describe("Check form button: blanks, formats and funny characters", () => {
       }
       const d = { getField: (n: string) => fields[n] ?? null };
       const m = new Function("color", "console", `${js}; return lcRules;`)({ red: 1, black: 0, white: 0, transparent: 0 }, { println: (e: string) => { throw new Error(e); } })(d);
-      return { miss: [...m] as string[], bad: m.bad as string[], red: (id: string) => fields[id].strokeColor === 1, fields };
+      return { miss: [...m] as string[], bad: m.bad as string[], first: m.first as string, red: (id: string) => fields[id].strokeColor === 1, fields };
     };
   };
   it.each([["original look", () => buildLcPdf()], ["new design", () => buildPdf(LC.template)]])("%s", async (_, make) => {
@@ -164,5 +166,53 @@ describe("Check form button: blanks, formats and funny characters", () => {
     // unticking "All bank charges" locks its options; ticking unlocks them
     expect(check({ ...LC_SAMPLE, bank_charges: false }).fields.bank_charges_for.readonly).toBe(true);
     expect(check(LC_SAMPLE).fields.bank_charges_for.readonly).toBe(false);
+  });
+  // The PDF's own script must flag exactly the questions the website's validator (validateLc) flags, once locked
+  // answers are cleared (which the script does, like the smart form): every trigger on and off, every sample.
+  it("flags the same questions as the website's validator", async () => {
+    const check = await lcRules(() => buildPdf(LC.template, {}, "javascript"));
+    const all = LC.template.sections.flatMap(s => s.fields);
+    const blankOf = (f: Field) => (f.kind === "check" ? false : f.kind === "checks" ? [] : "");
+    const variants: Values[] = [LC.defaults, LC_SAMPLE, ...SAMPLES.map(x => x.answers),
+      { ...LC_SAMPLE, expiry_date: "01/12/2026", amount: "0.00", price_basis: "CIP" }, { ...LC_SAMPLE, latest_shipment_date: "01/01/2026" }];
+    for (const id of new Set(all.flatMap(f => [...(f.requiredIf ?? []), ...(f.activeIf ?? [])]).map(r => r.field))) {
+      const f = all.find(q => q.id === id)!;
+      for (const v of f.kind === "check" ? [true, false] : f.options ?? []) variants.push({ ...LC_SAMPLE, [id]: v }, { ...LC.defaults, [id]: v });
+    }
+    let flagged = 0;
+    for (const data of variants) {
+      const cleared: Values = { ...data };
+      for (let changed = true; changed;) { // clear what doesn't apply, until nothing changes
+        changed = false;
+        for (const f of all) if (!isActive(f, cleared) && JSON.stringify(cleared[f.id] ?? blankOf(f)) !== JSON.stringify(blankOf(f))) { cleared[f.id] = blankOf(f); changed = true; }
+      }
+      const expected = [...new Set(validateLc(cleared).map(i => i.id))].sort();
+      if (expected.length) flagged++;
+      const r = check(data);
+      const shown = (f: Field) => f.kind === "checks" ? `${f.id}__0` : f.kind === "date" ? `${f.id}__list` : f.id;
+      expect(all.filter(f => r.fields[shown(f)]?.strokeColor === 1).map(f => f.id).sort(), JSON.stringify(data).slice(0, 200)).toEqual(expected);
+    }
+    expect(variants.length).toBeGreaterThan(100);
+    expect(flagged).toBeGreaterThan(variants.length / 2); // most variants have something to flag
+  });
+
+  it("checks across answers, locked answers cleared, and where the first problem is", async () => {
+    const check = await lcRules(() => buildPdf(LC.template, {}, "javascript"));
+    const r = check({ ...LC_SAMPLE, expiry_date: "01/12/2026", amount: "0.00", price_basis: "CIF" });
+    const bad = r.bad.join("\n");
+    expect(bad).toMatch(/expiry.*: is before the latest shipment date/i);
+    expect(bad).toMatch(/Amount: must be more than zero/);
+    expect(bad).toMatch(/For FOB\/CFR\/FCA\/CPT: is only for FOB\/CFR\/FCA\/CPT, but price basis is CIF/);
+    expect(r.red("insurance_arrangement")).toBe(true);
+    expect(r.red("amount")).toBe(true);
+    expect(check({ ...LC_SAMPLE, latest_shipment_date: "01/10/2026" }).bad.join()).toMatch(/Latest shipment date: is before the application date/);
+    // Unticking "Drafts" locks and clears everything under it, as the smart form does.
+    const locked = check({ ...LC_SAMPLE, drafts: false });
+    expect(locked.fields.drafts_at).toMatchObject({ value: "Off", readonly: true });
+    expect(locked.fields.term_days).toMatchObject({ value: "", readonly: true });
+    expect(locked).toMatchObject({ miss: [], bad: [] });
+    // "Check form" goes to the first problem, top to bottom: the date on a blank form, else the first wrong answer.
+    expect(check({}).first).toBe("application_date__list");
+    expect(check({ ...LC_SAMPLE, contact_tel: "61 ABC" }).first).toBe("contact_tel");
   });
 });

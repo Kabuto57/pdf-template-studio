@@ -13,7 +13,7 @@
 //                    save/print. Assumes JavaScript is on; with it off, only the page links and lists work.
 //   "both":          the two together (the studio's preview and the samples).
 import { PDFDocument, PDFHexString, PDFName, PDFPage, StandardFonts } from "pdf-lib";
-import { addChecks, formatActions } from "./acrobat-script";
+import { addChecks, formatActions, swiftActions } from "./acrobat-script";
 import { addDateLists } from "./dates";
 import { BOTTOM, GAP, GREY, H, INK, M, RED, RULE, W, WHITE, finishForm, tip, wrap } from "./look";
 import { addRedFrames, type Blocks } from "./red-frames";
@@ -148,7 +148,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
       if (typeof answer === "string" && answer) box.setText(safe(answer).slice(0, f.max));
       box.addToPage(page, { x, y: y - h, width: w, height: h, font, ...look });
       box.setFontSize(10);
-      if (f.format && js) box.acroField.dict.set(PDFName.of("AA"), formatActions(doc, js, f)); // Acrobat: refuse wrong keys
+      if (js) box.acroField.dict.set(PDFName.of("AA"), f.format ? formatActions(doc, js, f) : swiftActions(doc, js)); // Acrobat: refuse wrong keys
     }
     return 13 + h;
   }
@@ -203,7 +203,14 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
 
   // 6. Conditional highlighting without JavaScript, then the checks for when Acrobat runs JavaScript.
   if (mode !== "javascript") addRedFrames(doc, form, t, values, { blocks, font });
-  if (js && t.sections.some(s => s.fields.some(f => f.required || f.requiredIf))) addChecks(doc, form, pages[0], font, t, js);
+  // The JavaScript version also gets "Check form" and "Reset form" above the footer of every page.
+  if (js && t.sections.some(s => s.fields.some(f => f.required || f.requiredIf)))
+    addChecks(doc, form, pages[0], font, t, js, undefined, mode === "javascript" ? pages : undefined);
+  // JavaScript version: "Reset form" goes back to the answers the form started with (e.g. Full Swift), not blank.
+  if (mode === "javascript") for (const f of form.getFields()) {
+    const v = f.acroField.dict.get(PDFName.of("V"));
+    if (v) f.acroField.dict.set(PDFName.of("DV"), v);
+  }
   form.updateFieldAppearances(font);
   finishForm(doc, font);
   return doc.save();
