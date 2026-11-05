@@ -9,6 +9,8 @@ export const INK = rgb(0, 0, 0);            // text, lines, section bars
 export const GREY = rgb(0.35, 0.35, 0.35);  // footer text
 export const RULE = rgb(0.75, 0.75, 0.75);  // footer line
 export const WHITE = rgb(1, 1, 1);
+export const ACCENT = rgb(0.12, 0.23, 0.37); // navy: header, section headings, question numbers, buttons
+export const TINT = rgb(0.91, 0.93, 0.96);   // light blue-grey band behind section headings
 
 // Page (A4, in points: 1 point = 1/72 inch, about 0.35 mm). x and y count from the page's BOTTOM-left corner.
 export const W = 595.28;      // page width

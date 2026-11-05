@@ -41,6 +41,8 @@ export interface Template {
   sections: Section[];
   base?: string;         // an uploaded PDF (base64) whose own fields are filled, instead of drawing a new layout
   design?: "new";        // the LC only: draw it in the new design instead of the bank's own layout
+  issuer?: string;       // who issues the form, shown at the top of every page, e.g. "Demo Bank · Trade Services"
+  formCode?: string;     // the form's reference and version, shown in the header and footer, e.g. "Form LC-01 · v1.0"
 }
 
 /** An answer: text, the ticked options of a "tick any" question, or a tick box's true / false. */

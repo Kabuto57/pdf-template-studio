@@ -183,7 +183,10 @@ const sections: Section[] = [
 
 export const LC: { code: string; template: Template; defaults: Values } = {
   code: "LC",
-  template: { title: "Irrevocable Documentary Credit (LC)", note: "Please complete in block letters. Dates are DD/MM/YYYY.", sections },
+  template: {
+    title: "Irrevocable Documentary Credit (LC)", note: "Please complete in block letters. Dates are DD/MM/YYYY.", sections,
+    issuer: "Demo Bank · Trade Services", formCode: "Form LC-01 · v1.0 · Nov 2026",
+  },
   defaults: { mode_of_advising: "Full Swift", presentation_days: "21", bank_charges: true, bank_charges_for: "Beneficiary, except charges at DC Issuing Bank's counter", post_shipment_financing: true, debit_issuance_charges: true },
 };
 

@@ -15,7 +15,7 @@
 import { PDFDocument, PDFHexString, PDFName, PDFPage, PDFString, StandardFonts } from "pdf-lib";
 import { addChecks, formatActions, swiftActions } from "./acrobat-script";
 import { addDateLists } from "./dates";
-import { GREY, H, INK, M, RED, RULE, W, WHITE, finishForm, tip, wrap } from "./look";
+import { ACCENT, GREY, H, INK, M, RED, RULE, TINT, W, WHITE, finishForm, tip, wrap } from "./look";
 import { addRedFrames, type Blocks } from "./red-frames";
 import { activeRules, isRequired } from "./rules";
 import { stamp } from "./stored-template";
@@ -47,23 +47,35 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
   // 1. Store the form's description inside the PDF.
   stamp(doc, t);
 
-  // 2. Title and instructions. `top` is the pen: it starts near the top of the page and moves down.
+  // 2. The header: the issuer on every page (the buttons sit at its right in the JavaScript version), then on page 1
+  //    the title, the form's reference, the instructions and what the red marks mean. `top` is the pen: it starts
+  //    near the top of the page and moves down.
   let page: PDFPage = doc.addPage([W, H]), top = 0;
-  const newPage = () => { page = doc.addPage([W, H]); top = H - 26; };
-  page.drawText(safe(t.title.toUpperCase()), { x: M, y: H - 40, size: 13, font: bold, color: INK });
-  page.drawLine({ start: { x: M, y: H - 47 }, end: { x: W - M, y: H - 47 }, thickness: 1.2, color: INK });
-  top = H - 50;
-  for (const line of wrap(t.note, font, 7.5, W - 2 * M)) {
-    page.drawText(line, { x: M, y: top - 8, size: 7.5, font, color: INK });
-    top -= 10;
+  const strip = (first: boolean) => {
+    const who = safe(t.issuer ?? "").toUpperCase();
+    if (who) page.drawText(who, { x: M, y: H - 22, size: first ? 9 : 7, font: bold, color: ACCENT });
+    if (!first) page.drawText(safe(t.title), { x: M + (who ? bold.widthOfTextAtSize(who, 7) + 8 : 0), y: H - 22, size: 7, font, color: GREY });
+    page.drawLine({ start: { x: M, y: H - 29 }, end: { x: W - M, y: H - 29 }, thickness: first ? 1.5 : 0.5, color: ACCENT });
+  };
+  const newPage = () => { page = doc.addPage([W, H]); strip(false); top = H - 34; };
+  strip(true);
+  page.drawText(safe(t.title), { x: M, y: H - 48, size: 14, font: bold, color: INK });
+  if (t.formCode) page.drawText(safe(t.formCode), { x: W - M - font.widthOfTextAtSize(safe(t.formCode), 7), y: H - 47, size: 7, font, color: GREY });
+  top = H - 54;
+  const key = `${safe(t.note)}  * Mandatory. Boxes outlined in red must be completed; a red note under a question says when it becomes mandatory.`;
+  for (const line of wrap(key, font, 7, W - 2 * M)) {
+    page.drawText(line, { x: M, y: top - 7.5, size: 7, font, color: GREY });
+    top -= 9;
   }
-  top -= 4;
+  top -= 5;
 
   // Box styles. A mandatory box is outlined in red (not only starred) until it is answered.
   const plain = { borderColor: INK, borderWidth: 0.75, backgroundColor: WHITE };
   const mandatory = { ...plain, borderColor: RED, borderWidth: 1.25 };
   const blocks: Blocks = new Map(); // where each question was drawn, for the red frames
   const shrink: ReturnType<typeof form.createTextField>[] = []; // boxes whose text shrinks to fit in Acrobat
+  // Every question numbered by section, "3.1", "3.2", ..., so a question can be referred to ("see 14.3").
+  const number = new Map(t.sections.flatMap((s, si) => s.fields.map((f, qi) => [f.id, `${si + 1}.${qi + 1}`] as const)));
 
   /**
    * 4. Lays out one question at (x, top) in width w. Draws it only when `draw` (otherwise just measures it).
@@ -81,23 +93,27 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
 
     // A single tick box: the box, then its label beside it.
     if (f.kind === "check") {
-      const lines = wrap(f.label, font, TEXT, w - 14);
+      const no = number.get(f.id) ?? "", noW = no ? bold.widthOfTextAtSize(no, LABEL) + 4 : 0;
+      const lines = wrap(f.label, font, TEXT, w - 14 - noW);
       if (draw) {
         const box = form.createCheckBox(f.id);
         box.addToPage(page, { x, y: top - 10, width: 9, height: 9, ...look });
         tip(box, f.label);
         if (required) { if (flag) box.enableRequired(); page.drawText("*", { x: x - 7, y: top - 10, size: 9, font: bold, color: RED }); }
         if (answer === true) box.check();
-        lines.forEach((l, i) => page.drawText(l, { x: x + 14, y: top - 8 - i * 10, size: TEXT, font, color: INK }));
+        if (no) page.drawText(no, { x: x + 14, y: top - 8, size: LABEL, font: bold, color: ACCENT });
+        lines.forEach((l, i) => page.drawText(l, { x: x + 14 + noW, y: top - 8 - i * 10, size: TEXT, font, color: INK }));
       }
       return Math.max(11, lines.length * 10);
     }
 
     // Everything else: the label on top (with a red * if mandatory), the box(es) below.
     if (draw) {
-      blocks.set(f.id, { page, label: { x, y: top - 6.5, text: safe(f.label) } });
-      page.drawText(safe(f.label), { x, y: top - 7, size: LABEL, font, color: INK });
-      if (required) page.drawText("*", { x: x + font.widthOfTextAtSize(safe(f.label), LABEL) + 2, y: top - 7, size: 8.5, font: bold, color: RED });
+      const no = number.get(f.id) ?? "", lx = x + (no ? bold.widthOfTextAtSize(no, LABEL) + 4 : 0);
+      if (no) page.drawText(no, { x, y: top - 7, size: LABEL, font: bold, color: ACCENT });
+      blocks.set(f.id, { page, label: { x: lx, y: top - 7, text: safe(f.label) } });
+      page.drawText(safe(f.label), { x: lx, y: top - 7, size: LABEL, font, color: INK });
+      if (required) page.drawText("*", { x: lx + font.widthOfTextAtSize(safe(f.label), LABEL) + 2, y: top - 7, size: 8.5, font: bold, color: RED });
     }
     let y = top - 10;
 
@@ -147,7 +163,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
     // A date, or a text box (one line, or a paragraph).
     const h = f.kind === "long" ? 64 : BOX;
     if (draw && f.kind === "date") {
-      addDateLists(form, page, f.id, f.label, answer, { x, y: y - h, width: Math.min(w, 200), height: h }, font, TEXT, look, js);
+      addDateLists(form, page, f.id, f.label, answer, { x, y: y - h, width: w, height: h }, font, TEXT, look, js);
     } else if (draw) {
       const box = form.createTextField(f.id);
       if (f.kind === "long") box.enableMultiline();
@@ -177,7 +193,7 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
   const spanWidth = (n: number) => n * colW + (n - 1) * CGAP;
   const triggers = new Set(t.sections.flatMap(s => s.fields).flatMap(f => [...(f.requiredIf ?? []), ...(f.activeIf ?? [])]).map(r => r.field));
   const span = (f: Field) => {
-    const label = font.widthOfTextAtSize(safe(f.label), f.kind === "check" ? TEXT : LABEL) + (f.kind === "check" ? 16 : 10);
+    const label = font.widthOfTextAtSize(safe(f.label), f.kind === "check" ? TEXT : LABEL) + (f.kind === "check" ? 16 : 10) + 18; // + its number
     const box =
       f.kind === "long" ? Infinity :
       f.kind === "check" ? 0 :
@@ -197,18 +213,26 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
     let used = COLS;
     for (const f of s.fields) {
       const n = span(f);
-      if (used + n > COLS || triggers.has(f.id)) { rows.push([]); used = 0; }
+      if (used + n > COLS || triggers.has(f.id) || f.kind === "check") { rows.push([]); used = 0; }
       rows[rows.length - 1].push(f);
       used += n;
     }
     // Where each question of a row goes, and the row's height.
-    const layout = (row: Field[]) => { let x = M; return row.map(f => { const w = spanWidth(span(f)), at = x; x += w + CGAP; return { f, x: at, w }; }); };
+    // Columns left over at the end of a row go to its boxes (text, dates, lists), shared out evenly, so every row
+    // ends on the right margin.
+    const layout = (row: Field[]) => {
+      const n = row.map(span), grow = row.map(f => ["text", "long", "date", "select"].includes(f.kind));
+      let k = grow.filter(Boolean).length, spare = COLS - n.reduce((a, b) => a + b, 0), x = M;
+      if (k) row.forEach((_, i) => { if (grow[i]) { const add = Math.ceil(spare / k--); n[i] += add; spare -= add; } });
+      return row.map((f, i) => { const w = spanWidth(n[i]), at = x; x += w + CGAP; return { f, x: at, w }; });
+    };
     const height = (row: Field[]) => Math.max(...layout(row).map(c => place(c.f, c.x, c.w, false)));
 
-    // The black section bar, "1.  APPLICATION" (on a new page if not even its first row fits).
+    // The section heading, "3  APPLICANT": a light band with a navy edge (on a new page if not even its first row fits).
     if (top - 18 - (rows[0] ? height(rows[0]) : 0) < BOTTOM) newPage();
-    page.drawRectangle({ x: M, y: top - 13, width: W - 2 * M, height: 12, color: INK });
-    page.drawText(safe(`${si + 1}.  ${s.title.toUpperCase()}`), { x: M + 5, y: top - 10, size: 7.5, font: bold, color: WHITE });
+    page.drawRectangle({ x: M, y: top - 13, width: W - 2 * M, height: 12, color: TINT });
+    page.drawRectangle({ x: M, y: top - 13, width: 3, height: 12, color: ACCENT });
+    page.drawText(safe(`${si + 1}   ${s.title.toUpperCase()}`), { x: M + 8, y: top - 9.8, size: 7.5, font: bold, color: ACCENT });
     top -= 17;
 
     for (const row of rows) {
@@ -224,13 +248,13 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
   const pages = doc.getPages();
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: M, y: 36 }, end: { x: W - M, y: 36 }, thickness: 0.5, color: RULE });
-    if (mode !== "javascript") p.drawText(safe(t.title), { x: M, y: 24, size: 7.5, font, color: GREY }); // the buttons sit here otherwise
+    p.drawText(safe(t.formCode ?? t.title), { x: M, y: 24, size: 7, font, color: GREY });
     const n = `Page ${i + 1} of ${pages.length}`;
     p.drawText(n, { x: W - M - font.widthOfTextAtSize(n, 7.5), y: 24, size: 7.5, font, color: GREY });
     // "< Previous page" / "Next page >": plain PDF links, so they work in every viewer, JavaScript on or off.
     const link = (text: string, to: PDFPage, x: number) => {
-      const w = bold.widthOfTextAtSize(text, 8);
-      p.drawText(text, { x, y: 23.5, size: 8, font: bold, color: INK });
+      const w = bold.widthOfTextAtSize(text, 7.5);
+      p.drawText(text, { x, y: 23.5, size: 7.5, font: bold, color: ACCENT });
       const annot = doc.context.register(doc.context.obj({
         Type: "Annot", Subtype: "Link", Rect: [x - 4, 18, x + w + 4, 34], Border: [0, 0, 0],
         A: { S: "GoTo", D: [to.ref, PDFName.of("XYZ"), null, null, null] },
@@ -243,9 +267,9 @@ export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "b
 
   // 6. Conditional highlighting without JavaScript, then the checks for when Acrobat runs JavaScript.
   if (mode !== "javascript") addRedFrames(doc, form, t, values, { blocks, font });
-  // The JavaScript version also gets "Check form" and "Reset form" above the footer of every page.
+  // "Check form" and "Reset form" at the top right of every page.
   if (js && t.sections.some(s => s.fields.some(f => f.required || f.requiredIf)))
-    addChecks(doc, form, pages[0], font, t, js, undefined, mode === "javascript" ? pages : undefined);
+    addChecks(doc, form, pages[0], font, t, js, undefined, pages);
   // JavaScript version: "Reset form" goes back to the answers the form started with (e.g. Full Swift), not blank.
   if (mode === "javascript") for (const f of form.getFields()) {
     const v = f.acroField.dict.get(PDFName.of("V"));
