@@ -1,9 +1,9 @@
-MASTER PROMPT: ONE COMPLETE, FINAL SCRIPT PACKAGE FOR THE LC FORM (MAKE EVERYTHING WORK TOGETHER)
+MASTER PROMPT (v2): ONE COMPLETE, FINAL SCRIPT PACKAGE FOR THE LC FORM (MAKE EVERYTHING WORK TOGETHER)
 
 == WHY THIS PROMPT ==
 I have attached the "Irrevocable Documentary Credit Application" PDF. Every time one part was fixed, another part
-broke (red boxes, conditional questions, calendar, buttons). Right now "Check form" and "Reset form" are visible but
-do nothing, and the Drafts conditional questions broke again. So this time DO NOT patch. Remove ALL the form's
+broke (red boxes, conditional questions, calendar, buttons, buttons turning black after Reset, a red outline
+staying on filled-in boxes). This version includes ALL those fixes. So this time DO NOT patch. Remove ALL the form's
 scripts and actions, then put back the COMPLETE set below in ONE pass, exactly as written, and test EVERYTHING at the
 end. Keep the design exactly. Give me back the SAME PDF (same pages, look, fields, field names), named
 LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open it in Adobe Acrobat (Windows)
@@ -136,10 +136,9 @@ if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lc
      Drop-downs: also tick "Commit selected value immediately".
    - Add ONE hidden helper text field "__checks" (tiny, off to one side, hidden, not overlapping anything) with the
      Calculate action  lcRules(this);  and make it the only entry in the calculation order (/AcroForm /CO).
-   - Required flag: set only on the always-mandatory fields (application_date, mode_of_advising, applicant_name,
-     applicant_address_1, contact_name, contact_tel, beneficiary_name, beneficiary_address_1, currency, amount,
-     price_basis, partial_shipment, transhipment, expiry_date, goods_description, bank_charges,
-     issuance_charges_account) or on none. No ReadOnly flag on any answer field (the script locks and unlocks).
+   - Required flag (bit 2 of /Ff): OFF on every field in the file. lcRules turns it on only while a box is blank or
+     wrong (Acrobat draws its own red outline around every Required box, even a filled one, so it must not stay on).
+     No ReadOnly flag on any answer field (the script locks and unlocks).
 
 2.3 DATE BOXES (application_date, latest_shipment_date, expiry_date, draft_date): plain one-line text fields with
    ONLY: Format AFDate_FormatEx("dd/mm/yyyy");  Keystroke AFDate_KeystrokeEx("dd/mm/yyyy");  On Blur lcRules(this);
@@ -148,8 +147,14 @@ if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lc
 2.4 BUTTONS. "Check form" and "Reset form" on EVERY page, top right of the header, side by side (about 64 x 13 pt,
    4 pt apart, black box, white 8 pt text). Real push-button fields (Btn, /Ff 65536), names starting with "__"
    (e.g. __btn_check_1 ... and __btn_reset_1 ...), each widget in its page's annotations and in the form's field
-   list, on top of everything (nothing overlapping), visible on screen, not printed, not read-only, with a normal
-   appearance showing its caption. Mouse Up action (the widget's /A) with EXACTLY:
+   list, on top of everything (nothing overlapping), visible on screen, not printed, not read-only.
+   So the caption never disappears when Acrobat redraws a button (on Reset or on click), EVERY button widget
+   (Check form, Reset form, Previous page, Next page) has:
+     /DA "/Helv 8 Tf 1 g" (white text; /Helv = Helvetica in /AcroForm /DR /Font; no "0 g" anywhere in it);
+     /MK << /BG [0] /BC [0] /CA (its caption) >> (black background and border); /RC and /AC the same caption or none;
+     highlight /H /P or /H /N (never /I);
+     normal appearance /AP /N = black box, white centred Helvetica 8 pt caption; any /D or /R appearance the same.
+   Mouse Up action (the widget's /A) with EXACTLY:
 "Check form":
 ---------------- BEGIN Check form ----------------
 var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
@@ -270,14 +275,16 @@ Structure:
   4. Typing filters on the other boxes as in 2.7.
   5. Check form and Reset form on every page, top right, real push-buttons with the exact actions, nothing on top.
      Previous / Next work.
-  6. No ReadOnly flags; Required only on the always-mandatory fields (or none); every field name unchanged; design
-     unchanged.
+  6. No ReadOnly flags and no Required flags in the file; every field name unchanged; design unchanged.
+     Every button widget: /DA ends "1 g", /MK /BG [0] /BC [0] with its /CA caption, /H not /I.
 Behaviour (run lcRules and the button scripts in code against a stand-in for Acrobat: getField returning objects
 with value / valueAsString / readonly / required / strokeColor / fillColor / display / type / name, plus resetForm,
 pageNum, numPages, app.alert, setFocus, color):
   7. Blank form: red = exactly Date, Applicant name, Applicant address, Contact party Name, Tel no, Beneficiary's
      name, Beneficiary's address, Currency, Amount, Price basis, Partial shipment, Transhipment, Date of expiry,
-     Goods description, Account no for DC issuance charges, Financing. Every switched-off question locked grey.
+     Goods description, Account no for DC issuance charges, Financing (and only these have required = true).
+     Every switched-off question locked grey. Fill a red box and run lcRules: black border, white fill,
+     required = false (so Acrobat shows no red outline on it).
   8. Tick "Drafts for 100% invoice value at": Drafts at UNLOCKED (clickable) and red. Drafts at = Term: Term days,
      days after and prepay unlocked and red; the Date box locked. Drafts at = Date: the Date box unlocked, red, with
      its calendar; Term boxes locked and cleared. Untick Drafts: all locked, grey, cleared.
@@ -287,6 +294,6 @@ pageNum, numPages, app.alert, setFocus, color):
  11. Check form on the blank form lists the missing answers and puts the cursor in Date; on a fully correct form it
      says "All mandatory questions are answered ...".
  12. Reset form asks first; "Yes" clears everything, restores the starting answers and the blank-form state; the
-     buttons, calendar and conditional questions still work afterwards.
+     buttons (still white caption on black), calendar and conditional questions still work afterwards.
 Reply with: what you removed in Step 1, the PASS/FAIL list 1 to 12, and LAST the PDF file. Tell me honestly about
 anything that fails or could not be tested.
