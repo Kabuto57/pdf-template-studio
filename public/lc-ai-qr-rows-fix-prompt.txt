@@ -1,0 +1,136 @@
+MASTER PROMPT: QR CODE THAT WORKS ON EVERY ACROBAT (NO BARCODE FEATURE NEEDED), CHANGE NOTHING ELSE
+
+== THE PROBLEM ==
+I have attached LC-Application-with-checks.pdf, which you built. Everything works. On my work laptop, pressing
+"Generate QR Code" says "The QR code has been generated from your answers (2300 characters)", but the QR box stays
+an empty grey box. On my personal Mac the same file shows the QR code. So the script works, but the work laptop's
+Acrobat does not draw barcode fields (Acrobat's barcode feature is missing or switched off there).
+The fix: stop relying on Acrobat's barcode feature. The form's own JavaScript works out the QR code itself and writes
+it into 177 ordinary text boxes, one per row of the code, as black squares (the ZapfDingbats character "n", a font
+every Acrobat and Reader has built in). Ordinary text boxes display everywhere, so the code shows on any Acrobat.
+Change ONLY the QR code part. Give me back the same PDF, named LC-Application-with-checks.pdf. This is approved
+work within my bank's policy. I open it in Adobe Acrobat (Windows) and click "Enable All Features". Don't suggest
+ways around the bank's security settings. Use pikepdf to edit and save (not PyMuPDF).
+
+== STEP 1: THE DOCUMENT SCRIPT ==
+Append the text below to the END of the existing document-level JavaScript "lcRules" (after lcPayload), on a new
+line, exactly as written. Do not add a second document script and do not change the existing text.
+---------------- BEGIN lcQrMatrix and lcDrawQr ----------------
+// QR code (version 40, error correction M, byte mode, mask 0) drawn without Acrobat's barcode feature:
+// one comb text field per row ("__qr_0" ... "__qr_176"), dark modules as ZapfDingbats "n" (a black square).
+function lcQrMatrix(text) {
+  var N = 177, i, j, x, y, m = [], f = [], bytes = [], s = unescape(encodeURIComponent(text));
+  for (i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i) & 255);
+  for (y = 0; y < N; y++) { m.push([]); f.push([]); for (x = 0; x < N; x++) { m[y].push(false); f[y].push(false); } }
+  function set(x, y, dark) { m[y][x] = dark; f[y][x] = true; }
+  function mul(a, b) { var z = 0; for (var k = 7; k >= 0; k--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((b >>> k) & 1) * a; } return z; }
+  // Function patterns: timing, finders, alignment, format area, version, dark module.
+  for (i = 0; i < N; i++) { set(6, i, i % 2 == 0); set(i, 6, i % 2 == 0); }
+  function finder(cx, cy) { for (var dy = -4; dy <= 4; dy++) for (var dx = -4; dx <= 4; dx++) {
+    var d = Math.max(Math.abs(dx), Math.abs(dy)), xx = cx + dx, yy = cy + dy;
+    if (xx >= 0 && xx < N && yy >= 0 && yy < N) set(xx, yy, d != 2 && d != 4); } }
+  finder(3, 3); finder(N - 4, 3); finder(3, N - 4);
+  var A = [6, 30, 58, 86, 114, 142, 170];
+  for (i = 0; i < A.length; i++) for (j = 0; j < A.length; j++) {
+    if ((i == 0 && j == 0) || (i == 0 && j == A.length - 1) || (i == A.length - 1 && j == 0)) continue;
+    for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) set(A[i] + dx, A[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) != 1);
+  }
+  var rem = 0, fmt; for (i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+  fmt = ((0 << 10) | rem) ^ 0x5412; // error correction M (00), mask 0
+  function bit(v, k) { return ((v >>> k) & 1) != 0; }
+  for (i = 0; i <= 5; i++) set(8, i, bit(fmt, i));
+  set(8, 7, bit(fmt, 6)); set(8, 8, bit(fmt, 7)); set(7, 8, bit(fmt, 8));
+  for (i = 9; i < 15; i++) set(14 - i, 8, bit(fmt, i));
+  for (i = 0; i < 8; i++) set(N - 1 - i, 8, bit(fmt, i));
+  for (i = 8; i < 15; i++) set(8, N - 15 + i, bit(fmt, i));
+  set(8, N - 8, true);
+  rem = 40; for (i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+  var ver = (40 << 12) | rem;
+  for (i = 0; i < 18; i++) { var a = N - 11 + i % 3, b = Math.floor(i / 3); set(a, b, bit(ver, i)); set(b, a, bit(ver, i)); }
+  // Data: mode 0100, 16-bit length, the bytes, terminator, padding to 2,334 data codewords.
+  var bits = [], cap = 2334 * 8;
+  function put(v, n) { for (var k = n - 1; k >= 0; k--) bits.push((v >>> k) & 1); }
+  put(4, 4); put(bytes.length, 16); for (i = 0; i < bytes.length; i++) put(bytes[i], 8);
+  put(0, Math.min(4, cap - bits.length)); while (bits.length % 8) bits.push(0);
+  var data = []; for (i = 0; i < bits.length; i += 8) { var v = 0; for (j = 0; j < 8; j++) v = (v << 1) | bits[i + j]; data.push(v); }
+  for (i = 0; data.length < 2334; i++) data.push(i % 2 ? 0x11 : 0xEC);
+  // Reed-Solomon: 49 blocks (18 of 47 + 31 of 48 data codewords), 28 error-correction codewords each.
+  var div = [], root = 1; for (i = 0; i < 27; i++) div.push(0); div.push(1);
+  for (i = 0; i < 28; i++) { for (j = 0; j < 28; j++) { div[j] = mul(div[j], root); if (j + 1 < 28) div[j] ^= div[j + 1]; } root = mul(root, 2); }
+  var blocks = [], k = 0;
+  for (i = 0; i < 49; i++) {
+    var len = i < 18 ? 47 : 48, dat = data.slice(k, k + len), ecc = []; k += len;
+    for (j = 0; j < 28; j++) ecc.push(0);
+    for (j = 0; j < dat.length; j++) { var fct = dat[j] ^ ecc.shift(); ecc.push(0); for (var t = 0; t < 28; t++) ecc[t] ^= mul(div[t], fct); }
+    if (i < 18) dat.push(-1);
+    blocks.push(dat.concat(ecc));
+  }
+  var all = [];
+  for (i = 0; i < blocks[0].length; i++) for (j = 0; j < 49; j++) if (blocks[j][i] != -1) all.push(blocks[j][i]);
+  // Place the codewords in the zigzag, then mask 0 ((x + y) even flips).
+  var n = 0;
+  for (var right = N - 1; right >= 1; right -= 2) {
+    if (right == 6) right = 5;
+    for (var vert = 0; vert < N; vert++) for (j = 0; j < 2; j++) {
+      x = right - j; var up = ((right + 1) & 2) == 0; y = up ? N - 1 - vert : vert;
+      if (!f[y][x] && n < all.length * 8) { m[y][x] = ((all[n >>> 3] >>> (7 - (n & 7))) & 1) != 0; n++; }
+    }
+  }
+  for (y = 0; y < N; y++) for (x = 0; x < N; x++) if (!f[y][x] && (x + y) % 2 == 0) m[y][x] = !m[y][x];
+  return m;
+}
+function lcDrawQr(d, text) {
+  var m = lcQrMatrix(text), y, x, s, calc = d.calculate;
+  d.calculate = false; // 177 rows: don't re-run the checks after each one
+  try { for (y = 0; y < m.length; y++) { s = ""; for (x = 0; x < m.length; x++) s += m[y][x] ? "n" : " "; d.getField("__qr_" + y).value = s; } }
+  finally { d.calculate = calc; }
+}
+---------------- END lcQrMatrix and lcDrawQr ----------------
+After this the script is 27,674 characters long and contains "function lcRules(", "function lcPayload(",
+"function lcQrMatrix(" and "function lcDrawQr(".
+
+== STEP 2: THE QR CODE FIELDS ON THE LAST PAGE ==
+2.1 "__qr" stays (the buttons keep the JSON in it), but becomes a plain HIDDEN text field: remove /PMD and
+    /DataPrep, set /Ff 0 (or remove /Ff), widget /F 2 (hidden), /Rect [-20 -20 -19 -19] (off the page), keep its name.
+2.2 Add 177 text fields "__qr_0", "__qr_1", ... "__qr_176" (row 0 at the top), each with ONE widget on the last
+    page, in the page's /Annots and in /AcroForm /Fields:
+      field:  /FT /Tx  /T (__qr_N)  /Ff 16777217  (comb + read-only)  /MaxLen 177
+              /DA (/ZaDb 3.515 Tf 0 g)   (the widget has NO /DA of its own: it uses the field's)
+      widget: /Type /Annot /Subtype /Widget /P <last page> /F 4 (printed) /BS << /W 0 >>  NO /MK (no background,
+              no border), an empty appearance (or none)
+              /Rect [x0  yN  x0+430.5405  yN+2.4324]  with  x0 = 82.3697  and
+              yN = 737.89 - (5 + N) * 2.432432   (N = row number; 4 rows of white margin inside the frame)
+    /AcroForm /DR /Font must contain /ZaDb << /Type /Font /Subtype /Type1 /BaseFont /ZapfDingbats >> (add it if
+    missing). With any other font name in /DA, Acrobat falls back to Helvetica and draws the letter "n" instead of
+    a square.
+2.3 Do not put these fields in the calculation order and give them no actions. Keep the 450 pt grey frame drawing
+    on the page as it is.
+
+== STEP 3: THE "GENERATE QR CODE" BUTTON ==
+Set the "__generate_qr" widget's /A to << /S /JavaScript /JS (text) >> with EXACTLY this text (it now also draws the
+rows, and still shows any error instead of failing silently):
+---------------- BEGIN Generate QR Code ----------------
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("The QR code cannot be generated yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Generate QR Code again.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else { try { var q = this.getField("__qr"); q.value = lcPayload(this); lcDrawQr(this, q.value); this.pageNum = this.numPages - 1;
+  app.alert("The QR code has been generated from your answers (" + q.value.length + " characters). Press Print Form to print the form with the QR code.", 3); }
+  catch (e) { app.alert("The QR code could not be generated: " + e + "\nPlease send this message to the form's maintainer.", 1); } }
+---------------- END Generate QR Code ----------------
+"Print Form" and "Reset form" stay as they are (Reset form also empties the 177 rows).
+
+== CHECKLIST (on the saved file; mark EVERY item PASS or FAIL) ==
+  1. Exactly one document script "lcRules", 27,674 characters, ending with the STEP 1 text.
+  2. "__qr" has no /PMD and no /DataPrep, is hidden (/F 2).
+  3. 177 fields "__qr_0" ... "__qr_176" on the last page: /Ff 16777217, /MaxLen 177, field /DA "/ZaDb ... Tf 0 g",
+     no widget /DA, no /MK, /F 4, rectangles as in 2.2 (row 0 at the top, rows touching, no gaps).
+  4. /AcroForm /DR /Font has /ZaDb (ZapfDingbats).
+  5. "__generate_qr" /A equals the STEP 3 text.
+  6. Run lcQrMatrix in code (Node.js) on a 2,300-character test text: it returns 177 rows of 177 values. If you have
+     a QR reader available (zxing-cpp, pyzbar or OpenCV's QRCodeDetector), draw the matrix as an image (4 pixels per
+     module, white margin) and decode it: the decoded text must equal the test text.
+  7. Everything else unchanged: other fields, buttons, scripts, pages and look.
+Reply with: what you changed, the PASS / FAIL list 1 to 7, and LAST the PDF file.

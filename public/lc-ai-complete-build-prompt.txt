@@ -1,4 +1,4 @@
-MASTER PROMPT (FINAL v3, FROM SCRATCH): BUILD THE "IRREVOCABLE DOCUMENTARY CREDIT APPLICATION" AS ONE
+MASTER PROMPT (FINAL v4, FROM SCRATCH): BUILD THE "IRREVOCABLE DOCUMENTARY CREDIT APPLICATION" AS ONE
 FINISHED, SELF-CHECKING PDF WITH A QR CODE PAGE, AND AVOID EVERY PROBLEM WE HAVE ALREADY HIT
 
 == PART 0: WHAT I NEED ==
@@ -22,8 +22,9 @@ The form must:
   5. Be right as soon as it opens: blank mandatory boxes already red, switched-off questions already locked.
   6. End with ONE extra page holding a large QR code of all the answers (JSON) and, under it, two buttons used in this
      order: "Generate QR Code" (checks the form; makes the code only when everything is right) and "Print Form"
-     (prints only when the code exists and still matches the answers). The QR code must be a REAL Acrobat barcode
-     field that Acrobat draws as black-and-white squares, never text.
+     (prints only when the code exists and still matches the answers). The QR code is drawn by the form's OWN
+     script into 177 text boxes (one per row, black squares), so it shows on EVERY Acrobat, also ones without
+     Acrobat's barcode feature.
 
 == PART 1: HOW TO WORK (the golden rules) ==
 Earlier attempts kept breaking: each time one thing was fixed, something else broke. These rules prevent that.
@@ -101,21 +102,19 @@ P13. The form looked wrong: the order of questions was changed, labels were shor
     Why: the layout was "optimised" by moving and rewording questions.
     Rule: PART 3. Keep the SPEC's order and wording exactly; black, white and grey only (red only for problems);
     no blank gaps.
-P14. The QR box showed the JSON text instead of a QR code.
-    Why: "__qr" was made as an ordinary text field (or the PDF library drew its value as text). Acrobat only draws a
-    QR code for a barcode field: a text field carrying a /PMD (paper metadata) dictionary and /DataPrep 0, as
-    Acrobat's own Prepare Form > Barcode tool makes. Without them Acrobat shows the text.
-    Rule: PART 5.8 gives the exact field dictionary. Build "__qr" EMPTY (no value) and with NO text appearance; the
-    code is drawn by Acrobat when Generate QR Code sets the value. Never put the JSON in the file yourself.
+P14. The QR box showed the JSON text, or stayed an empty grey box on one laptop while it worked on another.
+    Why: Acrobat's barcode fields (/PMD) need Acrobat's barcode feature, which some installations (e.g. my work
+    laptop) don't have; and a plain text field just shows the text.
+    Rule: don't use a barcode field at all. The form's own script (lcQrMatrix, PART 5.1c) works out the QR code and
+    lcDrawQr writes it into 177 comb text boxes as ZapfDingbats "n" (a black square). PART 5.8 gives the fields.
 P15. After the QR code was added, ALL the buttons stopped working.
     Why: the new feature was patched on top: scripts re-written or duplicated, a script with an error (Acrobat then
     stops ALL document JavaScript silently), button actions lost when pages were rebuilt, or old buttons left over.
-    Rule: R1 to R4. Build everything in one pass from this prompt; the QR script goes INSIDE the one document script
+    Rule: R1 to R4. Build everything in one pass from this prompt; the QR scripts go INSIDE the one document script
     (PART 5.1, after lcRules), so there is still exactly one document script; check it parses (PART 7).
-P16. The QR code was tiny in its box, or changed size as answers changed.
-    Why: Acrobat draws each module at a fixed size, so the code's size follows the length of the text.
-    Rule: the text is padded to 2,300 characters (in lcPayload), and the module size is set so that one size of code
-    fills the 450 pt box (PART 5.8).
+P16. The QR rows showed the letter "n" instead of squares.
+    Why: the rows' /DA named a font that is not in /AcroForm /DR, so Acrobat fell back to Helvetica.
+    Rule: the rows' /DA is "/ZaDb ... Tf 0 g" on the FIELD (no /DA on the widget), and /DR /Font has /ZaDb.
 
 == PART 3: THE DESIGN (Step A) ==
 ORDER (most important): sections and questions appear EXACTLY in the order of the SPEC, top to bottom, sections
@@ -180,7 +179,8 @@ THE QR CODE PAGE (one extra page at the very end, after the Declaration and Sign
   - Heading "APPLICATION QR CODE (FOR BANK USE)" (11 pt bold), then in 8 pt grey: "When the form is filled in, press
     Generate QR Code (under the code), then Print Form. The Bank scans the code to read the application (all the
     answers, as JSON). Do not write on or fold the code."
-  - The QR code box: 450 x 450 pt, centred, a thin grey frame exactly around it (PART 5.8 makes the field).
+  - The QR code box: 450 x 450 pt, centred, a thin grey frame exactly around it (PART 5.8 puts the 177 QR rows
+    inside it).
   - Under it in 7 pt grey: "Form LC-01 · v1.0 · Nov 2026", then the two buttons side by side, centred, each 150 x 22
     pt, 12 pt apart: "Generate QR Code" (left) and "Print Form" (right) (PART 5.9).
   - The footer as on the other pages ("Page 4 of 4" if the form is 3 pages).
@@ -283,17 +283,14 @@ T6 PUSH BUTTON (Check form, Reset form, Generate QR Code, Print Form):
    Positions: Check form and Reset form at the top right of every page, 64 x 13 pt, 4 pt apart, the right one
    ending at x = 553.28, bottom at y = 816.89 (PDF coordinates). On page 4: Generate QR Code and Print Form,
    150 x 22 pt each, 12 pt apart, centred under the QR frame.
-T7 THE QR CODE (field "__qr" on page 4; a real Acrobat barcode field):
-   field AND widget (may be one merged dictionary):
-     /FT /Tx  /T (__qr)  /Ff 4198405  /DA (/Helv 8 Tf 0 g)  /DataPrep 0
-     /PMD << /Type /PaperMetaData /Version 1 /Width 6.25 /Height 6.25 /XSymWidth 10 /Symbology /QRCode /ECC 1
-             /Resolution 300.0 >>
-     /Type /Annot /Subtype /Widget /P <page 4> /Rect [72.64 287.89 522.64 737.89] /F 4
-     /MK << /BG [1 1 1] /BC [0 0 0] >>  /BS << /W 0 >>
-     /AP << /N <stream> >> with an EMPTY white box:  q 1 1 1 rg 0 0 450 450 re f Q
-   NO /V, NO /DV, NO actions. /Resolution must be written WITH the decimal point in the saved file (300.0): pikepdf
-   writes a Python Decimal("300.0") that way; check the raw bytes after saving. Generate QR Code fills it, and
-   Acrobat then draws the QR code (P14, P16).
+T7 THE QR CODE (page 4): NOT a barcode field. Two parts (exact values in PART 5.8):
+   "__qr": a plain HIDDEN text field that holds the JSON: /FT /Tx /T (__qr) /DA (/Helv 3 Tf 0 g), widget /F 2,
+   /Rect [-20 -20 -19 -19], empty appearance, no actions, no /PMD.
+   "__qr_0" ... "__qr_176": 177 comb text fields, one per row of the code, inside the frame:
+     field:  /FT /Tx /T (__qr_N) /Ff 16777217 (comb + read-only) /MaxLen 177 /DA (/ZaDb 3.515 Tf 0 g)
+     widget: /Rect [82.3697  yN  512.9103  yN+2.4324], yN = 737.89 - (5 + N) * 2.432432
+             /F 4  /BS << /W 0 >>  NO /MK, NO /DA (it inherits the field's), empty appearance (or none).
+   The script lcDrawQr fills them; /AcroForm /DR /Font must contain /ZaDb (ZapfDingbats).
 T8 THE HIDDEN HELPER "__checks": /FT /Tx /T (__checks) /DA (/Helv 3 Tf 0 g), widget on page 1 with
    /Rect [-20 -20 -19 -19] /F 2 (hidden) and an empty /AP; its Calculate action is in PART 5.2; /CO = [ it ].
 T9 PREVIOUS / NEXT: not fields. On each page, over the footer texts "< Previous page" / "Next page >", a link:
@@ -302,8 +299,8 @@ T9 PREVIOUS / NEXT: not fields. On each page, over the footer texts "< Previous 
    on page 4). They work even with JavaScript off.
 
 == PART 5: THE SCRIPTS AND ACTIONS (Step B: all of it, in ONE pass, exactly as written) ==
-5.1 ONE document-level JavaScript named "lcRules", with EXACTLY this text, FOLLOWED (in the same script, on the next
-    line) by the text of 5.1b (no changes, no other document scripts):
+5.1 ONE document-level JavaScript named "lcRules", with EXACTLY this text, FOLLOWED (in the same script, each on a
+    new line) by the text of 5.1b and then 5.1c (no changes, no other document scripts):
 ---------------- BEGIN lcRules ----------------
 function lcRules(d) {
 var M = {"application_date":{"kind":"date","label":"Date","hasRule":1,"always":1,"check":1},"mode_of_advising":{"kind":"radio","label":"Mode of advising","hasRule":1,"always":1},"applicant_name":{"kind":"text","label":"Applicant name","hasRule":1,"always":1,"check":1},"applicant_address_1":{"kind":"text","label":"Applicant address","hasRule":1,"always":1,"check":1},"applicant_address_2":{"kind":"text","label":"Applicant address (line 2)","check":1},"applicant_address_3":{"kind":"text","label":"Applicant address (line 3)","check":1},"applicant_address_4":{"kind":"text","label":"Applicant address (line 4)","check":1},"contact_name":{"kind":"text","label":"Contact party for this application & confirmation of FX rate: Name","hasRule":1,"always":1,"check":1},"contact_tel":{"kind":"text","label":"Contact party: Tel no","hasRule":1,"always":1,"check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"contact_fax":{"kind":"text","label":"Contact party: Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"dc_no":{"kind":"text","label":"DC no","check":1},"bank_code":{"kind":"text","label":"Bank code","check":1},"advising_bank_name":{"kind":"text","label":"Name","check":1},"advising_bank_address_1":{"kind":"text","label":"Address","check":1},"advising_bank_address_2":{"kind":"text","label":"Address (line 2)","check":1},"advising_bank_address_3":{"kind":"text","label":"Address (line 3)","check":1},"third_party_name":{"kind":"text","label":"Name","check":1},"third_party_address_1":{"kind":"text","label":"Address","check":1},"third_party_address_2":{"kind":"text","label":"Address (line 2)","check":1},"third_party_address_3":{"kind":"text","label":"Address (line 3)","check":1},"beneficiary_name":{"kind":"text","label":"Beneficiary's name","hasRule":1,"always":1,"check":1},"beneficiary_address_1":{"kind":"text","label":"Beneficiary's address","hasRule":1,"always":1,"check":1},"beneficiary_address_2":{"kind":"text","label":"Beneficiary's address (line 2)","check":1},"beneficiary_address_3":{"kind":"text","label":"Beneficiary's address (line 3)","check":1},"beneficiary_address_4":{"kind":"text","label":"Beneficiary's address (line 4)","check":1},"beneficiary_contact":{"kind":"text","label":"Contact person","check":1},"beneficiary_tel":{"kind":"text","label":"Tel no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"beneficiary_fax":{"kind":"text","label":"Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"currency":{"kind":"select","label":"Currency","hasRule":1,"always":1},"amount":{"kind":"text","label":"Amount","hasRule":1,"always":1,"check":["^\\d{1,3}(,?\\d{3})*(\\.\\d{1,2})?$","is not an amount"]},"tolerance":{"kind":"check","label":"Tolerance on credit amount & goods quantity"},"tolerance_plus":{"kind":"text","label":"Tolerance + (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"tolerance_minus":{"kind":"text","label":"Tolerance - (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"price_basis":{"kind":"radio","label":"Price basis","hasRule":1,"always":1},"price_basis_other":{"kind":"text","label":"Others (please specify)","hasRule":1,"requiredIf":[["price_basis",["Others"],0]],"activeIf":[["price_basis",["Others"],0]],"check":1},"partial_shipment":{"kind":"radio","label":"Partial shipment","hasRule":1,"always":1},"transhipment":{"kind":"radio","label":"Transhipment","hasRule":1,"always":1},"shipment_from":{"kind":"select","label":"Shipment from"},"shipment_from_place":{"kind":"text","label":"Shipment from: place","hasRule":1,"requiredIf":[["shipment_from",[""],1]],"check":1},"shipment_from_place_2":{"kind":"text","label":"Shipment from: place (line 2)","check":1},"shipment_to":{"kind":"select","label":"Shipment to"},"shipment_to_place":{"kind":"text","label":"Shipment to: place","hasRule":1,"requiredIf":[["shipment_to",[""],1]],"check":1},"shipment_to_place_2":{"kind":"text","label":"Shipment to: place (line 2)","check":1},"latest_shipment_date":{"kind":"date","label":"Latest shipment date","check":1},"expiry_date":{"kind":"date","label":"Date of expiry (in beneficiary's country)","hasRule":1,"always":1,"check":1},"presentation_days":{"kind":"text","label":"Presentation period (days after shipment)","check":["^\\d+$","should be a whole number"]},"back_to_back":{"kind":"check","label":"This is a back-to-back DC to be issued against the master credit (the \"Master DC\")"},"master_dc_no":{"kind":"text","label":"Master credit no","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"master_dc_issued_by":{"kind":"text","label":"Issued by","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"drafts":{"kind":"check","label":"Drafts for 100% invoice value at"},"drafts_at":{"kind":"radio","label":"Drafts at","hasRule":1,"requiredIf":[["drafts",["true"],0]],"activeIf":[["drafts",["true"],0]]},"term_days":{"kind":"text","label":"Term: days","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":["^\\d+$","should be a whole number"]},"term_after":{"kind":"text","label":"days after","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":1},"draft_date":{"kind":"date","label":"Date","hasRule":1,"requiredIf":[["drafts_at",["Date"],0]],"activeIf":[["drafts_at",["Date"],0]],"check":1},"term_prepay":{"kind":"radio","label":"If it is a term LC, please select one","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]]},"doc_bill_of_lading":{"kind":"check","label":"Full set of Clean on Board marine bills of lading"},"bl_made_out_to":{"kind":"radio","label":"Made out to","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_made_out_to_other":{"kind":"text","label":"Made out to (other)","hasRule":1,"requiredIf":[["bl_made_out_to",["other (specify)"],0]],"activeIf":[["bl_made_out_to",["other (specify)"],0]],"check":1},"bl_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]],"check":1},"doc_air_waybill":{"kind":"check","label":"Original Air Waybill consigned to the Bank"},"awb_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]]},"awb_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]],"check":1},"doc_delivery_order":{"kind":"check","label":"Delivery order signed by beneficiary made out to applicant"},"do_originals":{"kind":"text","label":"Delivery order: originals","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_copies":{"kind":"text","label":"Delivery order: copies","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_countersigned_by":{"kind":"select","label":"Countersigned by how many of our signatories","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"do_signature_verified":{"kind":"select","label":"Whose signature(s) ... to be verified by the Bank","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"doc_insurance":{"kind":"check","label":"Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion"},"insurance_arrangement":{"kind":"select","label":"For FOB/CFR/FCA/CPT","activeIf":[["doc_insurance",["true"],0]]},"insurance_cover_no":{"kind":"text","label":"Open cover no","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"insurance_cover_with":{"kind":"text","label":"With","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"doc_beneficiary_certificate":{"kind":"check","label":"Beneficiary's certificate stating 1 set of non-negotiable documents has been sent to applicant"},"bencert_sent_by":{"kind":"checks","label":"Sent by","options":["faxed","mailed","couriered"],"hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]]},"bencert_days":{"kind":"text","label":"Within (days after shipment)","hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_commercial_invoice":{"kind":"check","label":"Signed commercial invoice"},"invoice_originals":{"kind":"text","label":"Commercial invoice: originals","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"invoice_copies":{"kind":"text","label":"Commercial invoice: copies","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_packing_list":{"kind":"check","label":"Packing list"},"packing_list_originals":{"kind":"text","label":"Packing list: originals","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"packing_list_copies":{"kind":"text","label":"Packing list: copies","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_weight_note":{"kind":"check","label":"Weight note"},"weight_note_originals":{"kind":"text","label":"Weight note: originals","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"weight_note_copies":{"kind":"text","label":"Weight note: copies","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_certificate_of_origin":{"kind":"check","label":"Certificate of origin"},"origin_originals":{"kind":"text","label":"Certificate of origin: originals","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_copies":{"kind":"text","label":"Certificate of origin: copies","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_country":{"kind":"text","label":"Showing country of origin as","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":1},"doc_other":{"kind":"check","label":"Other documents"},"other_documents_1":{"kind":"text","label":"Other documents","hasRule":1,"requiredIf":[["doc_other",["true"],0]],"activeIf":[["doc_other",["true"],0]],"check":1},"other_documents_2":{"kind":"text","label":"Other documents (line 2)","activeIf":[["doc_other",["true"],0]],"check":1},"goods_description":{"kind":"long","label":"Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","hasRule":1,"always":1,"check":1},"additional_conditions":{"kind":"long","label":"Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","check":1},"bank_charges":{"kind":"check","label":"All bank charges are for account of","hasRule":1,"always":1},"bank_charges_for":{"kind":"radio","label":"Charges for account of","hasRule":1,"requiredIf":[["bank_charges",["true"],0]],"activeIf":[["bank_charges",["true"],0]]},"confirmation":{"kind":"check","label":"Confirmation required"},"confirmation_charges":{"kind":"radio","label":"Confirmation charges","hasRule":1,"requiredIf":[["confirmation",["true"],0]],"activeIf":[["confirmation",["true"],0]]},"post_shipment_financing":{"kind":"check","label":"Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies"},"financing_type":{"kind":"radio","label":"Financing","hasRule":1,"requiredIf":[["post_shipment_financing",["true"],0]],"activeIf":[["post_shipment_financing",["true"],0]]},"financing_currency":{"kind":"select","label":"Foreign currency financing in (type of currency)","hasRule":1,"requiredIf":[["financing_type",["Foreign Currency Financing"],0]],"activeIf":[["financing_type",["Foreign Currency Financing"],0]]},"forward_contract_no":{"kind":"text","label":"Forward contract no","hasRule":1,"requiredIf":[["financing_type",["Apply Forward Contract"],0]],"activeIf":[["financing_type",["Apply Forward Contract"],0]],"check":1},"advance_payment":{"kind":"check","label":"We authorise you to debit DC amount in full from our account for advance payment"},"advance_payment_account":{"kind":"text","label":"Account no for advance payment","hasRule":1,"requiredIf":[["advance_payment",["true"],0]],"activeIf":[["advance_payment",["true"],0]],"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"issuance_charges_account":{"kind":"text","label":"Account no for DC issuance charges","hasRule":1,"always":1,"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"authorised_person":{"kind":"text","label":"Name and title of authorised person(s)","check":1}};
@@ -438,6 +435,80 @@ return v;
 }
 ---------------- END lcPayload ----------------
 
+5.1c ... and straight after that, in the SAME document script, EXACTLY this text (the QR code drawn without
+     Acrobat's barcode feature):
+---------------- BEGIN lcQrMatrix and lcDrawQr ----------------
+// QR code (version 40, error correction M, byte mode, mask 0) drawn without Acrobat's barcode feature:
+// one comb text field per row ("__qr_0" ... "__qr_176"), dark modules as ZapfDingbats "n" (a black square).
+function lcQrMatrix(text) {
+  var N = 177, i, j, x, y, m = [], f = [], bytes = [], s = unescape(encodeURIComponent(text));
+  for (i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i) & 255);
+  for (y = 0; y < N; y++) { m.push([]); f.push([]); for (x = 0; x < N; x++) { m[y].push(false); f[y].push(false); } }
+  function set(x, y, dark) { m[y][x] = dark; f[y][x] = true; }
+  function mul(a, b) { var z = 0; for (var k = 7; k >= 0; k--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((b >>> k) & 1) * a; } return z; }
+  // Function patterns: timing, finders, alignment, format area, version, dark module.
+  for (i = 0; i < N; i++) { set(6, i, i % 2 == 0); set(i, 6, i % 2 == 0); }
+  function finder(cx, cy) { for (var dy = -4; dy <= 4; dy++) for (var dx = -4; dx <= 4; dx++) {
+    var d = Math.max(Math.abs(dx), Math.abs(dy)), xx = cx + dx, yy = cy + dy;
+    if (xx >= 0 && xx < N && yy >= 0 && yy < N) set(xx, yy, d != 2 && d != 4); } }
+  finder(3, 3); finder(N - 4, 3); finder(3, N - 4);
+  var A = [6, 30, 58, 86, 114, 142, 170];
+  for (i = 0; i < A.length; i++) for (j = 0; j < A.length; j++) {
+    if ((i == 0 && j == 0) || (i == 0 && j == A.length - 1) || (i == A.length - 1 && j == 0)) continue;
+    for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) set(A[i] + dx, A[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) != 1);
+  }
+  var rem = 0, fmt; for (i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+  fmt = ((0 << 10) | rem) ^ 0x5412; // error correction M (00), mask 0
+  function bit(v, k) { return ((v >>> k) & 1) != 0; }
+  for (i = 0; i <= 5; i++) set(8, i, bit(fmt, i));
+  set(8, 7, bit(fmt, 6)); set(8, 8, bit(fmt, 7)); set(7, 8, bit(fmt, 8));
+  for (i = 9; i < 15; i++) set(14 - i, 8, bit(fmt, i));
+  for (i = 0; i < 8; i++) set(N - 1 - i, 8, bit(fmt, i));
+  for (i = 8; i < 15; i++) set(8, N - 15 + i, bit(fmt, i));
+  set(8, N - 8, true);
+  rem = 40; for (i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+  var ver = (40 << 12) | rem;
+  for (i = 0; i < 18; i++) { var a = N - 11 + i % 3, b = Math.floor(i / 3); set(a, b, bit(ver, i)); set(b, a, bit(ver, i)); }
+  // Data: mode 0100, 16-bit length, the bytes, terminator, padding to 2,334 data codewords.
+  var bits = [], cap = 2334 * 8;
+  function put(v, n) { for (var k = n - 1; k >= 0; k--) bits.push((v >>> k) & 1); }
+  put(4, 4); put(bytes.length, 16); for (i = 0; i < bytes.length; i++) put(bytes[i], 8);
+  put(0, Math.min(4, cap - bits.length)); while (bits.length % 8) bits.push(0);
+  var data = []; for (i = 0; i < bits.length; i += 8) { var v = 0; for (j = 0; j < 8; j++) v = (v << 1) | bits[i + j]; data.push(v); }
+  for (i = 0; data.length < 2334; i++) data.push(i % 2 ? 0x11 : 0xEC);
+  // Reed-Solomon: 49 blocks (18 of 47 + 31 of 48 data codewords), 28 error-correction codewords each.
+  var div = [], root = 1; for (i = 0; i < 27; i++) div.push(0); div.push(1);
+  for (i = 0; i < 28; i++) { for (j = 0; j < 28; j++) { div[j] = mul(div[j], root); if (j + 1 < 28) div[j] ^= div[j + 1]; } root = mul(root, 2); }
+  var blocks = [], k = 0;
+  for (i = 0; i < 49; i++) {
+    var len = i < 18 ? 47 : 48, dat = data.slice(k, k + len), ecc = []; k += len;
+    for (j = 0; j < 28; j++) ecc.push(0);
+    for (j = 0; j < dat.length; j++) { var fct = dat[j] ^ ecc.shift(); ecc.push(0); for (var t = 0; t < 28; t++) ecc[t] ^= mul(div[t], fct); }
+    if (i < 18) dat.push(-1);
+    blocks.push(dat.concat(ecc));
+  }
+  var all = [];
+  for (i = 0; i < blocks[0].length; i++) for (j = 0; j < 49; j++) if (blocks[j][i] != -1) all.push(blocks[j][i]);
+  // Place the codewords in the zigzag, then mask 0 ((x + y) even flips).
+  var n = 0;
+  for (var right = N - 1; right >= 1; right -= 2) {
+    if (right == 6) right = 5;
+    for (var vert = 0; vert < N; vert++) for (j = 0; j < 2; j++) {
+      x = right - j; var up = ((right + 1) & 2) == 0; y = up ? N - 1 - vert : vert;
+      if (!f[y][x] && n < all.length * 8) { m[y][x] = ((all[n >>> 3] >>> (7 - (n & 7))) & 1) != 0; n++; }
+    }
+  }
+  for (y = 0; y < N; y++) for (x = 0; x < N; x++) if (!f[y][x] && (x + y) % 2 == 0) m[y][x] = !m[y][x];
+  return m;
+}
+function lcDrawQr(d, text) {
+  var m = lcQrMatrix(text), y, x, s, calc = d.calculate;
+  d.calculate = false; // 177 rows: don't re-run the checks after each one
+  try { for (y = 0; y < m.length; y++) { s = ""; for (x = 0; x < m.length; x++) s += m[y][x] ? "n" : " "; d.getField("__qr_" + y).value = s; } }
+  finally { d.calculate = calc; }
+}
+---------------- END lcQrMatrix and lcDrawQr ----------------
+
 5.2 RUN IT AFTER EVERY ANSWER:
    - Every tick box, every option of every pick-one group, every box of a tick-any group (bencert_sent_by__0, __1,
      __2): Mouse Up action:  lcRules(this);
@@ -498,21 +569,13 @@ this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lc
    - Every other text box (not dates):
      if (!event.willCommit) { event.change = event.change.toUpperCase(); if (/[^A-Za-z0-9 .,\-/()':?+#&@%\r\n]/.test(event.change)) { event.rc = false; app.beep(0); } }
 
-5.8 THE QR CODE FIELD "__qr" (on the last page; a real Acrobat barcode field). Write it EXACTLY like this (PDF
-    syntax; field and widget may be one merged dictionary), with Rect = the 450 x 450 pt box:
-      << /FT /Tx /T (__qr) /Ff 4198405 /DA (/Helv 8 Tf 0 g) /DataPrep 0
-         /PMD << /Type /PaperMetaData /Version 1 /Width 6.25 /Height 6.25 /XSymWidth 10
-                 /Symbology /QRCode /ECC 1 /Resolution 300.0 >>
-         /Type /Annot /Subtype /Widget /Rect [x y x+450 y+450] /P <the last page> /F 4 >>
-    - /Ff 4198405 = read-only + no export + multiline + no spell check (as Acrobat sets for barcode fields).
-    - /Width and /Height are inches (450 / 72 = 6.25). /XSymWidth 10 = module width 10 px at 300 dpi, the largest
-      that fits a QR version 40 code (177 modules + quiet zone) in the box. /ECC 1 = level M.
-    - /Resolution must be written WITH the decimal point: 300.0 (Acrobat ignores the field with "300").
-      /DataPrep 0 is required too (Acrobat won't draw the code without it).
-    - NO value (/V) and NO /DV, an EMPTY normal appearance (or none), NOT in the calculation order, NO Calculate
-      action. Do not let your PDF library generate a text appearance for it (that is how the JSON text appeared).
-    - "Compress data before encoding" stays OFF: there is no compression key; the code holds the plain JSON.
-    - Put it in the page's /Annots and in /AcroForm /Fields. Make sure /AcroForm /DR /Font has /Helv (Helvetica).
+5.8 THE QR CODE FIELDS (page 4), exactly as template T7:
+    - "__qr": hidden text field holding the JSON (Generate QR Code fills it; Print Form compares with it).
+    - "__qr_0" ... "__qr_176" (row 0 at the top): 177 comb text fields, /MaxLen 177, /Ff 16777217, field /DA
+      (/ZaDb 3.515 Tf 0 g), rows touching (row height 2.4324 pt = one module), 4 modules of white margin
+      inside the 450 pt frame. Generate QR Code calls lcDrawQr, which writes each row as "n" (black square) and
+      " " (white), so Acrobat draws the code with its built-in ZapfDingbats font. No /PMD anywhere.
+    - None of them in the calculation order; no actions on them.
 
 5.9 THE TWO BUTTONS under the QR code (last page only): real push-button fields "__generate_qr" and "__print_form"
     (Btn, /Ff 65536), one widget each, white-on-black like the others (/DA "/Helv 10 Tf 1 g"; /MK << /BG [0] /BC [0]
@@ -526,7 +589,7 @@ if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" 
 if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
 if (t.length) { app.alert("The QR code cannot be generated yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Generate QR Code again.", 1);
   var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
-else { try { var q = this.getField("__qr"); q.value = lcPayload(this); this.pageNum = this.numPages - 1;
+else { try { var q = this.getField("__qr"); q.value = lcPayload(this); lcDrawQr(this, q.value); this.pageNum = this.numPages - 1;
   app.alert("The QR code has been generated from your answers (" + q.value.length + " characters). Press Print Form to print the form with the QR code.", 3); }
   catch (e) { app.alert("The QR code could not be generated: " + e + "\nPlease send this message to the form's maintainer.", 1); } }
 ---------------- END Generate QR Code ----------------
@@ -633,9 +696,9 @@ Structure:
   6a. Built as PART 4B: pages drawn with PyMuPDF only, every field written with pikepdf from templates T1 to T9,
       saved last by pikepdf; no /NeedAppearances; every push-button widget has a white caption in its /AP, white
       /DA, black /MK and its /A action (render page 1 and show me the top right: black boxes WITH white captions).
-  6b. "__qr" is exactly as 5.8 (/PMD with /Symbology /QRCode, /Resolution 300.0 written with the decimal point,
-      /DataPrep 0), empty, no text appearance, no Calculate, not in /CO; "__generate_qr" and "__print_form" are on
-      the last page only, with the exact actions in 5.9.
+  6b. "__qr" is a hidden plain text field (no /PMD); the 177 rows "__qr_0" ... "__qr_176" are exactly as 5.8 (comb,
+      /MaxLen 177, field /DA /ZaDb, no widget /DA, no /MK); /DR /Font has /ZaDb; "__generate_qr" and "__print_form"
+      are on the last page only, with the exact actions in 5.9.
 Behaviour (run lcRules and the button scripts in code against a stand-in for Acrobat: getField returning objects
 with value / valueAsString / readonly / required / strokeColor / fillColor / display / type / name, plus resetForm,
 pageNum, numPages, app.alert, setFocus, color):
@@ -658,11 +721,14 @@ pageNum, numPages, app.alert, setFocus, color):
  13. Generate QR Code on the blank form: "The QR code cannot be generated yet ..." with the missing answers, cursor
      on Date, the QR field stays empty. Print Form then: "Please press Generate QR Code first ...".
  14. Fully correct form: Generate QR Code fills "__qr" with the JSON ("complete": true, exactly 2,300 characters,
-     JSON.parse works) and goes to the last page; in Acrobat the box shows a QR code (squares, NOT text) filling the
-     frame; Print Form opens the print dialog. Change an answer, press Print Form: "Your answers have changed ...".
+     JSON.parse works), writes the 177 rows (each 177 characters of "n" and " ") and goes to the last page; in
+     Acrobat the frame shows a QR code made of black squares; Print Form opens the print dialog. Change an answer,
+     press Print Form: "Your answers have changed ...".
+ 14b. Run lcQrMatrix in code on a 2,300-character test text; if a QR reader is available (zxing-cpp, pyzbar or
+     OpenCV's QRCodeDetector), draw the matrix as an image and decode it: the text must come back unchanged.
  15. Scanning the QR code (on screen or printed) with a phone shows the JSON.
 
-Reply with: the PASS / FAIL list (D1 to D3, 1 to 15, and 6b) with how you tested each, anything that fails or could
+Reply with: the PASS / FAIL list (D1 to D3, 1 to 15, 6a, 6b and 14b) with how you tested each, anything that fails or could
 not be tested, and LAST the PDF file LC-Application-with-checks.pdf.
 
 == SPEC: every question, in form order (one JSON object per line) ==

@@ -1,3 +1,6 @@
+SUPERSEDED (6 Nov 2026): do not use. Use lc-ai-complete-build-prompt.txt (from scratch) or lc-ai-qr-rows-fix-prompt.txt (QR code
+without Acrobat's barcode feature). Kept for the record.
+
 MASTER PROMPT, STEP 2 OF 2: ADD THE QR CODE PAGE (QR CODE, ITS FRAME, "GENERATE QR CODE" AND "PRINT FORM") BY
 COPYING THE LAST PAGE OF THE WORKING PDF (CHANGE NOTHING ELSE)
 

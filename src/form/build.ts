@@ -466,6 +466,9 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
       const da = d.lookup(PDFName.of("DA"));
       if (da instanceof PDFString) d.set(PDFName.of("DA"), PDFString.of(da.asString().replace(/[\d.]+ Tf/, "0 Tf")));
     }
+  // The QR rows draw with ZapfDingbats (/ZaDb, set on the field): drop the widget's own font setting, which the
+  // appearance update above rewrote to Helvetica.
+  for (const f of form.getFields()) if (/^__qr_\d+$/.test(f.getName())) for (const w of f.acroField.getWidgets()) w.dict.delete(PDFName.of("DA"));
   finishForm(doc, font);
   const last = formLast; // the form's own last page (not the QR code page), for sharing out its spare room
   return { bytes: await doc.save(), pages: doc.getPageCount(), spare: top - BOTTOM, lastLongs: [...longsOn].filter(([, p]) => p === last).map(([id]) => id) };

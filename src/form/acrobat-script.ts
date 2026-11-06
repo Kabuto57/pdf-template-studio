@@ -8,7 +8,7 @@
 //   - a warning when saving or printing an incomplete form
 //   - typing filters on amount / phone / account / number boxes, and upper case + SWIFT characters on the rest
 // With JavaScript off, none of this runs; red-frames.ts and the workbench cover that case.
-import { PDFDict, PDFDocument, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFPage } from "pdf-lib";
+import { PDFDict, PDFDocument, PDFString, StandardFonts, PDFFont, PDFHexString, PDFName, PDFNumber, PDFObject, PDFPage } from "pdf-lib";
 import { activeRules } from "./rules";
 import { dateIds } from "./dates";
 import { ACCENT, H, INK, M, W, WHITE } from "./look";
@@ -51,18 +51,6 @@ interface Model {
   check?: [string, string] | 1;    // typed answer: [format pattern, message], or 1 = characters only
 }
 
-/** A real number written with its decimal point ("300.0"): Acrobat ignores a barcode field whose /Resolution is "300". */
-class Real extends PDFObject {
-  constructor(private text: string) { super(); }
-  clone() { return new Real(this.text); }
-  toString() { return this.text; }
-  sizeInBytes() { return this.text.length; }
-  copyBytesInto(buffer: Uint8Array, offset: number) {
-    for (let i = 0; i < this.text.length; i++) buffer[offset + i] = this.text.charCodeAt(i);
-    return this.text.length;
-  }
-}
-
 /** The QR code's text (lcPayload): every answered question as JSON, keyed by field name, so the next stage can check
  *  it with the form's JSON Schema. A QR code holds about 2,300 characters: longer paragraphs are shortened and listed
  *  in "truncated" (the full text stays in the PDF's fields). Also given word for word to the company AI
@@ -100,6 +88,78 @@ return v;
 }`;
 }
 
+/** The QR code without Acrobat's barcode feature: lcQrMatrix makes a version 40 / error correction M code, lcDrawQr writes
+ *  its rows into the 177 comb fields "__qr_0" ... "__qr_176" (ZapfDingbats "n" = a black square). */
+export const qrScript = String.raw`// QR code (version 40, error correction M, byte mode, mask 0) drawn without Acrobat's barcode feature:
+// one comb text field per row ("__qr_0" ... "__qr_176"), dark modules as ZapfDingbats "n" (a black square).
+function lcQrMatrix(text) {
+  var N = 177, i, j, x, y, m = [], f = [], bytes = [], s = unescape(encodeURIComponent(text));
+  for (i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i) & 255);
+  for (y = 0; y < N; y++) { m.push([]); f.push([]); for (x = 0; x < N; x++) { m[y].push(false); f[y].push(false); } }
+  function set(x, y, dark) { m[y][x] = dark; f[y][x] = true; }
+  function mul(a, b) { var z = 0; for (var k = 7; k >= 0; k--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((b >>> k) & 1) * a; } return z; }
+  // Function patterns: timing, finders, alignment, format area, version, dark module.
+  for (i = 0; i < N; i++) { set(6, i, i % 2 == 0); set(i, 6, i % 2 == 0); }
+  function finder(cx, cy) { for (var dy = -4; dy <= 4; dy++) for (var dx = -4; dx <= 4; dx++) {
+    var d = Math.max(Math.abs(dx), Math.abs(dy)), xx = cx + dx, yy = cy + dy;
+    if (xx >= 0 && xx < N && yy >= 0 && yy < N) set(xx, yy, d != 2 && d != 4); } }
+  finder(3, 3); finder(N - 4, 3); finder(3, N - 4);
+  var A = [6, 30, 58, 86, 114, 142, 170];
+  for (i = 0; i < A.length; i++) for (j = 0; j < A.length; j++) {
+    if ((i == 0 && j == 0) || (i == 0 && j == A.length - 1) || (i == A.length - 1 && j == 0)) continue;
+    for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) set(A[i] + dx, A[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) != 1);
+  }
+  var rem = 0, fmt; for (i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+  fmt = ((0 << 10) | rem) ^ 0x5412; // error correction M (00), mask 0
+  function bit(v, k) { return ((v >>> k) & 1) != 0; }
+  for (i = 0; i <= 5; i++) set(8, i, bit(fmt, i));
+  set(8, 7, bit(fmt, 6)); set(8, 8, bit(fmt, 7)); set(7, 8, bit(fmt, 8));
+  for (i = 9; i < 15; i++) set(14 - i, 8, bit(fmt, i));
+  for (i = 0; i < 8; i++) set(N - 1 - i, 8, bit(fmt, i));
+  for (i = 8; i < 15; i++) set(8, N - 15 + i, bit(fmt, i));
+  set(8, N - 8, true);
+  rem = 40; for (i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+  var ver = (40 << 12) | rem;
+  for (i = 0; i < 18; i++) { var a = N - 11 + i % 3, b = Math.floor(i / 3); set(a, b, bit(ver, i)); set(b, a, bit(ver, i)); }
+  // Data: mode 0100, 16-bit length, the bytes, terminator, padding to 2,334 data codewords.
+  var bits = [], cap = 2334 * 8;
+  function put(v, n) { for (var k = n - 1; k >= 0; k--) bits.push((v >>> k) & 1); }
+  put(4, 4); put(bytes.length, 16); for (i = 0; i < bytes.length; i++) put(bytes[i], 8);
+  put(0, Math.min(4, cap - bits.length)); while (bits.length % 8) bits.push(0);
+  var data = []; for (i = 0; i < bits.length; i += 8) { var v = 0; for (j = 0; j < 8; j++) v = (v << 1) | bits[i + j]; data.push(v); }
+  for (i = 0; data.length < 2334; i++) data.push(i % 2 ? 0x11 : 0xEC);
+  // Reed-Solomon: 49 blocks (18 of 47 + 31 of 48 data codewords), 28 error-correction codewords each.
+  var div = [], root = 1; for (i = 0; i < 27; i++) div.push(0); div.push(1);
+  for (i = 0; i < 28; i++) { for (j = 0; j < 28; j++) { div[j] = mul(div[j], root); if (j + 1 < 28) div[j] ^= div[j + 1]; } root = mul(root, 2); }
+  var blocks = [], k = 0;
+  for (i = 0; i < 49; i++) {
+    var len = i < 18 ? 47 : 48, dat = data.slice(k, k + len), ecc = []; k += len;
+    for (j = 0; j < 28; j++) ecc.push(0);
+    for (j = 0; j < dat.length; j++) { var fct = dat[j] ^ ecc.shift(); ecc.push(0); for (var t = 0; t < 28; t++) ecc[t] ^= mul(div[t], fct); }
+    if (i < 18) dat.push(-1);
+    blocks.push(dat.concat(ecc));
+  }
+  var all = [];
+  for (i = 0; i < blocks[0].length; i++) for (j = 0; j < 49; j++) if (blocks[j][i] != -1) all.push(blocks[j][i]);
+  // Place the codewords in the zigzag, then mask 0 ((x + y) even flips).
+  var n = 0;
+  for (var right = N - 1; right >= 1; right -= 2) {
+    if (right == 6) right = 5;
+    for (var vert = 0; vert < N; vert++) for (j = 0; j < 2; j++) {
+      x = right - j; var up = ((right + 1) & 2) == 0; y = up ? N - 1 - vert : vert;
+      if (!f[y][x] && n < all.length * 8) { m[y][x] = ((all[n >>> 3] >>> (7 - (n & 7))) & 1) != 0; n++; }
+    }
+  }
+  for (y = 0; y < N; y++) for (x = 0; x < N; x++) if (!f[y][x] && (x + y) % 2 == 0) m[y][x] = !m[y][x];
+  return m;
+}
+function lcDrawQr(d, text) {
+  var m = lcQrMatrix(text), y, x, s, calc = d.calculate;
+  d.calculate = false; // 177 rows: don't re-run the checks after each one
+  try { for (y = 0; y < m.length; y++) { s = ""; for (x = 0; x < m.length; x++) s += m[y][x] ? "n" : " "; d.getField("__qr_" + y).value = s; } }
+  finally { d.calculate = calc; }
+}`;
+
 /** "Generate QR Code": problems are listed and no code is made; otherwise the QR code is made from the answers and
  *  the form goes to its page. */
 export const generateQr = String.raw`var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
@@ -108,7 +168,7 @@ if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" 
 if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
 if (t.length) { app.alert("The QR code cannot be generated yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Generate QR Code again.", 1);
   var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
-else { try { var q = this.getField("__qr"); q.value = lcPayload(this); this.pageNum = this.numPages - 1;
+else { try { var q = this.getField("__qr"); q.value = lcPayload(this); lcDrawQr(this, q.value); this.pageNum = this.numPages - 1;
   app.alert("The QR code has been generated from your answers (" + q.value.length + " characters). Press Print Form to print the form with the QR code.", 3); }
   catch (e) { app.alert("The QR code could not be generated: " + e + "\nPlease send this message to the form's maintainer.", 1); } }`;
 
@@ -251,7 +311,8 @@ function lcDates(d) {
 if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lcDates(this); lcRules(this); }`;
   // Stored as a stream, not a string: no 32,767-byte limit however many rules a form has.
   const scriptRef = doc.context.register(doc.context.flateStream(Uint8Array.from(qr ? `${script}
-${payloadScript(t)}` : script, c => c.charCodeAt(0) & 0xff)));
+${payloadScript(t)}
+${qrScript}` : script, c => c.charCodeAt(0) & 0xff)));
   doc.catalog.set(PDFName.of("Names"), doc.context.obj({
     JavaScript: doc.context.obj({ Names: [PDFHexString.fromText("lcRules"), doc.context.obj({ S: "JavaScript", JS: scriptRef })] }),
   }));
@@ -280,20 +341,28 @@ ${payloadScript(t)}` : script, c => c.charCodeAt(0) & 0xff)));
   // ... and the QR code (JavaScript version): an Acrobat barcode field (a text field with paper metadata, /PMD, as in
   // Adobe's Implementation Note E-7), filled only when "Generate QR Code" is pressed.
   if (qr) {
+    // The QR code is drawn by the form's own script (lcDrawQr), not by Acrobat's barcode feature (which some
+    // Acrobat installations don't have): 177 comb text fields, one per row of a version 40 code, dark modules as
+    // ZapfDingbats "n" (a black square), inside the frame with a 4-module quiet zone. "__qr" (hidden) holds the JSON.
     const box = form.createTextField("__qr");
-    box.addToPage(qr.page, { x: qr.x, y: qr.y, width: qr.size, height: qr.size, font, borderWidth: 0 });
-    box.setFontSize(8);
-    const inches = PDFNumber.of(Math.round(qr.size / 72 * 1000) / 1000);
-    // Module width in pixels at 300 dpi: the largest that fits a version 40 code (177 modules + 4 each side) in the box.
-    const module = Math.floor(qr.size / 72 * 300 / 185);
-    const pmd = doc.context.obj({ Type: "PaperMetaData", Version: 1, Width: inches, Height: inches, XSymWidth: module, Symbology: "QRCode", ECC: 1 });
-    pmd.set(PDFName.of("Resolution"), new Real("300.0"));
-    for (const d of [box.acroField.dict, ...box.acroField.getWidgets().map(w => w.dict)]) {
-      d.set(PDFName.of("PMD"), doc.context.register(pmd));
-      d.set(PDFName.of("DataPrep"), PDFNumber.of(0)); // optional in the spec, but Acrobat won't draw the code without it
+    box.addToPage(qr.page, { x: -20, y: -20, width: 1, height: 1, borderWidth: 0 });
+    box.acroField.getWidgets()[0].dict.set(PDFName.of("F"), PDFNumber.of(2)); // hidden
+    const zapf = doc.embedStandardFont(StandardFonts.ZapfDingbats), m = qr.size / 185; // zapf: only for the initial (empty) look
+    for (let y = 0; y < 177; y++) {
+      const row = form.createTextField(`__qr_${y}`);
+      row.setMaxLength(177);
+      row.enableCombing();
+      row.enableReadOnly();
+      row.addToPage(qr.page, { x: qr.x + 4 * m, y: qr.y + qr.size - (5 + y) * m, width: 177 * m, height: m, font: zapf, borderWidth: 0 });
+      // The square is 0.692 em: one module. /ZaDb is the form's own ZapfDingbats entry (finishForm puts it in /DR);
+      // with any other font name Acrobat falls back to Helvetica and draws the letter "n".
+      const da = PDFString.of(`/ZaDb ${Math.round(m / 0.692 * 1000) / 1000} Tf 0 g`);
+      row.acroField.dict.set(PDFName.of("DA"), da);
+      row.acroField.getWidgets()[0].dict.set(PDFName.of("DA"), da);
+      row.acroField.getWidgets()[0].dict.delete(PDFName.of("MK")); // no background, no border
     }
-    box.acroField.dict.set(PDFName.of("Ff"), PDFNumber.of(1 | 4 | 4096 | 4194304)); // read-only, no export, multiline, no spell check (as Acrobat sets them)
   }
+
 
   // 4. The "Check form" button, and the same report before saving or printing.
   const report = (always: boolean) => `var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];

@@ -1,3 +1,6 @@
+SUPERSEDED (6 Nov 2026): do not use. Use lc-ai-complete-build-prompt.txt (from scratch) or lc-ai-qr-rows-fix-prompt.txt (QR code
+without Acrobat's barcode feature). Kept for the record.
+
 MASTER PROMPT: FIX THE QR CODE (IT STAYS A GREY BOX), CHANGE NOTHING ELSE
 
 == THE PROBLEM ==

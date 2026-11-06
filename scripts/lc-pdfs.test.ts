@@ -33,7 +33,10 @@ it.skipIf(!process.env.LC_PDFS && process.env.npm_lifecycle_event !== "pdfs")("b
   writeFileSync("public/lc-build-spec.json", JSON.stringify(spec) + "\n");
   const out = join(tmpdir(), "lc-from-spec.pdf");
   execFileSync("python3", ["public/build_lc_pdf.py", "public/lc-build-spec.json", out]);
-  writeFileSync("public/lc-build-spec.json", JSON.stringify({ expectedSha256: createHash("sha256").update(readFileSync(out)).digest("hex"), ...spec }) + "\n");
+  const sha = createHash("sha256").update(readFileSync(out)).digest("hex");
+  writeFileSync("public/lc-build-spec.json", JSON.stringify({ expectedSha256: sha, ...spec }) + "\n");
+  const prompt = "public/lc-ai-build-from-spec-prompt.txt"; // its SHA-256 follows the spec
+  writeFileSync(prompt, readFileSync(prompt, "utf8").replace(/\b[0-9a-f]{64}\b/g, sha));
   const schema = toSchema(LC.template);
   writeFileSync("public/lc-application.schema.json", JSON.stringify(schema, null, 2) + "\n");
   const ajv = new Ajv2020({ allErrors: true, strict: false, code: { source: true, esm: true } });

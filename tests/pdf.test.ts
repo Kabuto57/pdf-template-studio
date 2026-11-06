@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PDFArray, PDFButton, PDFCheckBox, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRadioGroup, PDFRawStream, PDFDropdown, PDFTextField, decodePDFRawStream } from "pdf-lib";
 import { readFileSync } from "fs";
-import { inflateSync } from "zlib";
-import { generateQr, payloadScript, printForm } from "../src/form/acrobat-script";
+import { generateQr, payloadScript, printForm, qrScript } from "../src/form/acrobat-script";
 import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
 import { LC } from "../src/lc";
@@ -163,30 +162,23 @@ describe("the JavaScript version", async () => {
     };
     expect(action("__generate_qr")).toBe(generateQr);
     expect(action("__print_form")).toBe(printForm);
-    // ... word for word the scripts given to the company AI.
-    const prompt = readFileSync("public/lc-ai-confirm-print-prompt.txt", "utf8");
-    const block = (name: string) => prompt.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
-    expect([block("Generate QR Code"), block("Print Form")]).toEqual([generateQr, printForm]);
     // The from-scratch prompt carries the same: the document script (lcRules then lcPayload) and both buttons.
     const full = readFileSync("public/lc-ai-complete-build-prompt.txt", "utf8");
     const of = (name: string) => full.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
-    expect(`${of("lcRules")}\n${of("lcPayload")}`).toBe(library(doc));
+    expect(`${of("lcRules")}\n${of("lcPayload")}\n${of("lcQrMatrix and lcDrawQr")}`).toBe(library(doc));
+    // ... and so does the fix for Acrobat installations that don't draw barcode fields.
+    const fix = readFileSync("public/lc-ai-qr-rows-fix-prompt.txt", "utf8");
+    const fx = (name: string) => fix.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
+    expect([fx("lcQrMatrix and lcDrawQr"), fx("Generate QR Code")]).toEqual([qrScript, generateQr]);
     expect([of("Generate QR Code"), of("Print Form")]).toEqual([generateQr, printForm]);
-    // The step-by-step prompts (for when the working PDF arrives with its scripts stripped) carry the same texts.
-    const step = (file: string) => { const t = readFileSync(file, "utf8"); return (name: string) => t.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0]; };
-    const s1 = step("public/lc-ai-step1-buttons-prompt.txt"), s2 = step("public/lc-ai-step2-qr-page-prompt.txt");
-    const act = (n: string) => js(doc.getForm().getButton(n).acroField.getWidgets()[0].dict.lookup(PDFName.of("A")));
-    expect(s1("Document script lcRules")).toBe(library(doc));
-    expect([s1("Check form"), s1("Reset form")]).toEqual([act("__check_form"), act("__reset_form")]);
-    expect([s2("Generate QR Code"), s2("Print Form")]).toEqual([generateQr, printForm]);
-    expect(step("public/lc-ai-qr-fix-prompt.txt")("Generate QR Code")).toBe(generateQr);
     // A stand-in for Acrobat: the QR field, the answers lcPayload reports, and what happens.
     const run = (code: string, qr: { value: string }, missing: string[], answers: string) => {
       const log: string[] = [];
       const d = { numPages: 4, pageNum: 0, print: (...a: unknown[]) => log.push(`print ${a.join(",")}`), getField: (n: string) => n === "__qr" ? qr : { setFocus: () => log.push(`focus ${n}`) } };
       const lcRules = () => Object.assign([...missing], { bad: [], first: missing.length ? "application_date" : "" });
       const lcPayload = () => JSON.stringify({ saved: String(Math.random()), data: { applicant_name: answers } }) + "   ";
-      new Function("app", "lcRules", "lcPayload", code).call(d, { alert: (m: string) => log.push(m.split(".")[0]) }, lcRules, lcPayload);
+      const lcDrawQr = (_: unknown, text: string) => log.push(`draw ${text.length}`);
+      new Function("app", "lcRules", "lcPayload", "lcDrawQr", code).call(d, { alert: (m: string) => log.push(m.split(".")[0]) }, lcRules, lcPayload, lcDrawQr);
       return { log, page: d.pageNum };
     };
     const qr = { value: "" };
@@ -195,24 +187,32 @@ describe("the JavaScript version", async () => {
     expect(run(printForm, qr, [], "ACME").log).toEqual(["Please press Generate QR Code first, so the printed form carries the QR code"]);
     const made = run(generateQr, qr, [], "ACME");
     expect(made.page).toBe(3);
-    expect(made.log).toEqual([`The QR code has been generated from your answers (${qr.value.length} characters)`]);
+    expect(made.log).toEqual([`draw ${qr.value.length}`, `The QR code has been generated from your answers (${qr.value.length} characters)`]);
     // Anything going wrong is shown, not swallowed (e.g. the document script lost lcPayload).
     const broken = { log: [] as string[] };
-    new Function("app", "lcRules", "lcPayload", generateQr).call({ numPages: 4, getField: () => ({}) }, { alert: (m: string) => broken.log.push(m.split("\n")[0]) }, () => Object.assign([], { bad: [] }), () => { throw new Error("lcPayload is not defined"); });
+    new Function("app", "lcRules", "lcPayload", "lcDrawQr", generateQr).call({ numPages: 4, getField: () => ({}) }, { alert: (m: string) => broken.log.push(m.split("\n")[0]) }, () => Object.assign([], { bad: [] }), () => { throw new Error("lcPayload is not defined"); }, () => {});
     expect(broken.log).toEqual(["The QR code could not be generated: Error: lcPayload is not defined"]);
     expect(JSON.parse(qr.value).data.applicant_name).toBe("ACME");
     expect(run(printForm, qr, [], "ACME").log).toEqual(["print true,0,3,false,true"]);   // same answers (a later time is fine)
     expect(run(printForm, qr, [], "ACME LTD").log).toEqual(["Your answers have changed since the QR code was generated"]);
   });
-  it("QR code: an Acrobat barcode field on the last page, holding the answers as JSON", () => {
+  it("QR code: drawn by the form's own script into 177 comb rows on the last page (no Acrobat barcode feature)", () => {
     const form = doc.getForm(), box = form.getTextField("__qr"), last = doc.getPages()[doc.getPageCount() - 1];
-    expect(box.acroField.getWidgets()[0].P()?.toString()).toBe(last.ref.toString());
-    const pmd = box.acroField.dict.lookup(PDFName.of("PMD"), PDFDict);
-    expect(pmd.get(PDFName.of("Symbology"))).toBe(PDFName.of("QRCode"));
-    // Written "300.0" (Acrobat ignores "300"); reading the file back turns it into a number, so look in the file itself.
-    const raw = Buffer.from(bytes).toString("latin1"), streams = [...raw.matchAll(/stream\r?\n([\s\S]*?)endstream/g)];
-    expect(streams.some(m => { try { return /\/Resolution 300\.0/.test(inflateSync(Buffer.from(m[1], "latin1")).toString("latin1")); } catch { return false; } })).toBe(true);
-    expect(box.acroField.dict.has(PDFName.of("AA"))).toBe(false); // not recalculated: made only by Generate QR Code
+    expect(box.acroField.dict.has(PDFName.of("PMD"))).toBe(false);          // a plain hidden field holding the JSON
+    expect(box.acroField.dict.has(PDFName.of("AA"))).toBe(false);           // made only by Generate QR Code
+    for (const y of [0, 88, 176]) {
+      const row = form.getTextField(`__qr_${y}`);
+      expect(row.acroField.getWidgets()[0].P()?.toString()).toBe(last.ref.toString());
+      expect([row.isCombed(), row.getMaxLength(), row.isReadOnly()]).toEqual([true, 177, true]);
+      expect(row.acroField.dict.lookup(PDFName.of("DA"))?.toString()).toMatch(/^\(\/ZaDb [\d.]+ Tf 0 g\)$/);
+      expect(row.acroField.getWidgets()[0].dict.has(PDFName.of("DA"))).toBe(false); // inherits ZapfDingbats from the field
+    }
+    // The encoder: a version 40 symbol with its finder patterns and timing line in place.
+    const m = new Function(`${qrScript}; return lcQrMatrix(${JSON.stringify("x".repeat(2300))});`)() as boolean[][];
+    expect(m.length).toBe(177);
+    const finder = (x: number, y: number) => [0, 6].every(i => m[y + i][x] && m[y][x + i]) && !m[y + 1][x + 1] && m[y + 3][x + 3];
+    expect([finder(0, 0), finder(170, 0), finder(0, 170)]).toEqual([true, true, true]);
+    expect(m[6].slice(8, 20).map(Number).join("")).toBe("101010101010");
     // The script given to the company AI word for word is the one in this PDF.
     const prompt = readFileSync("public/lc-ai-confirm-print-prompt.txt", "utf8");
     expect(prompt.split("---------------- BEGIN lcPayload ----------------\n")[1].split("\n---------------- END lcPayload")[0]).toBe(payloadScript(LC.template));
