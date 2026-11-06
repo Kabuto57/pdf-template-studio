@@ -179,6 +179,7 @@ describe("the JavaScript version", async () => {
     expect(s1("Document script lcRules")).toBe(library(doc));
     expect([s1("Check form"), s1("Reset form")]).toEqual([act("__check_form"), act("__reset_form")]);
     expect([s2("Generate QR Code"), s2("Print Form")]).toEqual([generateQr, printForm]);
+    expect(step("public/lc-ai-qr-fix-prompt.txt")("Generate QR Code")).toBe(generateQr);
     // A stand-in for Acrobat: the QR field, the answers lcPayload reports, and what happens.
     const run = (code: string, qr: { value: string }, missing: string[], answers: string) => {
       const log: string[] = [];
@@ -192,7 +193,13 @@ describe("the JavaScript version", async () => {
     expect(run(generateQr, qr, ["Date"], "ACME").log).toEqual(["The QR code cannot be generated yet", "focus application_date"]);
     expect(qr.value).toBe("");
     expect(run(printForm, qr, [], "ACME").log).toEqual(["Please press Generate QR Code first, so the printed form carries the QR code"]);
-    expect(run(generateQr, qr, [], "ACME")).toEqual({ log: ["The QR code has been generated from your answers"], page: 3 });
+    const made = run(generateQr, qr, [], "ACME");
+    expect(made.page).toBe(3);
+    expect(made.log).toEqual([`The QR code has been generated from your answers (${qr.value.length} characters)`]);
+    // Anything going wrong is shown, not swallowed (e.g. the document script lost lcPayload).
+    const broken = { log: [] as string[] };
+    new Function("app", "lcRules", "lcPayload", generateQr).call({ numPages: 4, getField: () => ({}) }, { alert: (m: string) => broken.log.push(m.split("\n")[0]) }, () => Object.assign([], { bad: [] }), () => { throw new Error("lcPayload is not defined"); });
+    expect(broken.log).toEqual(["The QR code could not be generated: Error: lcPayload is not defined"]);
     expect(JSON.parse(qr.value).data.applicant_name).toBe("ACME");
     expect(run(printForm, qr, [], "ACME").log).toEqual(["print true,0,3,false,true"]);   // same answers (a later time is fine)
     expect(run(printForm, qr, [], "ACME LTD").log).toEqual(["Your answers have changed since the QR code was generated"]);

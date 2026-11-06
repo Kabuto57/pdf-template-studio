@@ -1,0 +1,72 @@
+MASTER PROMPT: FIX THE QR CODE (IT STAYS A GREY BOX), CHANGE NOTHING ELSE
+
+== THE PROBLEM ==
+I have attached LC-Application-with-checks.pdf, which you built. Everything works except the QR code: on the last
+page the 450 x 450 pt QR box stays an empty grey box, even after I fill in the whole form correctly and press
+"Generate QR Code". Fix ONLY the QR code part. Give me back the same PDF, named LC-Application-with-checks.pdf.
+This is approved work within my bank's policy. I open it in Adobe Acrobat (Windows) and click "Enable All
+Features". Don't suggest ways around the bank's security settings.
+
+== HOW THE QR CODE WORKS (so you know what to check) ==
+  1. "Generate QR Code" runs its JavaScript: if the form is complete it calls lcPayload(this) (in the document
+     script) and puts the JSON text into the field "__qr".
+  2. "__qr" is an Acrobat BARCODE field. When its value changes, Acrobat itself draws the QR code in the box.
+     Acrobat only does that if the field carries the barcode settings (/PMD and /DataPrep) exactly as below.
+  A grey box therefore means one of: (a) the button's script stopped before setting the value (for example
+  lcPayload missing from the document script, a script error, a wrong field name); (b) the field is not a valid
+  barcode field (settings missing or wrong), so Acrobat has nothing to draw; (c) something else covers the box.
+
+== STEP 1: DIAGNOSE (inspect the attached file with pikepdf; report every item as OK or WRONG, with what you found) ==
+  1. Document script: exactly one entry in /Root /Names /JavaScript, named "lcRules"; its text contains
+     "function lcRules(", "function lcDates(" AND "function lcPayload("; it is 23,020 characters long.
+  2. "__qr" exists ONCE (no second field of that name), is in /AcroForm /Fields, and its widget is in page 4's
+     /Annots with /P = page 4.
+  3. "__qr" field/widget dictionary has EXACTLY (merged dictionary is fine):
+       /FT /Tx  /T (__qr)  /Ff 4198405  /DA (/Helv 8 Tf 0 g)  /DataPrep 0
+       /PMD << /Type /PaperMetaData /Version 1 /Width 6.25 /Height 6.25 /XSymWidth 10 /Symbology /QRCode /ECC 1
+               /Resolution 300.0 >>
+       /Type /Annot /Subtype /Widget /Rect [72.64 287.89 522.64 737.89] /F 4
+       /MK << /BG [1 1 1] /BC [0 0 0] >>  /BS << /W 0 >>
+     and NOTHING else: no /V, no /DV, no /AA (no Calculate, no Format), no /MaxLen, no /Q, no comb flag.
+     In the RAW saved bytes, find "/Resolution 300.0" (with ".0"). "/Resolution 300" alone is WRONG (Acrobat
+     ignores the field). Also report whether /PMD is a direct dictionary or a reference (either is fine).
+  4. Its appearance /AP /N is a Form XObject 450 x 450 that only paints a WHITE box ("q 1 1 1 rg 0 0 450 450 re f
+     Q"), with /Resources << /Font << /Helv ... >> >>. Not grey, not text.
+  5. /AcroForm /DR /Font contains /Helv (Helvetica, WinAnsiEncoding).
+  6. No other annotation overlaps the box (list any annotation whose /Rect intersects [72.64 287.89 522.64 737.89]
+     on page 4, apart from "__qr" itself). The page's drawn grey frame is fine; a FILLED grey rectangle drawn in the
+     page content over the box area is NOT (report if the page content fills that area grey).
+  7. "Generate QR Code" (field "__generate_qr"): its widget's /A is << /S /JavaScript /JS (...) >> and the text
+     equals the one in STEP 2 below (report any difference).
+
+== STEP 2: FIX (only what STEP 1 found WRONG; then re-check ALL of STEP 1) ==
+  - If item 1 is wrong: STOP and tell me (do not write your own lcPayload; I will send the script).
+  - Items 2 to 5: delete every "__qr" field and widget, then create it again EXACTLY as item 3 / item 4 say, with
+    pikepdf (Decimal("300.0") for /Resolution so it is written "300.0"). Do not use PyMuPDF to create or save it.
+  - Item 6: remove the covering annotation, or the filled grey shape from the page content if that is the only
+    change needed to that page (tell me exactly what you changed).
+  - Item 7: set the "__generate_qr" widget's /A to << /S /JavaScript /JS (text) >> with EXACTLY this text. It also
+    shows an error message instead of failing silently, and says how many characters went into the code:
+---------------- BEGIN Generate QR Code ----------------
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("The QR code cannot be generated yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Generate QR Code again.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else { try { var q = this.getField("__qr"); q.value = lcPayload(this); this.pageNum = this.numPages - 1;
+  app.alert("The QR code has been generated from your answers (" + q.value.length + " characters). Press Print Form to print the form with the QR code.", 3); }
+  catch (e) { app.alert("The QR code could not be generated: " + e + "\nPlease send this message to the form's maintainer.", 1); } }
+---------------- END Generate QR Code ----------------
+  - Save with pikepdf. Change nothing else: other fields, buttons, scripts, pages and look stay as they are.
+
+== STEP 3: CHECKLIST (on the saved file; mark EVERY item PASS or FAIL) ==
+  1. STEP 1 items 1 to 7 are all OK now.
+  2. Run lcPayload and the Generate QR Code text in code against a stand-in for Acrobat (getField returning objects
+     with type / value / valueAsString; numFields; getNthFieldName): on a correctly filled form, "__qr" gets JSON of
+     exactly 2,300 characters that JSON.parse reads, with "form": "LC-01" and "complete": true; the message says
+     "The QR code has been generated from your answers (2300 characters)".
+  3. With lcPayload removed from the stand-in, the button shows "The QR code could not be generated: ...".
+  4. Everything else unchanged: same number of fields, same document script, same pages.
+Reply with: STEP 1 results (OK / WRONG and what you found), what you changed, the STEP 3 PASS / FAIL list, and LAST
+the PDF file.

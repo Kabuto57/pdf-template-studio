@@ -31,7 +31,7 @@ Your job: turn the specification into the PDF with the program below, then run t
   2. Save the program below as build_lc_pdf.py, EXACTLY as written (between the BEGIN / END lines).
   3. Run:  python build_lc_pdf.py lc-build-spec.json LC-Application-with-checks.pdf
   4. Compute the SHA-256 of LC-Application-with-checks.pdf. It must equal the spec's "expectedSha256":
-       e7c7e86435b5586b5fb48cee0c4f7f3f180a5e6b866ab42cf4eaf8e019c71c74
+       9b3f575e00c0661192bc87ea14368c23cf1efce41815d4710f61dec10511ca6e
      If it is equal, the file is byte-for-byte the tested form: go to step 2.
      If it is not, do NOT try to fix it: tell me the hash you got, the Python version, and the first 300 bytes
      of the file, and stop.
@@ -133,7 +133,7 @@ if __name__ == "__main__":
 ---------------- END build_lc_pdf.py ----------------
 
 == STEP 2: CHECK (read-only; mark EVERY item PASS or FAIL) ==
-  1. SHA-256 equals e7c7e86435b5586b5fb48cee0c4f7f3f180a5e6b866ab42cf4eaf8e019c71c74.
+  1. SHA-256 equals 9b3f575e00c0661192bc87ea14368c23cf1efce41815d4710f61dec10511ca6e.
   2. The file opens in pikepdf (or PyMuPDF) with 4 pages, size 595.28 x 841.89 pt each.
   3. Form fields: 119 in /AcroForm /Fields, including "__check_form" and "__reset_form" (one widget on each of the
      4 pages), "__generate_qr", "__print_form" and "__qr" (on page 4), "__checks" (hidden helper).
