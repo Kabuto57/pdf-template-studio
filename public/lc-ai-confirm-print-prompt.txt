@@ -1,0 +1,121 @@
+MASTER PROMPT: REVERT THE BROKEN FORM, THEN ADD "CONFIRM & PRINT FORM" THE SAFE WAY (LIKE THE OLD SMART FORM)
+
+== WHAT HAPPENED, AND THE NEW APPROACH ==
+After the "Save form" button and QR code were added to the end of the "Irrevocable Documentary Credit Application"
+PDF, the layout broke: things moved out of place. Squeezing new items into the last section made the pages get
+redrawn. So:
+  1. REVERT to the last working version (attached: the PDF from BEFORE the Save form / QR change).
+  2. Then add the feature the way the bank's old smart form did it, WITHOUT touching any existing page:
+       - a "Confirm & Print Form" button in the header of every page (next to Check form / Reset form): it checks
+         the form; if anything is missing or wrong it lists the problems and does NOT print; if all is correct it
+         updates the barcode and opens the print dialog;
+       - the barcode (a QR code holding the answers as JSON) on ONE NEW PAGE added at the END of the PDF.
+     No Save form button (Ctrl+S / File > Save already saves the filled form).
+Give me back LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open it in Adobe
+Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's security settings.
+
+== THE ONE RULE THAT PREVENTS THE BREAKAGE ==
+Do NOT change, redraw, re-flow, re-render or re-save the content of ANY existing page. Existing pages may only get
+new button widgets placed ON TOP of empty header space. Everything else new goes on the NEW last page.
+If a step seems to need changing an existing page, STOP and tell me instead.
+
+== STEP 1: REVERT ==
+  - Start from the attached last working PDF (before the Save form / QR change). Do not start from the broken one.
+  - Check it is the working version: one document script "lcRules"; no "__qr", no "__btn_save", no "lcPayload";
+    calculation order (/AcroForm /CO) is ["__checks"]. Tell me what you found.
+  - If I attached only the broken PDF, STOP and tell me (don't try to move things back by guessing).
+
+== STEP 2: THE "CONFIRM & PRINT FORM" BUTTON (every page, header) ==
+  - Real push-button fields, one per page: __btn_print_1, __btn_print_2, ... (Btn, /Ff 65536).
+  - Position: in the header strip, on the same line as Check form / Reset form, directly to their LEFT, 4 pt gap;
+    about 90 x 13 pt. It must not overlap the bank name text or anything else.
+  - Look (same as the other buttons, so the caption never disappears): /DA "/Helv 8 Tf 1 g"; /MK << /BG [0] /BC [0]
+    /CA (Confirm & Print Form) >>; highlight /P or /N (not /I); normal appearance black box, white centred caption.
+  - Visible, NOT printed, not read-only, nothing on top of it.
+  - Mouse Up action (the widget's /A) EXACTLY (tested):
+---------------- BEGIN Confirm & Print Form ----------------
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("This form cannot be printed yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Confirm & Print Form again.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else { this.calculateNow(); this.print(true, 0, this.numPages - 1, false, true); }
+---------------- END Confirm & Print Form ----------------
+
+== STEP 3: THE NEW LAST PAGE (the barcode page) ==
+  - Add ONE new page at the end, same size as the others (A4 portrait).
+  - At the top: "DEMO BANK · TRADE SERVICES" in bold black, a black rule under it, then the heading
+    "APPLICATION BARCODE (FOR BANK USE)" in bold, then in 8 pt grey: "This page is printed with the form. The Bank
+    scans the code to read the application. Do not write on or fold the code."
+  - The QR code: a barcode form field "__qr" (Acrobat barcode field, as made with Prepare Form > Barcode), centred,
+    about 200 x 200 pt. Symbology QR Code, error correction level M, "Compress data before encoding" OFF.
+    Visible, PRINTED, read-only. Calculate action EXACTLY:
+        event.value = typeof lcPayload == "function" ? lcPayload(this) : "";
+  - Under the code, in 8 pt grey: "Form LC-01 · v1.0".
+  - Calculation order (/AcroForm /CO): exactly ["__checks", "__qr"].
+  - No buttons on this page except Confirm & Print Form / Check form / Reset form if you can place them on the same
+    header line without overlapping anything (otherwise none).
+  - The existing pages' footers still say "Page x of y" with the old total: leave them as they are (do not edit existing pages). The
+    barcode page has no page number.
+  - If you cannot make a real Acrobat barcode field, STOP and tell me; don't fake it with a picture or text box.
+
+== STEP 4: SECOND DOCUMENT SCRIPT "lcPayload" (EXACTLY this text; tested) ==
+After this there are exactly two document scripts: "lcRules" (unchanged, not a character) and "lcPayload".
+The QR code then holds the answers as JSON, keyed by the form's field names, for example:
+{"form":"LC-01","version":"1.0","saved":"2026-11-06T10:40","complete":true,"data":{"applicant_name":"ACME TRADING PTE LTD","currency":"USD","amount":"125,000.00","drafts":true,"drafts_at":"Term"}}
+---------------- BEGIN lcPayload ----------------
+function lcPayload(d) {
+var G = {"bencert_sent_by": ["faxed","mailed","couriered"]}, LONG = ["goods_description","additional_conditions"], CAP = 2300;
+var data = {}, i, n, f, k, v, g, m, out, cut = [], ok = true, t = new Date();
+for (i = 0; i < d.numFields; i++) {
+  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n)) continue;
+  f = d.getField(n); if (!f || f.type == "button" || f.type == "signature") continue;
+  g = /^(.+)__(\d+)$/.exec(n);
+  if (g && G[g[1]]) { if (f.value != "Off") { if (!data[g[1]]) data[g[1]] = []; data[g[1]].push(G[g[1]][+g[2]]); } continue; }
+  if (f.type == "checkbox") { if (f.value != "Off") data[n] = true; continue; }
+  v = f.type == "radiobutton" ? (f.value == "Off" ? "" : String(f.value)) : String(f.valueAsString).replace(/^\s+|\s+$/g, "");
+  if (v !== "") data[n] = v;
+}
+if (typeof lcRules == "function") { m = lcRules(d); ok = !m.length && !(m.bad || []).length; }
+function pad(x) { return ("0" + x).slice(-2); }
+out = {"form": "LC-01", "version": "1.0", "saved": t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()) + "T" + pad(t.getHours()) + ":" + pad(t.getMinutes()), "complete": ok, "data": data};
+// A QR code holds about 2,300 characters: if the answers are longer, shorten the two long paragraphs and say so.
+for (i = 0; i < LONG.length && JSON.stringify(out).length > CAP; i++) {
+  k = LONG[i]; if (!data[k]) continue;
+  cut.push(k); out.truncated = cut;
+  v = JSON.stringify(out).length - CAP + 3;
+  data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
+}
+return JSON.stringify(out);
+}
+---------------- END lcPayload ----------------
+
+== CHECKLIST (on the final file; mark EVERY item PASS or FAIL; fix any FAIL and re-run ALL items) ==
+Layout (the reason for this prompt):
+  1. Render every EXISTING page of the attached working PDF and of your result, and compare: identical, except
+     the new Confirm & Print Form button in the header. Show me the comparison (e.g. pixel difference only in the
+     button's rectangle). Same number of existing pages; one extra page at the end.
+  2. The new last page looks as described; the QR code is centred, about 200 pt, and prints.
+Structure:
+  3. Document scripts: exactly "lcRules" (identical to the working version) and "lcPayload" (identical to above).
+  4. /CO is ["__checks", "__qr"]; "__qr" is a QR Code barcode field, level M, not compressed, with the exact
+     Calculate action.
+  5. Every page has __btn_print_N with the exact action and white-on-black settings, not printed, nothing on top.
+Behaviour (run the scripts in code against a stand-in for Acrobat, then describe what Acrobat will show):
+  6. Confirm & Print Form on the blank form: message "This form cannot be printed yet ..." listing the missing
+     answers, cursor goes to Date, and NO print dialog.
+  7. Amount "1,25,000.0.0": message lists "Amount: is not an amount"; no print dialog.
+  8. Fully correct form: the QR code updates ("complete": true), then the print dialog opens for all pages,
+     including the barcode page; the buttons don't print.
+  9. lcPayload: only answered questions; tick-any as a list (bencert_sent_by ["faxed","couriered"]); no "__" fields
+     or buttons; a 6,500-character goods description gives JSON of at most 2,300 characters with "truncated".
+ 10. Scanning the printed QR code with a phone shows the JSON.
+Regression (all must still work exactly as in the working version):
+ 11. Blank form: only the always-mandatory blank boxes red; filled boxes have no red outline.
+ 12. Tick "Drafts for 100% invoice value at": Drafts at unlocks and turns red; Term / Date unlock their questions;
+     untick: locked, grey, cleared.
+ 13. Date boxes show the calendar; typing filters unchanged.
+ 14. Check form, Reset form (captions stay white), Previous / Next work; Reset also resets the QR code.
+Reply with: what you found in Step 1, the PASS / FAIL list 1 to 14 with how you tested each, anything that fails or
+could not be tested, and LAST the PDF file.
