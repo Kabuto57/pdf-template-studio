@@ -174,7 +174,7 @@ this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lc
    bank_charges_for = "Beneficiary, except charges at DC Issuing Bank's counter"; post_shipment_financing = ticked;
    debit_issuance_charges = ticked. Every other field: blank.
 
-2.7 7. TYPING FILTERS (Keystroke action on the field):
+2.7 TYPING FILTERS (Keystroke action on the field):
    - Amount (amount):  if (!event.willCommit && /[^0-9.,]/.test(event.change)) { event.rc = false; app.beep(0); }
    - Whole numbers (tolerance_plus, tolerance_minus, presentation_days, term_days, do_originals, do_copies,
      bencert_days, invoice_originals, invoice_copies, packing_list_originals, packing_list_copies,
