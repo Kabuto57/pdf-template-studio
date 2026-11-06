@@ -252,10 +252,12 @@ fields at all fall back to reading the page text, and those results are marked "
 
 ### How the bank forms were made
 
-1. `readXfa()` opened the bank's trade smart form (`Trade-Smartform.pdf`, 14 forms built in Adobe LiveCycle).
+1. `readXfa()` opened the bank's trade smart form (`Trade-Smartform.pdf`, 13 forms built in Adobe LiveCycle).
 2. For each form, `xfaTemplate()` produced a Template. Currency and country drop-downs got the standard ISO
    lists (the smart form fills those by script, so they are not in the file); fields named like dates became dates; the smart form's mandatory fields (its "required" setting or a `*`) stay mandatory.
 3. The bank's name was replaced with "the Bank", and the result saved as `src/bank-forms.json`.
+
+How the smart form itself works (layers, fields, scripts, mandatory logic, barcodes): [docs/how-the-bank-smart-form-is-built.md](docs/how-the-bank-smart-form-is-built.md).
 
 To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vitest run scripts`.
 
