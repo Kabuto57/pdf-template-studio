@@ -1,4 +1,4 @@
-MASTER PROMPT (FINAL v2, FROM SCRATCH): BUILD THE "IRREVOCABLE DOCUMENTARY CREDIT APPLICATION" AS ONE
+MASTER PROMPT (FINAL v3, FROM SCRATCH): BUILD THE "IRREVOCABLE DOCUMENTARY CREDIT APPLICATION" AS ONE
 FINISHED, SELF-CHECKING PDF WITH A QR CODE PAGE, AND AVOID EVERY PROBLEM WE HAVE ALREADY HIT
 
 == PART 0: WHAT I NEED ==
@@ -28,7 +28,8 @@ The form must:
 == PART 1: HOW TO WORK (the golden rules) ==
 Earlier attempts kept breaking: each time one thing was fixed, something else broke. These rules prevent that.
   R1. Build in this order, and finish each step before the next:
-        Step A: the page design (PART 3) and every field with its exact name (PART 4).
+        Step A: the page design (PART 3) and every field with its exact name (PART 4), built with the recipe in
+                PART 4B (PyMuPDF draws the pages; pikepdf writes every field, button, link and script).
         Step B: ALL the scripts and actions in ONE pass, exactly as written in PART 5.
         Step C: the full checklist (PART 7), every item.
       The scripts go in LAST, after the design is final. If you redraw or rebuild a page after Step B, the scripts
@@ -199,6 +200,106 @@ every answer.
   - Drop-down ("select"): the options from the SPEC; starts with no selection (value ""); no " " entry.
   - "max": N -> the field's character limit N, on text boxes only (never on date boxes).
   - Do NOT add any other fields, except the "__" helper and buttons in PART 5.
+
+== PART 4B: THE BUILD RECIPE (libraries, and exactly how to write each kind of field) ==
+Earlier builds failed in the details this part fixes: buttons drawn as plain black boxes that did nothing, a QR box
+that showed text, and a QR page with no frame or buttons. Follow it literally.
+
+LIBRARIES (you have them; nothing else is needed):
+  - PyMuPDF (fitz): ONLY to draw the pages (text, lines, rectangles, the grey bands, the QR frame). Do NOT create
+    any form field or widget with PyMuPDF (its widgets get their own appearances and lose the settings below).
+  - pikepdf: to add EVERY field, widget, link, action and the document script, as raw PDF dictionaries, exactly as
+    in the templates below. The final save is done by pikepdf. Never open and re-save the finished file with
+    PyMuPDF (or any other library) afterwards.
+  - Python's own json / math only for your bookkeeping. No other PDF library.
+
+THE STEPS:
+  1. PyMuPDF: make 4 A4 pages (595.28 x 841.89 pt): pages 1 to 3 the form (PART 3), page 4 the QR code page. Draw
+     everything that is not a field: labels, numbers, section bands and frames, footers (with the texts
+     "< Previous page", "Next page >", "Page x of 4"), the QR page heading, text and its 450 x 450 pt grey frame.
+     Fonts: PyMuPDF's built-in "helv" (Helvetica) and "hebo" (Helvetica-Bold). While drawing, RECORD for every
+     field the page number and the box (x0, y0, x1, y1). Save as design.pdf.
+     PyMuPDF measures y from the TOP of the page; PDF dictionaries measure from the BOTTOM. Convert every box to
+     PDF coordinates before step 2:  Rect = [x0, 841.89 - y1, x1, 841.89 - y0].
+  2. pikepdf: open design.pdf. Create /Root /AcroForm with:
+       /Fields [ ...every field, in form order... ]
+       /DR << /Font << /Helv <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding>>
+                       /ZaDb <</Type /Font /Subtype /Type1 /BaseFont /ZapfDingbats>> >> >>
+       /DA (/Helv 0 Tf 0 g)
+     Do NOT set /NeedAppearances. For each field use the matching template T1 to T9 below: one field dictionary
+     (/T = the field name) and its widget(s) (/Type /Annot /Subtype /Widget, /P = its page, /Rect from step 1,
+     /Parent = the field when the field has /Kids). Add every widget to its page's /Annots and every field to
+     /AcroForm /Fields. Every appearance (/AP) is a Form XObject stream: << /Type /XObject /Subtype /Form
+     /BBox [0 0 w h] /Resources << /Font << /Helv <same font as in /DR> >> >> >> where w, h = the widget's size.
+  3. Add the actions and the document script exactly as PART 5 says, then /AcroForm /CO [ <__checks field> ].
+  4. Save with pikepdf as LC-Application-with-checks.pdf. Then run the PART 7 checklist on THAT file.
+
+THE TEMPLATES (w, h = widget width and height in pt; "/Helv" everywhere; strings shown in PDF syntax):
+T1 TEXT BOX (text, long, and every answer box that is not a date / drop-down / tick):
+   field:  /FT /Tx  /T (id)  /DA (/Helv 8.5 Tf 0 g)  [/MaxLen N if the SPEC has "max"]
+           /Ff 4096 for "long" (multi-line); otherwise no /Ff (never ReadOnly, never Required: see P2, P3, P9)
+   widget: /MK << /BG [1 1 1] /BC [0 0 0] >>  /BS << /W 0.75 >>  /F 4
+           /AP << /N <stream> >> with content:  q 1 1 1 rg 0 0 0 RG 0.75 w 0.375 0.375 (w-0.75) (h-0.75) re B Q
+   (Acrobat redraws the text as it is typed; lcRules later sets the red / grey / black colours.)
+T2 DATE BOX (application_date, latest_shipment_date, expiry_date, draft_date): exactly T1 (one line, no /MaxLen)
+   plus the field actions in PART 5.3. No /Ff, no comb, no character limit.
+T3 DROP-DOWN (select):
+   field:  /FT /Ch  /Ff 131072 (combo box)  /T (id)  /DA (/Helv 8.5 Tf 0 g)  /Opt [ (option 1) (option 2) ... ]
+           (the SPEC's options, plain strings; no " " entry; no /V unless PART 5.6 gives a starting answer)
+   widget: as T1, with the same box appearance.
+T4 TICK BOX (check, and each box of a tick-any group <id>__0, __1, ...):
+   field:  /FT /Btn  /T (id)  /V /Off  (or /V /Yes and /AS /Yes for a ticked starting answer, PART 5.6)
+   widget: /MK << /BG [1 1 1] /BC [0 0 0] /CA (4) >>  /BS << /W 0.75 >>  /F 4  /AS /Off
+           /DA (/ZaDb 0 Tf 0 g)
+           /AP << /N << /Yes <stream on> /Off <stream off> >> >>
+             off: q 1 1 1 rg 0 0 0 RG 0.75 w 0.375 0.375 (w-0.75) (h-0.75) re B Q
+             on:  the off drawing, then  q 0 0 0 RG 1.5 w (w*0.16) (h*0.46) m (w*0.38) (h*0.25) l (w*0.84) (h*0.73) l S Q
+   The value when ticked is "Yes"; unticked "Off" (lcRules counts anything but "Off" as ticked).
+T5 PICK-ONE GROUP (radio):
+   field:  /FT /Btn  /Ff 32768 (radio)  /T (id)  /V /Off (or the starting answer's state)  /Opt [ (option 1) ... ]
+           /Kids [ one widget per option, in the SPEC's order ]
+   widget k (k = 0, 1, 2, ...): /Parent <field>  /MK << /BG [1 1 1] /BC [0 0 0] >>  /BS << /W 0.75 >>  /F 4
+           /AS /Off   /AP << /N << /k <stream on> /Off <stream off> >> >>   (the on-state NAME is the number k:
+           /0, /1, /2 ...; /Opt maps it to the option text, so Acrobat reports the option text, e.g. "Term")
+             off: a circle:  q 1 1 1 rg 0 0 0 RG 0.75 w <circle of radius (w/2-0.375) centred at (w/2, h/2)> B Q
+             on:  the off drawing, then a filled black dot of radius w*0.21 at the centre:  q 0 0 0 rg <circle> f Q
+           (draw a circle with 4 Bezier curves: for centre (cx, cy), radius r, k = 0.5523*r:
+            cx+r cy m  cx+r cy+k  cx+k cy+r  cx cy+r c  cx-k cy+r  cx-r cy+k  cx-r cy c
+            cx-r cy-k  cx-k cy-r  cx cy-r c  cx+k cy-r  cx+r cy-k  cx+r cy c)
+   A starting answer (PART 5.6, e.g. mode_of_advising = Full Swift = option 0): field /V /0, that widget /AS /0.
+T6 PUSH BUTTON (Check form, Reset form, Generate QR Code, Print Form):
+   field:  /FT /Btn  /Ff 65536  /T (__check_form | __reset_form | __generate_qr | __print_form)
+           /DA (/Helv 8 Tf 1 g)   (10 Tf for the two buttons on the QR page)
+           Check form / Reset form: ONE field each, with /Kids = one widget per page (4 widgets).
+   widget: /Parent <field>  /MK << /BG [0 0 0] /BC [0 0 0] /CA (Check form) >>  (its own caption)
+           /BS << /W 0 >>  /F 0  (shown on screen, NOT printed)   /H /P
+           /DA (/Helv 8 Tf 1 g)   /A << /S /JavaScript /JS (the button's text from PART 5) >>
+           /AP << /N <stream> /D <same stream> >>, content (black box, white centred caption):
+             q 0 0 0 rg 0 0 w h re f Q
+             BT 1 1 1 rg /Helv 8 Tf  tx ty Td (Check form) Tj ET
+           where tx = (w - caption width) / 2 (caption width from fitz.get_text_length(caption, "helv", 8)),
+           ty = (h - 8 * 0.72) / 2. THIS is what fixes "the buttons are black and do nothing": a caption drawn in
+           WHITE in the appearance, white /DA, black /MK, and the /A action on EVERY widget.
+   Positions: Check form and Reset form at the top right of every page, 64 x 13 pt, 4 pt apart, the right one
+   ending at x = 553.28, bottom at y = 816.89 (PDF coordinates). On page 4: Generate QR Code and Print Form,
+   150 x 22 pt each, 12 pt apart, centred under the QR frame.
+T7 THE QR CODE (field "__qr" on page 4; a real Acrobat barcode field):
+   field AND widget (may be one merged dictionary):
+     /FT /Tx  /T (__qr)  /Ff 4198405  /DA (/Helv 8 Tf 0 g)  /DataPrep 0
+     /PMD << /Type /PaperMetaData /Version 1 /Width 6.25 /Height 6.25 /XSymWidth 10 /Symbology /QRCode /ECC 1
+             /Resolution 300.0 >>
+     /Type /Annot /Subtype /Widget /P <page 4> /Rect [72.64 287.89 522.64 737.89] /F 4
+     /MK << /BG [1 1 1] /BC [0 0 0] >>  /BS << /W 0 >>
+     /AP << /N <stream> >> with an EMPTY white box:  q 1 1 1 rg 0 0 450 450 re f Q
+   NO /V, NO /DV, NO actions. /Resolution must be written WITH the decimal point in the saved file (300.0): pikepdf
+   writes a Python Decimal("300.0") that way; check the raw bytes after saving. Generate QR Code fills it, and
+   Acrobat then draws the QR code (P14, P16).
+T8 THE HIDDEN HELPER "__checks": /FT /Tx /T (__checks) /DA (/Helv 3 Tf 0 g), widget on page 1 with
+   /Rect [-20 -20 -19 -19] /F 2 (hidden) and an empty /AP; its Calculate action is in PART 5.2; /CO = [ it ].
+T9 PREVIOUS / NEXT: not fields. On each page, over the footer texts "< Previous page" / "Next page >", a link:
+   << /Type /Annot /Subtype /Link /Rect [x0 y0 x1 y1] /Border [0 0 0]
+      /A << /S /GoTo /D [ <previous or next page> /XYZ null null null ] >> >>   (none Previous on page 1, none Next
+   on page 4). They work even with JavaScript off.
 
 == PART 5: THE SCRIPTS AND ACTIONS (Step B: all of it, in ONE pass, exactly as written) ==
 5.1 ONE document-level JavaScript named "lcRules", with EXACTLY this text, FOLLOWED (in the same script, on the next
@@ -528,6 +629,9 @@ Structure:
      Previous / Next work.
   6. No ReadOnly flags and no Required flags in the file; every field name unchanged; design unchanged.
      Every button widget: /DA ends "1 g", /MK /BG [0] /BC [0] with its /CA caption, /H not /I.
+  6a. Built as PART 4B: pages drawn with PyMuPDF only, every field written with pikepdf from templates T1 to T9,
+      saved last by pikepdf; no /NeedAppearances; every push-button widget has a white caption in its /AP, white
+      /DA, black /MK and its /A action (render page 1 and show me the top right: black boxes WITH white captions).
   6b. "__qr" is exactly as 5.8 (/PMD with /Symbology /QRCode, /Resolution 300.0 written with the decimal point,
       /DataPrep 0), empty, no text appearance, no Calculate, not in /CO; "__generate_qr" and "__print_form" are on
       the last page only, with the exact actions in 5.9.
