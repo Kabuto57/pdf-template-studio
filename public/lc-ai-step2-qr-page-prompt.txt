@@ -58,6 +58,8 @@ else this.print(true, 0, this.numPages - 1, false, true);
   - The page also has Check form / Reset form in its header. In B those widgets belong to the fields
     "__check_form" / "__reset_form": add them as extra widgets of A's EXISTING "__check_form" / "__reset_form"
     fields (set their /Parent, add them to the field's /Kids). Do not create second fields with the same names.
+    B's copy of them has no action: give each the same /A as A's Check form / Reset form widgets on the other
+    pages (the "Check form" / "Reset form" texts from the step 1 prompt).
   - The footer's "< Previous page" /Link: point its /GoTo at A's previous page (the old last page), not at B's page.
     Also give A's old last page a "Next page >" /Link to the new page, like the other pages have (only if its
     footer has the "Next page >" text; otherwise skip and tell me).
