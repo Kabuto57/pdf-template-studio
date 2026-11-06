@@ -95,6 +95,11 @@ P11. The script was corrupted when copied through email / chat: a field property
 P12. A drop-down that should be blank counted as answered.
     Why: its "blank" entry was a space " " (not empty), or the first real option was pre-selected.
     Rule: drop-downs start with NO selection (value ""), unless PART 5.6 gives a starting answer.
+P13. The form looked wrong: the order of questions was changed, labels were shortened, blue was used, and there
+    were big blank gaps.
+    Why: the layout was "optimised" by moving and rewording questions.
+    Rule: PART 3. Keep the SPEC's order and wording exactly; black, white and grey only (red only for problems);
+    no blank gaps.
 P14. The QR box showed the JSON text instead of a QR code.
     Why: "__qr" was made as an ordinary text field (or the PDF library drew its value as text). Acrobat only draws a
     QR code for a barcode field: a text field carrying a /PMD (paper metadata) dictionary and /DataPrep 0, as
@@ -110,11 +115,6 @@ P16. The QR code was tiny in its box, or changed size as answers changed.
     Why: Acrobat draws each module at a fixed size, so the code's size follows the length of the text.
     Rule: the text is padded to 2,300 characters (in lcPayload), and the module size is set so that one size of code
     fills the 450 pt box (PART 5.8).
-P13. The form looked wrong: the order of questions was changed, labels were shortened, blue was used, and there
-    were big blank gaps.
-    Why: the layout was "optimised" by moving and rewording questions.
-    Rule: PART 3. Keep the SPEC's order and wording exactly; black, white and grey only (red only for problems);
-    no blank gaps.
 
 == PART 3: THE DESIGN (Step A) ==
 ORDER (most important): sections and questions appear EXACTLY in the order of the SPEC, top to bottom, sections
