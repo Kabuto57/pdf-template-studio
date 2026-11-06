@@ -1,0 +1,292 @@
+MASTER PROMPT: ONE COMPLETE, FINAL SCRIPT PACKAGE FOR THE LC FORM (MAKE EVERYTHING WORK TOGETHER)
+
+== WHY THIS PROMPT ==
+I have attached the "Irrevocable Documentary Credit Application" PDF. Every time one part was fixed, another part
+broke (red boxes, conditional questions, calendar, buttons). Right now "Check form" and "Reset form" are visible but
+do nothing, and the Drafts conditional questions broke again. So this time DO NOT patch. Remove ALL the form's
+scripts and actions, then put back the COMPLETE set below in ONE pass, exactly as written, and test EVERYTHING at the
+end. Keep the design exactly. Give me back the SAME PDF (same pages, look, fields, field names), named
+LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open it in Adobe Acrobat (Windows)
+and click "Enable All Features". Don't suggest ways around the bank's security settings. Don't redraw or rebuild
+the pages.
+
+== STEP 1: CLEAN SLATE (scripts only, not the design) ==
+Remove, from the whole file:
+  - every document-level JavaScript (/Names /JavaScript) and any document open action that runs JavaScript;
+  - every field and widget action (/AA: Keystroke, Format, Validate, Calculate, Mouse Up, Mouse Down, On Blur,
+    On Focus) and every widget /A action, EXCEPT the Previous page / Next page actions if they work (or redo them
+    as in Step 2.5);
+  - the calculation order (/AcroForm /CO), and any old hidden helper fields (names starting with "__" that are not
+    buttons);
+  - the PDF ReadOnly flag on every answer field, and the Required flag on every field (Step 2 sets them again).
+Keep: every page, drawing, label, colour, every answer field with its name, position, size and look, and the
+four button widgets' look (if Check form / Reset form are missing, Step 2.4 adds them).
+Tell me what you removed (counts).
+
+== STEP 2: PUT BACK THE COMPLETE SET, EXACTLY ==
+2.1 ONE document-level JavaScript named "lcRules", with EXACTLY this text (no changes, no other document scripts):
+---------------- BEGIN lcRules ----------------
+function lcRules(d) {
+var M = {"application_date":{"kind":"date","label":"Date","hasRule":1,"always":1,"check":1},"mode_of_advising":{"kind":"radio","label":"Mode of advising","hasRule":1,"always":1},"applicant_name":{"kind":"text","label":"Applicant name","hasRule":1,"always":1,"check":1},"applicant_address_1":{"kind":"text","label":"Applicant address","hasRule":1,"always":1,"check":1},"applicant_address_2":{"kind":"text","label":"Applicant address (line 2)","check":1},"applicant_address_3":{"kind":"text","label":"Applicant address (line 3)","check":1},"applicant_address_4":{"kind":"text","label":"Applicant address (line 4)","check":1},"contact_name":{"kind":"text","label":"Contact party for this application & confirmation of FX rate: Name","hasRule":1,"always":1,"check":1},"contact_tel":{"kind":"text","label":"Contact party: Tel no","hasRule":1,"always":1,"check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"contact_fax":{"kind":"text","label":"Contact party: Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"dc_no":{"kind":"text","label":"DC no","check":1},"bank_code":{"kind":"text","label":"Bank code","check":1},"advising_bank_name":{"kind":"text","label":"Name","check":1},"advising_bank_address_1":{"kind":"text","label":"Address","check":1},"advising_bank_address_2":{"kind":"text","label":"Address (line 2)","check":1},"advising_bank_address_3":{"kind":"text","label":"Address (line 3)","check":1},"third_party_name":{"kind":"text","label":"Name","check":1},"third_party_address_1":{"kind":"text","label":"Address","check":1},"third_party_address_2":{"kind":"text","label":"Address (line 2)","check":1},"third_party_address_3":{"kind":"text","label":"Address (line 3)","check":1},"beneficiary_name":{"kind":"text","label":"Beneficiary's name","hasRule":1,"always":1,"check":1},"beneficiary_address_1":{"kind":"text","label":"Beneficiary's address","hasRule":1,"always":1,"check":1},"beneficiary_address_2":{"kind":"text","label":"Beneficiary's address (line 2)","check":1},"beneficiary_address_3":{"kind":"text","label":"Beneficiary's address (line 3)","check":1},"beneficiary_address_4":{"kind":"text","label":"Beneficiary's address (line 4)","check":1},"beneficiary_contact":{"kind":"text","label":"Contact person","check":1},"beneficiary_tel":{"kind":"text","label":"Tel no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"beneficiary_fax":{"kind":"text","label":"Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"currency":{"kind":"select","label":"Currency","hasRule":1,"always":1},"amount":{"kind":"text","label":"Amount","hasRule":1,"always":1,"check":["^\\d{1,3}(,?\\d{3})*(\\.\\d{1,2})?$","is not an amount"]},"tolerance":{"kind":"check","label":"Tolerance on credit amount & goods quantity"},"tolerance_plus":{"kind":"text","label":"Tolerance + (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"tolerance_minus":{"kind":"text","label":"Tolerance - (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"price_basis":{"kind":"radio","label":"Price basis","hasRule":1,"always":1},"price_basis_other":{"kind":"text","label":"Others (please specify)","hasRule":1,"requiredIf":[["price_basis",["Others"],0]],"activeIf":[["price_basis",["Others"],0]],"check":1},"partial_shipment":{"kind":"radio","label":"Partial shipment","hasRule":1,"always":1},"transhipment":{"kind":"radio","label":"Transhipment","hasRule":1,"always":1},"shipment_from":{"kind":"select","label":"Shipment from"},"shipment_from_place":{"kind":"text","label":"Shipment from: place","hasRule":1,"requiredIf":[["shipment_from",[""],1]],"check":1},"shipment_from_place_2":{"kind":"text","label":"Shipment from: place (line 2)","check":1},"shipment_to":{"kind":"select","label":"Shipment to"},"shipment_to_place":{"kind":"text","label":"Shipment to: place","hasRule":1,"requiredIf":[["shipment_to",[""],1]],"check":1},"shipment_to_place_2":{"kind":"text","label":"Shipment to: place (line 2)","check":1},"latest_shipment_date":{"kind":"date","label":"Latest shipment date","check":1},"expiry_date":{"kind":"date","label":"Date of expiry (in beneficiary's country)","hasRule":1,"always":1,"check":1},"presentation_days":{"kind":"text","label":"Presentation period (days after shipment)","check":["^\\d+$","should be a whole number"]},"back_to_back":{"kind":"check","label":"This is a back-to-back DC to be issued against the master credit (the \"Master DC\")"},"master_dc_no":{"kind":"text","label":"Master credit no","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"master_dc_issued_by":{"kind":"text","label":"Issued by","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"drafts":{"kind":"check","label":"Drafts for 100% invoice value at"},"drafts_at":{"kind":"radio","label":"Drafts at","hasRule":1,"requiredIf":[["drafts",["true"],0]],"activeIf":[["drafts",["true"],0]]},"term_days":{"kind":"text","label":"Term: days","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":["^\\d+$","should be a whole number"]},"term_after":{"kind":"text","label":"days after","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":1},"draft_date":{"kind":"date","label":"Date","hasRule":1,"requiredIf":[["drafts_at",["Date"],0]],"activeIf":[["drafts_at",["Date"],0]],"check":1},"term_prepay":{"kind":"radio","label":"If it is a term LC, please select one","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]]},"doc_bill_of_lading":{"kind":"check","label":"Full set of Clean on Board marine bills of lading"},"bl_made_out_to":{"kind":"radio","label":"Made out to","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_made_out_to_other":{"kind":"text","label":"Made out to (other)","hasRule":1,"requiredIf":[["bl_made_out_to",["other (specify)"],0]],"activeIf":[["bl_made_out_to",["other (specify)"],0]],"check":1},"bl_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]],"check":1},"doc_air_waybill":{"kind":"check","label":"Original Air Waybill consigned to the Bank"},"awb_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]]},"awb_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]],"check":1},"doc_delivery_order":{"kind":"check","label":"Delivery order signed by beneficiary made out to applicant"},"do_originals":{"kind":"text","label":"Delivery order: originals","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_copies":{"kind":"text","label":"Delivery order: copies","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_countersigned_by":{"kind":"select","label":"Countersigned by how many of our signatories","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"do_signature_verified":{"kind":"select","label":"Whose signature(s) ... to be verified by the Bank","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"doc_insurance":{"kind":"check","label":"Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion"},"insurance_arrangement":{"kind":"select","label":"For FOB/CFR/FCA/CPT","activeIf":[["doc_insurance",["true"],0]]},"insurance_cover_no":{"kind":"text","label":"Open cover no","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"insurance_cover_with":{"kind":"text","label":"With","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"doc_beneficiary_certificate":{"kind":"check","label":"Beneficiary's certificate stating 1 set of non-negotiable documents has been sent to applicant"},"bencert_sent_by":{"kind":"checks","label":"Sent by","options":["faxed","mailed","couriered"],"hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]]},"bencert_days":{"kind":"text","label":"Within (days after shipment)","hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_commercial_invoice":{"kind":"check","label":"Signed commercial invoice"},"invoice_originals":{"kind":"text","label":"Commercial invoice: originals","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"invoice_copies":{"kind":"text","label":"Commercial invoice: copies","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_packing_list":{"kind":"check","label":"Packing list"},"packing_list_originals":{"kind":"text","label":"Packing list: originals","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"packing_list_copies":{"kind":"text","label":"Packing list: copies","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_weight_note":{"kind":"check","label":"Weight note"},"weight_note_originals":{"kind":"text","label":"Weight note: originals","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"weight_note_copies":{"kind":"text","label":"Weight note: copies","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_certificate_of_origin":{"kind":"check","label":"Certificate of origin"},"origin_originals":{"kind":"text","label":"Certificate of origin: originals","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_copies":{"kind":"text","label":"Certificate of origin: copies","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_country":{"kind":"text","label":"Showing country of origin as","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":1},"doc_other":{"kind":"check","label":"Other documents"},"other_documents_1":{"kind":"text","label":"Other documents","hasRule":1,"requiredIf":[["doc_other",["true"],0]],"activeIf":[["doc_other",["true"],0]],"check":1},"other_documents_2":{"kind":"text","label":"Other documents (line 2)","activeIf":[["doc_other",["true"],0]],"check":1},"goods_description":{"kind":"long","label":"Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","hasRule":1,"always":1,"check":1},"additional_conditions":{"kind":"long","label":"Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","check":1},"bank_charges":{"kind":"check","label":"All bank charges are for account of","hasRule":1,"always":1},"bank_charges_for":{"kind":"radio","label":"Charges for account of","hasRule":1,"requiredIf":[["bank_charges",["true"],0]],"activeIf":[["bank_charges",["true"],0]]},"confirmation":{"kind":"check","label":"Confirmation required"},"confirmation_charges":{"kind":"radio","label":"Confirmation charges","hasRule":1,"requiredIf":[["confirmation",["true"],0]],"activeIf":[["confirmation",["true"],0]]},"post_shipment_financing":{"kind":"check","label":"Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies"},"financing_type":{"kind":"radio","label":"Financing","hasRule":1,"requiredIf":[["post_shipment_financing",["true"],0]],"activeIf":[["post_shipment_financing",["true"],0]]},"financing_currency":{"kind":"select","label":"Foreign currency financing in (type of currency)","hasRule":1,"requiredIf":[["financing_type",["Foreign Currency Financing"],0]],"activeIf":[["financing_type",["Foreign Currency Financing"],0]]},"forward_contract_no":{"kind":"text","label":"Forward contract no","hasRule":1,"requiredIf":[["financing_type",["Apply Forward Contract"],0]],"activeIf":[["financing_type",["Apply Forward Contract"],0]],"check":1},"advance_payment":{"kind":"check","label":"We authorise you to debit DC amount in full from our account for advance payment"},"advance_payment_account":{"kind":"text","label":"Account no for advance payment","hasRule":1,"requiredIf":[["advance_payment",["true"],0]],"activeIf":[["advance_payment",["true"],0]],"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"issuance_charges_account":{"kind":"text","label":"Account no for DC issuance charges","hasRule":1,"always":1,"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"authorised_person":{"kind":"text","label":"Name and title of authorised person(s)","check":1}};
+function has(list, x) { for (var i = 0; i < list.length; i++) if (list[i] == x) return true; return false; }
+
+// The answer to question id, read from the PDF's fields.
+function val(id) {
+  var m = M[id], f, a = [], i;
+  if (m.kind == "checks") { for (i = 0; i < m.options.length; i++) { f = d.getField(id + "__" + i); if (f && f.value != "Off") a.push(m.options[i]); } return a; }
+  if (m.kind == "date" && shown(id)) return d.getField(id).valueAsString;
+  if (m.kind == "date" && d.getField(id + "__list")) { a = /^(\d\d) (\w{3}) (\d{4})$/.exec(d.getField(id + "__list").valueAsString);
+    return a ? a[1] + "/" + ("0" + ("JanFebMarAprMayJunJulAugSepOctNovDec".indexOf(a[2]) / 3 + 1)).slice(-2) + "/" + a[3] : ""; }
+  f = d.getField(id); if (!f) return "";
+  if (m.kind == "check") return f.value != "Off" ? "true" : "false";
+  return f.value == "Off" ? "" : String(f.value);
+}
+function shown(id) { var f = d.getField(id); return !!f && f.display != 1; } // 1 = display.hidden
+function empty(x) { return typeof x == "object" ? !x.length : x === ""; }
+
+// Does any of these rules hold?
+function any(rules) {
+  var i, j, x, hit;
+  for (i = 0; i < rules.length; i++) {
+    x = val(rules[i][0]); hit = false;
+    if (typeof x == "object") { for (j = 0; j < x.length; j++) if (has(rules[i][1], x[j])) hit = true; } else hit = has(rules[i][1], x);
+    if (rules[i][2] ? !hit && !empty(x) : hit) return true;
+  }
+  return false;
+}
+function mandatory(id) { var m = M[id]; return m.always ? true : any(m.requiredIf || []); }
+
+// What is wrong with a typed answer, or "".
+function wrong(id) {
+  var m = M[id], f = d.getField(id), s = m.kind == "date" ? val(id) : f ? f.valueAsString : "", x, k;
+  if (!m.check || !s) return "";
+  x = s.match(new RegExp("[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]", "g"));
+  if (x) { k = []; for (var i = 0; i < x.length; i++) if (!has(k, x[i])) k.push(x[i]); return "remove " + k.join(" ") + " (letters, digits and . , - / ( ) ' : ? + # & @ % only)"; }
+  if (m.kind == "date") { x = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s); k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? "" : "not a real date (DD/MM/YYYY)"; }
+  return m.check.length && !new RegExp(m.check[0]).test(s) ? m.check[1] : "";
+}
+
+// A real DD/MM/YYYY date as a Date, or null.
+function day(s) { var x = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s), k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? k : null; }
+function v(id) { return M[id] ? val(id) : ""; }
+
+// Checks across answers (the same as cross-checks in form/validate.ts). Skipped when a form doesn't have the fields.
+function across() {
+  var X = {}, A = day(v("application_date")), S = day(v("latest_shipment_date")), E = day(v("expiry_date")), a = v("amount"), pb = v("price_basis");
+  if (S && E && E < S) X.expiry_date = "is before the latest shipment date";
+  else if (A && E && E < A) X.expiry_date = "is before the application date";
+  if (A && S && S < A) X.latest_shipment_date = "is before the application date";
+  if (A && A.getTime() > new Date().getTime()) X.application_date = "is in the future";
+  if (/^[\d,]+(\.\d+)?$/.test(a) && !(Number(a.replace(/,/g, "")) > 0)) X.amount = "must be more than zero";
+  if (v("insurance_arrangement") && (pb == "CIF" || pb == "CIP")) X.insurance_arrangement = "is only for FOB/CFR/FCA/CPT, but price basis is " + pb + " (the beneficiary insures)";
+  return X;
+}
+
+// Clears a question's box, so an answer can't stay behind in a question that doesn't apply.
+function clear(f, kind) {
+  if (kind == "check" || kind == "checks" || kind == "radio") { if (f.value != "Off") f.value = "Off"; }
+  else if (f.type == "combobox" && /__list$/.test(f["name"])) { if (f.currentValueIndices != 0) f.currentValueIndices = 0; } // a date list: back to "Pick a date"
+  else if (f.value !== "" && f.value != null) f.value = "";
+}
+
+// Go through every question: work out its state, then colour (and lock) its boxes.
+var missing = [], bad = [], first = "", id, m, applies, required, problem, whatsWrong, names, i, f, X;
+try {
+X = across();
+for (id in M) {
+  m = M[id]; if (!m.hasRule && !m.check && !m.activeIf) continue;
+  applies = !m.activeIf || any(m.activeIf);
+  required = m.hasRule && applies ? mandatory(id) : false;
+  problem = required && (m.kind == "check" ? val(id) != "true" : empty(val(id)));
+  if (problem) missing.push(m.label);
+  whatsWrong = applies ? wrong(id) || X[id] || "" : ""; if (whatsWrong) { bad.push(m.label + ": " + whatsWrong); problem = true; }
+  names = [id]; if (m.kind == "checks") { names = []; for (i = 0; i < m.options.length; i++) names.push(id + "__" + i); }
+  if (m.kind == "date" && !shown(id) && d.getField(id + "__list")) names = [id + "__list"];
+  if (problem && !first) first = names[0];
+  for (i = 0; i < names.length; i++) {
+    f = d.getField(names[i]); if (!f) continue;
+    if (m.hasRule && m.kind != "checks") f.required = required;
+    if (m.activeIf) f.readonly = !applies;                                                   // locked until it applies
+    if (!applies) { clear(f, m.kind); f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; } // grey, cleared
+    f.lineWidth = problem || !m.underlined ? 1 : 0;
+    f.strokeColor = problem ? color.red : m.underlined ? color.transparent : color.black;    // red when blank or wrong
+    f.fillColor = problem ? ["RGB", 1, 0.88, 0.88] : m.underlined ? color.transparent : color.white;
+  }
+}
+} catch (e) { console.println("lcRules: " + e); }
+missing.bad = bad;
+missing.first = first; // the field of the first problem, for "Check form" to go to
+return missing;
+}
+
+// Acrobat only: show each date's calendar box and hide its drop-down list.
+function lcDates(d) {
+  var D = ["application_date","latest_shipment_date","expiry_date","draft_date"], i, t, p;
+  for (i = 0; i < D.length; i++) { t = d.getField(D[i]); if (!t) continue; t.display = display.visible;
+    p = d.getField(D[i] + "__list"); if (p) p.display = display.hidden; }
+}
+// On opening in Acrobat: show the calendars, and set every box's colour and lock.
+if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lcDates(this); lcRules(this); }
+---------------- END lcRules ----------------
+
+2.2 RUN IT AFTER EVERY ANSWER:
+   - Every tick box, every option of every pick-one group, every box of a tick-any group (bencert_sent_by__0, __1,
+     __2): Mouse Up action:  lcRules(this);
+   - Every text box, date box and drop-down: On Blur action:  lcRules(this);
+     Drop-downs: also tick "Commit selected value immediately".
+   - Add ONE hidden helper text field "__checks" (tiny, off to one side, hidden, not overlapping anything) with the
+     Calculate action  lcRules(this);  and make it the only entry in the calculation order (/AcroForm /CO).
+   - Required flag: set only on the always-mandatory fields (application_date, mode_of_advising, applicant_name,
+     applicant_address_1, contact_name, contact_tel, beneficiary_name, beneficiary_address_1, currency, amount,
+     price_basis, partial_shipment, transhipment, expiry_date, goods_description, bank_charges,
+     issuance_charges_account) or on none. No ReadOnly flag on any answer field (the script locks and unlocks).
+
+2.3 DATE BOXES (application_date, latest_shipment_date, expiry_date, draft_date): plain one-line text fields with
+   ONLY: Format AFDate_FormatEx("dd/mm/yyyy");  Keystroke AFDate_KeystrokeEx("dd/mm/yyyy");  On Blur lcRules(this);
+   No typing filter, no Validate, no Calculate on them. (This gives Acrobat's calendar.)
+
+2.4 BUTTONS. "Check form" and "Reset form" on EVERY page, top right of the header, side by side (about 64 x 13 pt,
+   4 pt apart, black box, white 8 pt text). Real push-button fields (Btn, /Ff 65536), names starting with "__"
+   (e.g. __btn_check_1 ... and __btn_reset_1 ...), each widget in its page's annotations and in the form's field
+   list, on top of everything (nothing overlapping), visible on screen, not printed, not read-only, with a normal
+   appearance showing its caption. Mouse Up action (the widget's /A) with EXACTLY:
+"Check form":
+---------------- BEGIN Check form ----------------
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("This form is not ready to send. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them before you send the form.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else app.alert("All mandatory questions are answered and every answer is in the right format. You can save the form and send it.", 3);
+---------------- END Check form ----------------
+
+"Reset form":
+---------------- BEGIN Reset form ----------------
+if (app.alert("Are you sure you want to reset the form? All your answers will be cleared.", 2, 2) == 4) {
+this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lcRules == "function") lcRules(this); }
+---------------- END Reset form ----------------
+
+2.5 "Previous page":  if (this.pageNum > 0) this.pageNum--;     "Next page":  if (this.pageNum < this.numPages - 1) this.pageNum++;
+
+2.6 STARTING ANSWERS as the fields' DEFAULT values (/DV) AND current values, so the blank form and Reset show them:
+   mode_of_advising = "Full Swift"; presentation_days = "21"; bank_charges = ticked;
+   bank_charges_for = "Beneficiary, except charges at DC Issuing Bank's counter"; post_shipment_financing = ticked;
+   debit_issuance_charges = ticked. Every other field: blank.
+
+2.7 7. TYPING FILTERS (Keystroke action on the field):
+   - Amount (amount):  if (!event.willCommit && /[^0-9.,]/.test(event.change)) { event.rc = false; app.beep(0); }
+   - Whole numbers (tolerance_plus, tolerance_minus, presentation_days, term_days, do_originals, do_copies,
+     bencert_days, invoice_originals, invoice_copies, packing_list_originals, packing_list_copies,
+     weight_note_originals, weight_note_copies, origin_originals, origin_copies): same with /[^0-9]/
+   - Phone (contact_tel, contact_fax, beneficiary_tel, beneficiary_fax): same with /[^0-9+() -]/
+   - Account (advance_payment_account, issuance_charges_account): same with /[^0-9-]/
+   - Every other text box (not dates):
+     if (!event.willCommit) { event.change = event.change.toUpperCase(); if (/[^A-Za-z0-9 .,\-/()':?+#&@%\r\n]/.test(event.change)) { event.rc = false; app.beep(0); } }
+
+
+== HOW TO KNOW IT WORKS ==
+== WHAT EACH SWITCH MUST DO (use this to test) ==
+Until its switch is on, each question below is locked: read-only, grey, and its answer cleared. The moment the
+switch is on, it becomes EDITABLE (and, if mandatory, red until answered). Switch off again: locked, grey, cleared.
+  8.4 Tolerance on credit amount & goods quantity [tolerance] is TICKED:
+      -> 8.5 Tolerance + (%) [tolerance_plus]: unlocks, mandatory (turns red while empty)
+      -> 8.6 Tolerance - (%) [tolerance_minus]: unlocks, mandatory (turns red while empty)
+  9.1 Price basis [price_basis] = "Others":
+      -> 9.2 Others (please specify) [price_basis_other]: unlocks, mandatory (turns red while empty)
+  10.3 Shipment from [shipment_from] is filled in (any choice):
+      -> 10.4 Shipment from: place [shipment_from_place]: always editable (never locked); becomes mandatory (red while empty)
+  10.6 Shipment to [shipment_to] is filled in (any choice):
+      -> 10.7 Shipment to: place [shipment_to_place]: always editable (never locked); becomes mandatory (red while empty)
+  12.1 This is a back-to-back DC to be issued against the master credit (the  [back_to_back] is TICKED:
+      -> 12.2 Master credit no [master_dc_no]: unlocks, mandatory (turns red while empty)
+      -> 12.3 Issued by [master_dc_issued_by]: unlocks, mandatory (turns red while empty)
+  13.1 Drafts for 100% invoice value at [drafts] is TICKED:
+      -> 13.2 Drafts at [drafts_at]: unlocks, mandatory (turns red while empty)
+  13.2 Drafts at [drafts_at] = "Term":
+      -> 13.3 Term: days [term_days]: unlocks, mandatory (turns red while empty)
+      -> 13.4 days after [term_after]: unlocks, mandatory (turns red while empty)
+      -> 13.6 If it is a term LC, please select one [term_prepay]: unlocks, mandatory (turns red while empty)
+  13.2 Drafts at [drafts_at] = "Date":
+      -> 13.5 Date [draft_date]: unlocks, mandatory (turns red while empty)
+  14.1 Full set of Clean on Board marine bills of lading [doc_bill_of_lading] is TICKED:
+      -> 14.2 Made out to [bl_made_out_to]: unlocks, mandatory (turns red while empty)
+      -> 14.4 Marked Freight [bl_freight]: unlocks, mandatory (turns red while empty)
+      -> 14.5 Notify party (if not specified, notify party is considered to be appli [bl_notify_party]: unlocks, mandatory (turns red while empty)
+  14.2 Made out to [bl_made_out_to] = "other (specify)":
+      -> 14.3 Made out to (other) [bl_made_out_to_other]: unlocks, mandatory (turns red while empty)
+  14.6 Original Air Waybill consigned to the Bank [doc_air_waybill] is TICKED:
+      -> 14.7 Marked Freight [awb_freight]: unlocks, mandatory (turns red while empty)
+      -> 14.8 Notify party (if not specified, notify party is considered to be appli [awb_notify_party]: unlocks, mandatory (turns red while empty)
+  14.9 Delivery order signed by beneficiary made out to applicant [doc_delivery_order] is TICKED:
+      -> 14.10 Delivery order: originals [do_originals]: unlocks, mandatory (turns red while empty)
+      -> 14.11 Delivery order: copies [do_copies]: unlocks, mandatory (turns red while empty)
+      -> 14.12 Countersigned by how many of our signatories [do_countersigned_by]: unlocks, mandatory (turns red while empty)
+      -> 14.13 Whose signature(s) ... to be verified by the Bank [do_signature_verified]: unlocks, mandatory (turns red while empty)
+  14.14 Marine/Air Insurance Policy or Certificate in duplicate, in Singapore  [doc_insurance] is TICKED:
+      -> 14.15 For FOB/CFR/FCA/CPT [insurance_arrangement]: unlocks, optional
+  14.15 For FOB/CFR/FCA/CPT [insurance_arrangement] = "Insurance covered by applicant under open Cover No.":
+      -> 14.16 Open cover no [insurance_cover_no]: unlocks, mandatory (turns red while empty)
+      -> 14.17 With [insurance_cover_with]: unlocks, mandatory (turns red while empty)
+  14.18 Beneficiary's certificate stating 1 set of non-negotiable documents ha [doc_beneficiary_certificate] is TICKED:
+      -> 14.19 Sent by [bencert_sent_by]: unlocks, mandatory (turns red while empty)
+      -> 14.20 Within (days after shipment) [bencert_days]: unlocks, mandatory (turns red while empty)
+  14.21 Signed commercial invoice [doc_commercial_invoice] is TICKED:
+      -> 14.22 Commercial invoice: originals [invoice_originals]: unlocks, mandatory (turns red while empty)
+      -> 14.23 Commercial invoice: copies [invoice_copies]: unlocks, mandatory (turns red while empty)
+  14.24 Packing list [doc_packing_list] is TICKED:
+      -> 14.25 Packing list: originals [packing_list_originals]: unlocks, mandatory (turns red while empty)
+      -> 14.26 Packing list: copies [packing_list_copies]: unlocks, mandatory (turns red while empty)
+  14.27 Weight note [doc_weight_note] is TICKED:
+      -> 14.28 Weight note: originals [weight_note_originals]: unlocks, mandatory (turns red while empty)
+      -> 14.29 Weight note: copies [weight_note_copies]: unlocks, mandatory (turns red while empty)
+  14.30 Certificate of origin [doc_certificate_of_origin] is TICKED:
+      -> 14.31 Certificate of origin: originals [origin_originals]: unlocks, mandatory (turns red while empty)
+      -> 14.32 Certificate of origin: copies [origin_copies]: unlocks, mandatory (turns red while empty)
+      -> 14.33 Showing country of origin as [origin_country]: unlocks, mandatory (turns red while empty)
+  14.34 Other documents [doc_other] is TICKED:
+      -> 14.35 Other documents [other_documents_1]: unlocks, mandatory (turns red while empty)
+      -> 14.36 Other documents (line 2) [other_documents_2]: unlocks, optional
+  17.1 All bank charges are for account of [bank_charges] is TICKED:
+      -> 17.2 Charges for account of [bank_charges_for]: unlocks, mandatory (turns red while empty)
+  17.3 Confirmation required [confirmation] is TICKED:
+      -> 17.4 Confirmation charges [confirmation_charges]: unlocks, mandatory (turns red while empty)
+  17.5 Please provide us with post-shipment financing under Documentary Credi [post_shipment_financing] is TICKED:
+      -> 17.6 Financing [financing_type]: unlocks, mandatory (turns red while empty)
+  17.6 Financing [financing_type] = "Foreign Currency Financing":
+      -> 17.7 Foreign currency financing in (type of currency) [financing_currency]: unlocks, mandatory (turns red while empty)
+  17.6 Financing [financing_type] = "Apply Forward Contract":
+      -> 17.8 Forward contract no [forward_contract_no]: unlocks, mandatory (turns red while empty)
+  17.9 We authorise you to debit DC amount in full from our account for advan [advance_payment] is TICKED:
+      -> 17.10 Account no for advance payment [advance_payment_account]: unlocks, mandatory (turns red while empty)
+
+
+== FINAL CHECKLIST (on the final file; mark EVERY item PASS or FAIL; fix any FAIL and re-run ALL items) ==
+Structure:
+  1. Exactly one document script, "lcRules", identical to 2.1.
+  2. Every tick box / option / tick-any box has Mouse Up lcRules(this); every text, date and drop-down has On Blur
+     lcRules(this); "__checks" has Calculate lcRules(this) and is the only entry in /CO.
+  3. Date boxes: only the two AFDate actions + On Blur; no typing filter on them.
+  4. Typing filters on the other boxes as in 2.7.
+  5. Check form and Reset form on every page, top right, real push-buttons with the exact actions, nothing on top.
+     Previous / Next work.
+  6. No ReadOnly flags; Required only on the always-mandatory fields (or none); every field name unchanged; design
+     unchanged.
+Behaviour (run lcRules and the button scripts in code against a stand-in for Acrobat: getField returning objects
+with value / valueAsString / readonly / required / strokeColor / fillColor / display / type / name, plus resetForm,
+pageNum, numPages, app.alert, setFocus, color):
+  7. Blank form: red = exactly Date, Applicant name, Applicant address, Contact party Name, Tel no, Beneficiary's
+     name, Beneficiary's address, Currency, Amount, Price basis, Partial shipment, Transhipment, Date of expiry,
+     Goods description, Account no for DC issuance charges, Financing. Every switched-off question locked grey.
+  8. Tick "Drafts for 100% invoice value at": Drafts at UNLOCKED (clickable) and red. Drafts at = Term: Term days,
+     days after and prepay unlocked and red; the Date box locked. Drafts at = Date: the Date box unlocked, red, with
+     its calendar; Term boxes locked and cleared. Untick Drafts: all locked, grey, cleared.
+  9. Every other switch in the table: on -> its questions unlocked (mandatory ones red); off -> locked and cleared.
+ 10. Amount "1,25,000.0.0" -> Check form says "Amount: is not an amount". Expiry 31/12/2026 with latest shipment
+     15/01/2027 -> "Date of expiry (in beneficiary's country): is before the latest shipment date".
+ 11. Check form on the blank form lists the missing answers and puts the cursor in Date; on a fully correct form it
+     says "All mandatory questions are answered ...".
+ 12. Reset form asks first; "Yes" clears everything, restores the starting answers and the blank-form state; the
+     buttons, calendar and conditional questions still work afterwards.
+Reply with: what you removed in Step 1, the PASS/FAIL list 1 to 12, and LAST the PDF file. Tell me honestly about
+anything that fails or could not be tested.
