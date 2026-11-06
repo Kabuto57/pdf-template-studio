@@ -172,6 +172,13 @@ describe("the JavaScript version", async () => {
     const of = (name: string) => full.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
     expect(`${of("lcRules")}\n${of("lcPayload")}`).toBe(library(doc));
     expect([of("Generate QR Code"), of("Print Form")]).toEqual([generateQr, printForm]);
+    // The step-by-step prompts (for when the working PDF arrives with its scripts stripped) carry the same texts.
+    const step = (file: string) => { const t = readFileSync(file, "utf8"); return (name: string) => t.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0]; };
+    const s1 = step("public/lc-ai-step1-buttons-prompt.txt"), s2 = step("public/lc-ai-step2-qr-page-prompt.txt");
+    const act = (n: string) => js(doc.getForm().getButton(n).acroField.getWidgets()[0].dict.lookup(PDFName.of("A")));
+    expect(s1("Document script lcRules")).toBe(library(doc));
+    expect([s1("Check form"), s1("Reset form")]).toEqual([act("__check_form"), act("__reset_form")]);
+    expect([s2("Generate QR Code"), s2("Print Form")]).toEqual([generateQr, printForm]);
     // A stand-in for Acrobat: the QR field, the answers lcPayload reports, and what happens.
     const run = (code: string, qr: { value: string }, missing: string[], answers: string) => {
       const log: string[] = [];
