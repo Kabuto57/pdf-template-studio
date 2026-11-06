@@ -410,7 +410,23 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     si++;
   }
 
-  // 5. Footers: the title, and "Page x of y".
+  // 5. JavaScript version: a last page for the QR code of the answers ("Confirm & Print Form" prints it with the form).
+  const formLast = page;
+  let qr: { page: PDFPage; x: number; y: number; size: number } | undefined;
+  if (mode === "javascript" && js) {
+    page = doc.addPage([W, H]); strip(false);
+    page.drawText("APPLICATION QR CODE (FOR BANK USE)", { x: M, y: H - 56, size: 11, font: bold, color: INK });
+    let y = H - 70;
+    for (const line of wrap("This page is printed with the form by Confirm & Print Form. The Bank scans the code to read the application (all the answers, as JSON). Do not write on or fold the code.", font, 8, W - 2 * M)) {
+      page.drawText(line, { x: M, y, size: 8, font, color: GREY }); y -= 10;
+    }
+    qr = { page, x: (W - 200) / 2, y: y - 220, size: 200 };
+    page.drawRectangle({ x: qr.x - 6, y: qr.y - 6, width: 212, height: 212, borderColor: RULE, borderWidth: 0.5 });
+    const code = safe(t.formCode ?? t.title);
+    page.drawText(code, { x: (W - font.widthOfTextAtSize(code, 7)) / 2, y: qr.y - 18, size: 7, font, color: GREY });
+  }
+
+  // 6. Footers: the title, and "Page x of y".
   const pages = doc.getPages();
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: M, y: 36 }, end: { x: W - M, y: 36 }, thickness: 0.5, color: RULE });
@@ -431,11 +447,11 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     if (i < pages.length - 1) link("Next page >", pages[i + 1], W / 2 + 20);
   });
 
-  // 6. Conditional highlighting without JavaScript, then the checks for when Acrobat runs JavaScript.
+  // 7. Conditional highlighting without JavaScript, then the checks for when Acrobat runs JavaScript.
   if (mode !== "javascript") addRedFrames(doc, form, t, values, { blocks, font });
   // "Check form" and "Reset form" at the top right of every page.
   if (js && t.sections.some(s => s.fields.some(f => f.required || f.requiredIf)))
-    addChecks(doc, form, pages[0], font, t, js, undefined, pages);
+    addChecks(doc, form, pages[0], font, t, js, undefined, pages, qr);
   // JavaScript version: "Reset form" goes back to the answers the form started with (e.g. Full Swift), not blank.
   if (mode === "javascript") for (const f of form.getFields()) {
     const v = f.acroField.dict.get(PDFName.of("V"));
@@ -450,6 +466,6 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
       if (da instanceof PDFString) d.set(PDFName.of("DA"), PDFString.of(da.asString().replace(/[\d.]+ Tf/, "0 Tf")));
     }
   finishForm(doc, font);
-  const last = doc.getPages()[doc.getPageCount() - 1];
+  const last = formLast; // the form's own last page (not the QR code page), for sharing out its spare room
   return { bytes: await doc.save(), pages: doc.getPageCount(), spare: top - BOTTOM, lastLongs: [...longsOn].filter(([, p]) => p === last).map(([id]) => id) };
 }
