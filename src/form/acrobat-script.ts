@@ -4,7 +4,7 @@
 //     it doesn't apply, and the checks across answers (dates in order, amount above zero, insurance against price basis)
 //   - a "Check form" button that lists what is missing or wrong and puts the cursor on the first one
 //   - a "Reset form" button (addToolbar)
-//   - (JavaScript version) a "Confirm & Print Form" button and, on a last page, a QR code of the answers as JSON
+//   - (JavaScript version) on a last page, a QR code of the answers as JSON, with "Generate QR Code" and "Print Form"
 //   - a warning when saving or printing an incomplete form
 //   - typing filters on amount / phone / account / number boxes, and upper case + SWIFT characters on the rest
 // With JavaScript off, none of this runs; red-frames.ts and the workbench cover that case.
@@ -100,15 +100,23 @@ return v;
 }`;
 }
 
-/** "Confirm & Print Form", as on the bank's smart form: problems are listed and nothing prints; otherwise the QR code
- *  is brought up to date and the print dialog opens. */
-export const confirmPrint = String.raw`var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+/** "Generate QR Code": problems are listed and no code is made; otherwise the QR code is made from the answers and
+ *  the form goes to its page. */
+export const generateQr = String.raw`var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
 function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
 if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
 if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
-if (t.length) { app.alert("This form cannot be printed yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Confirm & Print Form again.", 1);
+if (t.length) { app.alert("The QR code cannot be generated yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Generate QR Code again.", 1);
   var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
-else { this.calculateNow(); this.print(true, 0, this.numPages - 1, false, true); }`;
+else { this.getField("__qr").value = lcPayload(this); this.pageNum = this.numPages - 1;
+  app.alert("The QR code has been generated from your answers. Press Print Form to print the form with the QR code.", 3); }`;
+
+/** "Print Form": prints only once the QR code exists and still matches the answers. */
+export const printForm = String.raw`var q = this.getField("__qr"), now = typeof lcPayload == "function" ? lcPayload(this) : "", same = false;
+try { same = JSON.stringify(JSON.parse(q.value).data) == JSON.stringify(JSON.parse(now).data); } catch (e) {}
+if (!/\S/.test(q.value)) app.alert("Please press Generate QR Code first, so the printed form carries the QR code.", 1);
+else if (!same) app.alert("Your answers have changed since the QR code was generated. Please press Generate QR Code again, then Print Form.", 1);
+else this.print(true, 0, this.numPages - 1, false, true);`;
 
 export function addChecks(doc: PDFDocument, form: Form, page: PDFPage, font: PDFFont, t: Template, js: JS,
   underlined: Set<string> = new Set(), toolbar?: PDFPage[], qr?: { page: PDFPage; x: number; y: number; size: number; button: { x: number; y: number } }) {
@@ -269,7 +277,7 @@ ${payloadScript(t)}` : script, c => c.charCodeAt(0) & 0xff)));
   form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj([recalc.ref]));
 
   // ... and the QR code (JavaScript version): an Acrobat barcode field (a text field with paper metadata, /PMD, as in
-  // Adobe's Implementation Note E-7) whose text is recalculated after every change, after "__checks".
+  // Adobe's Implementation Note E-7), filled only when "Generate QR Code" is pressed.
   if (qr) {
     const box = form.createTextField("__qr");
     box.addToPage(qr.page, { x: qr.x, y: qr.y, width: qr.size, height: qr.size, font, borderWidth: 0 });
@@ -284,8 +292,6 @@ ${payloadScript(t)}` : script, c => c.charCodeAt(0) & 0xff)));
       d.set(PDFName.of("DataPrep"), PDFNumber.of(0)); // optional in the spec, but Acrobat won't draw the code without it
     }
     box.acroField.dict.set(PDFName.of("Ff"), PDFNumber.of(1 | 4 | 4096 | 4194304)); // read-only, no export, multiline, no spell check (as Acrobat sets them)
-    box.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ C: js('event.value = typeof lcPayload == "function" ? lcPayload(this) : "";') }));
-    form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj([recalc.ref, box.ref]));
   }
 
   // 4. The "Check form" button, and the same report before saving or printing.
@@ -317,14 +323,14 @@ this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lc
       w.dict.set(PDFName.of("F"), PDFNumber.of(0));  // shown on screen, not printed
     }
   });
-  // "Confirm & Print Form": once, at the end of the form, under the QR code.
-  if (qr) {
-    const button = form.createButton("__confirm_print");
-    button.addToPage("Confirm & Print Form", qr.page, { x: qr.button.x, y: qr.button.y, width: 160, height: 22, ...style });
+  // "Generate QR Code" then "Print Form": once, at the end of the form, under the QR code.
+  if (qr) ([["__generate_qr", "Generate QR Code", generateQr], ["__print_form", "Print Form", printForm]] as const).forEach(([name, caption, code], i) => {
+    const button = form.createButton(name);
+    button.addToPage(caption, qr.page, { x: qr.button.x + i * 162, y: qr.button.y, width: 150, height: 22, ...style });
     button.setFontSize(10);
     const w = button.acroField.getWidgets()[0];
-    w.dict.set(PDFName.of("A"), js(confirmPrint));
+    w.dict.set(PDFName.of("A"), js(code));
     w.dict.set(PDFName.of("F"), PDFNumber.of(0));
-  }
+  });
   doc.catalog.set(PDFName.of("AA"), doc.context.obj({ WS: js(report(false)), WP: js(report(false)) })); // WS / WP = before save / print
 }

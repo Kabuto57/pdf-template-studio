@@ -417,11 +417,11 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     page = doc.addPage([W, H]); strip(false);
     page.drawText("APPLICATION QR CODE (FOR BANK USE)", { x: M, y: H - 56, size: 11, font: bold, color: INK });
     let y = H - 70;
-    for (const line of wrap("This page is printed with the form by Confirm & Print Form. The Bank scans the code to read the application (all the answers, as JSON). Do not write on or fold the code.", font, 8, W - 2 * M)) {
+    for (const line of wrap("When the form is filled in, press Generate QR Code (under the code), then Print Form. The Bank scans the code to read the application (all the answers, as JSON). Do not write on or fold the code.", font, 8, W - 2 * M)) {
       page.drawText(line, { x: M, y, size: 8, font, color: GREY }); y -= 10;
     }
-    const size = 450; // the code fills this square; Confirm & Print Form goes under it, at the end of the form
-    qr = { page, x: (W - size) / 2, y: y - 14 - size, size, button: { x: (W - 160) / 2, y: y - 14 - size - 52 } };
+    const size = 450; // the code fills this square; Generate QR Code and Print Form go under it, at the end of the form
+    qr = { page, x: (W - size) / 2, y: y - 14 - size, size, button: { x: (W - 312) / 2, y: y - 14 - size - 52 } };
     page.drawRectangle({ x: qr.x, y: qr.y, width: size, height: size, borderColor: RULE, borderWidth: 0.5 });
     const code = safe(t.formCode ?? t.title);
     page.drawText(code, { x: (W - font.widthOfTextAtSize(code, 7)) / 2, y: qr.y - 14, size: 7, font, color: GREY });
