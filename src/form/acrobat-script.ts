@@ -158,7 +158,7 @@ for (id in M) {
   if (problem && !first) first = names[0];
   for (i = 0; i < names.length; i++) {
     f = d.getField(names[i]); if (!f) continue;
-    if (m.hasRule && m.kind != "checks") f.required = required;
+    if (m.hasRule && m.kind != "checks") f.required = !!(required && problem); // only while blank or wrong: Acrobat outlines Required boxes in red even when filled
     if (m.activeIf) f.readonly = !applies;                                                   // locked until it applies
     if (!applies) { clear(f, m.kind); f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; } // grey, cleared
     f.lineWidth = problem || !m.underlined ? 1 : 0;

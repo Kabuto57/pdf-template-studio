@@ -103,7 +103,7 @@ describe("checks built into the PDF (Acrobat / Reader)", () => {
     expect(on.fields.invoice_originals).toMatchObject({ required: true, strokeColor: "red" });
     expect(on.missing).toContain("Commercial invoice: originals");
     const filled = await acrobat({ doc_commercial_invoice: "Yes", invoice_originals: "3" });
-    expect(filled.fields.invoice_originals).toMatchObject({ required: true, strokeColor: "black" });
+    expect(filled.fields.invoice_originals).toMatchObject({ required: false, strokeColor: "black" }); // no Acrobat red outline once answered
   });
 
   it("ticking a box re-checks straight away (mouse-up action on the tick box)", async () => {

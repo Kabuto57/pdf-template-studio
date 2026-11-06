@@ -1,0 +1,42 @@
+MASTER PROMPT: REMOVE THE RED OUTLINE THAT STAYS ON FILLED-IN MANDATORY BOXES (CHANGE ONE LINE, NOTHING ELSE)
+
+== THE PROBLEM ==
+I have attached the "Irrevocable Documentary Credit Application" PDF. Everything works. ONE problem: when I fill in
+a mandatory box, our script turns it from red back to black (correct), but a thin red tint / outline stays around
+the box. Fix ONLY that. Give me back the SAME PDF, named LC-Application-with-checks.pdf. This is approved work
+within my bank's policy. I open it in Adobe Acrobat (Windows) and click "Enable All Features". Don't suggest ways
+around the bank's security settings. Don't redraw or rebuild the pages.
+
+== WHY IT HAPPENS ==
+That red outline is NOT drawn by our script. It is Acrobat's own "Highlight required fields" marking: Acrobat draws
+a red outline around EVERY field whose Required flag is on, even when it is filled in. Our script lcRules sets the
+Required flag on every mandatory box and keeps it on after the box is answered, so Acrobat keeps outlining it.
+Fix: the Required flag must be on only while the box is blank or wrong (exactly when our script colours it red).
+
+== THE FIX ==
+1. In the document-level script "lcRules", find this ONE line:
+       if (m.hasRule && m.kind != "checks") f.required = required;
+   and replace it with EXACTLY:
+       if (m.hasRule && m.kind != "checks") f.required = !!(required && problem); // only while blank or wrong: Acrobat outlines Required boxes in red even when filled
+   Change NOTHING else in lcRules (not a character). There must still be exactly one document script, "lcRules".
+2. In the file itself, turn the Required flag (bit 2 of /Ff) OFF on every field. (lcRules sets it again on opening,
+   only on boxes that are blank or wrong.) Keep every other /Ff bit as it is (multiline, push-button, radio, etc.).
+3. Change nothing else: buttons and their look and actions, field actions (Mouse Up, On Blur, Keystroke, Format,
+   Calculate), /CO, "__checks", date boxes, typing filters, field names, starting answers, and the page design.
+
+== CHECKLIST (on the final file; mark EVERY item PASS or FAIL) ==
+  1. lcRules is identical to the attached file's lcRules except for that one line (show me the before / after).
+  2. No field has the Required flag set in the file; all other /Ff bits unchanged.
+  3. Compare with the attached PDF: list ANY other difference (there should be none).
+Behaviour (run lcRules in code against a stand-in for Acrobat: getField returning objects with value /
+valueAsString / readonly / required / strokeColor / fillColor / display / type / name, plus color):
+  4. Blank form: the always-mandatory empty boxes are red AND have required = true.
+  5. Type an applicant name, then run lcRules: Applicant name has black border, white fill, required = false.
+  6. Amount "1,25,000.0.0": Amount red, required = true. Change to "125,000.00": black, required = false.
+  7. Tick "Drafts for 100% invoice value at": Drafts at unlocks, red, required = true; choose Term: Drafts at black,
+     required = false; Term days / days after / prepay red and required = true; fill them: black, required = false.
+     Untick Drafts: all locked, grey, cleared, required = false.
+  8. Check form, Reset form (white caption stays), Previous / Next, and the date calendar still work.
+Expected in Acrobat: a box shows red only while it is blank or wrong; once answered there is no red outline at all.
+Reply with: the before / after of the one line, the PASS/FAIL list 1 to 8, and LAST the PDF file. Tell me honestly
+about anything that fails or could not be tested.
