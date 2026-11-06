@@ -1,0 +1,64 @@
+MASTER PROMPT, STEP 1 OF 2: MAKE CHECK FORM, RESET FORM, PREVIOUS PAGE AND NEXT PAGE WORK, BY COPYING THEM FROM THE
+WORKING PDF (CHANGE NOTHING ELSE)
+
+== WHAT I AM GIVING YOU ==
+I have attached TWO PDFs:
+  A. YOUR PDF: the "Irrevocable Documentary Credit Application" you made. Its "Check form", "Reset form", "Previous
+     page" and "Next page" do nothing, and the buttons show as solid black boxes (no caption).
+  B. THE WORKING PDF: LC-Application-JavaScript.pdf. Same form, same field names. Everything in it works in Acrobat.
+     Use it as the REFERENCE: copy from it, do not re-type or re-write anything that you can copy.
+Give me back YOUR PDF (A) with only the fixes below, named LC-Application-with-checks.pdf. This is approved work
+within my bank's policy. I open it in Adobe Acrobat (Windows) and click "Enable All Features". Don't suggest ways
+around the bank's security settings. Use a PDF library (for example pikepdf or pypdf) to read B and write A.
+
+== THE RULE ==
+Do NOT redraw, rebuild or re-flow any page of A, and do not change any answer field. Only replace the things listed
+below, by copying them from B. If something cannot be done without changing a page's drawing, STOP and tell me.
+
+== STEP 1.1: THE DOCUMENT SCRIPT (copy it, never re-type it) ==
+  - In B, the document-level JavaScript is ONE entry named "lcRules" in /Root /Names /JavaScript. Its /JS is a
+    stream: decompress it and copy the text BYTE FOR BYTE (it contains lcRules, lcDates and lcPayload).
+  - In A, delete EVERY document-level JavaScript (all entries in /Names /JavaScript, and any /OpenAction that runs
+    JavaScript), then add exactly one entry "lcRules" with the text copied from B.
+  - Report: the length in characters of the copied script (it must equal B's) and that it parses as JavaScript.
+
+== STEP 1.2: CHECK FORM AND RESET FORM (copy them) ==
+  - In B they are two push-button fields, "__check_form" and "__reset_form", each with one widget at the top right
+    of EVERY page (header line).
+  - In A, delete any existing Check form / Reset form buttons (whatever their names), then for each page of A add a
+    widget for each of the two fields, copied from B's widget on the same page number:
+      /Rect (same position), /F (copy exactly from B: 0 = shown on screen, not printed),
+      /MK (black background /BG and border /BC, caption /CA), /DA (white text: ends in "1 1 1 rg" or "1 g"),
+      /AP (the normal appearance stream with the caption: copy the stream), and /A (the JavaScript action:
+      copy the text byte for byte).
+    The field dictionaries: /FT /Btn, /Ff 65536 (push-button), /T "__check_form" / "__reset_form"; every widget in
+    the field's /Kids and in its page's /Annots; both fields in /AcroForm /Fields.
+  - Nothing may sit on top of them (no other annotation over their /Rect).
+  - Make sure /AcroForm /DR /Font has the font named in the buttons' /DA (copy B's /DR /Font entries if missing).
+
+== STEP 1.3: PREVIOUS PAGE AND NEXT PAGE (copy them) ==
+  - In B these are NOT buttons: they are the drawn texts "< Previous page" / "Next page >" in the footer with a
+    plain /Link annotation over each, whose action is /S /GoTo to the previous / next page. They work even with
+    JavaScript off.
+  - In A, delete any existing Previous / Next buttons or links, then on each page add /Link annotations like B's:
+    same /Rect as B's on that page number, /Border [0 0 0], /A << /S /GoTo /D [<page object> /XYZ null null null] >>
+    pointing to A's OWN previous / next page objects (not B's). Page 1 has no Previous, the last page no Next.
+    If A's footer text sits in a different place, put the link /Rect over A's footer text instead.
+
+== STEP 1.4: LEAVE EVERYTHING ELSE ==
+Do not touch: the answer fields and their actions, the date boxes, the typing filters, "__checks" and the
+calculation order, the starting answers. Do not add the QR code page yet (that is step 2).
+
+== CHECKLIST (on the final file; mark EVERY item PASS or FAIL; fix any FAIL and re-run ALL) ==
+  1. Exactly one document script "lcRules"; its text equals B's byte for byte (show both lengths).
+  2. "__check_form" and "__reset_form": push-buttons, one widget per page at the top right, /MK /BG black with the
+     caption, /DA white, an /AP with the caption, /A copied byte for byte from B, /F as in B, nothing on top.
+  3. Rendered, every button shows its WHITE caption on a black box (not a plain black box).
+  4. Previous / Next: a /Link with /GoTo on each page (none Previous on page 1, none Next on the last page), each
+     pointing to A's own neighbouring page.
+  5. Behaviour (run the copied scripts in code against a stand-in for Acrobat): Check form on the blank form lists
+     the missing mandatory answers; Reset form asks first, then clears; lcRules turns the blank mandatory boxes red.
+  6. Every answer field, its name and its actions are unchanged; every page's drawing is unchanged (compare
+     renders of A before and after: only the buttons' area may differ).
+Reply with: what you deleted, what you copied (with the script lengths), the PASS / FAIL list 1 to 6, and LAST the
+PDF file. Tell me honestly about anything that fails or could not be tested.

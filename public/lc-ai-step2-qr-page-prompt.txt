@@ -1,0 +1,70 @@
+MASTER PROMPT, STEP 2 OF 2: ADD THE QR CODE PAGE (QR CODE, ITS FRAME, "GENERATE QR CODE" AND "PRINT FORM") BY
+COPYING THE LAST PAGE OF THE WORKING PDF (CHANGE NOTHING ELSE)
+
+== WHAT I AM GIVING YOU ==
+I have attached TWO PDFs:
+  A. YOUR PDF from step 1 (Check form, Reset form, Previous / Next now work). It has no QR code page: the QR code,
+     its border, and the "Generate QR Code" and "Print Form" buttons do not exist.
+  B. THE WORKING PDF: LC-Application-JavaScript.pdf. Its LAST page is the QR code page and it works in Acrobat:
+     a 450 x 450 pt QR code inside a thin grey frame, and under it "Generate QR Code" and "Print Form".
+Copy B's last page into A. Do not re-type or re-create anything that you can copy. Give me back A as
+LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open it in Adobe Acrobat
+(Windows) and click "Enable All Features". Don't suggest ways around the bank's security settings. Use a PDF
+library (for example pikepdf or pypdf) to read B and write A.
+
+== THE RULE ==
+Do NOT redraw, rebuild or change any existing page of A. Only ADD one page at the end. If that seems impossible,
+STOP and tell me.
+
+== STEP 2.1: COPY THE PAGE ==
+  - Append B's last page to the end of A with its content stream and resources unchanged (the heading, the text,
+    the grey frame, the footer all come with it).
+  - Its footer says "Page 4 of 4": correct if A has 3 pages. If A has another number of pages, tell me (don't edit
+    the drawing).
+
+== STEP 2.2: THE FIELDS ON THAT PAGE (copy them; this is where it went wrong before) ==
+Make sure these three come across as REAL fields, listed in A's /AcroForm /Fields, with their widget in the new
+page's /Annots and its /P pointing to the new page:
+  - "__qr", the QR code. It is a BARCODE field: a text field (/FT /Tx) whose dictionary carries
+        /PMD << /Type /PaperMetaData /Version 1 /Width 6.25 /Height 6.25 /XSymWidth 10 /Symbology /QRCode /ECC 1
+                /Resolution 300.0 >>   and   /DataPrep 0
+    Copy the field and widget dictionaries from B EXACTLY, including /PMD and /DataPrep, /Ff 4198405, /Rect, /F.
+    /Resolution must stay written as 300.0 (with the decimal point; Acrobat ignores "300"); if your library
+    rewrites it as 300, fix it in the saved file. Keep it EMPTY: no /V, no /DV, and do NOT let your library draw a
+    text appearance for it (that is what made the box show JSON text instead of a QR code). No Calculate action,
+    not in the calculation order.
+  - "__generate_qr" and "__print_form": push-buttons (/FT /Btn, /Ff 65536). Copy each widget's /Rect, /F, /MK
+    (black background and caption), /DA (white text), /AP (the appearance stream with the caption) and /A (the
+    JavaScript action, byte for byte) from B.
+  - The page also has Check form / Reset form in its header. In B those widgets belong to the fields
+    "__check_form" / "__reset_form": add them as extra widgets of A's EXISTING "__check_form" / "__reset_form"
+    fields (set their /Parent, add them to the field's /Kids). Do not create second fields with the same names.
+  - The footer's "< Previous page" /Link: point its /GoTo at A's previous page (the old last page), not at B's page.
+    Also give A's old last page a "Next page >" /Link to the new page, like the other pages have (only if its
+    footer has the "Next page >" text; otherwise skip and tell me).
+  - /AcroForm /DR /Font must include the fonts named in these fields' /DA (copy from B's /DR if missing).
+
+== STEP 2.3: THE SCRIPT ==
+The Generate QR Code button calls lcPayload, which is inside the document script "lcRules" copied from B in step 1.
+Check A's "lcRules" script contains "function lcPayload(" and equals B's byte for byte. If not, copy it again from B
+(replace, never add a second document script).
+
+== CHECKLIST (on the final file; mark EVERY item PASS or FAIL; fix any FAIL and re-run ALL) ==
+  1. A has one more page than before; the earlier pages render exactly as before (compare renders).
+  2. The new last page renders like B's last page: heading, text, grey 450 pt frame, footer, and the two black
+     buttons with white captions "Generate QR Code" and "Print Form" under the frame.
+  3. "__qr" has /PMD (/Symbology /QRCode, /Resolution 300.0 in the saved file) and /DataPrep 0, /Ff 4198405, is
+     empty, has no text appearance, no Calculate; it is in /AcroForm /Fields and the new page's /Annots.
+  4. "__generate_qr" and "__print_form": /A copied byte for byte from B, white-on-black, not printed, nothing on top.
+  5. Exactly one "__check_form" and one "__reset_form" field, each with one widget on EVERY page (now including
+     the new page).
+  6. Exactly one document script "lcRules", equal to B's, containing lcRules and lcPayload.
+  7. Behaviour (run the copied scripts in code against a stand-in for Acrobat): Generate QR Code on the blank form
+     lists the missing answers and leaves "__qr" empty; on a fully correct form it fills "__qr" with JSON of exactly
+     2,300 characters that JSON.parse reads ("form": "LC-01"); Print Form before generating says "Please press
+     Generate QR Code first".
+  8. In Acrobat (describe what will happen): after Generate QR Code the box shows a QR code (black and white
+     squares filling the frame), NOT text; a phone scan shows the JSON.
+  9. Step 1 still works: Check form, Reset form (white captions), Previous / Next, red mandatory boxes.
+Reply with: what you copied, the PASS / FAIL list 1 to 9, and LAST the PDF file. Tell me honestly about anything
+that fails or could not be tested.
