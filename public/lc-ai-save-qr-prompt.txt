@@ -1,0 +1,114 @@
+MASTER PROMPT: ADD A "SAVE FORM" BUTTON AND A QR CODE OF THE ANSWERS (JSON) TO THE LC FORM, KEEP EVERYTHING ELSE
+
+== WHAT I NEED ==
+I have attached the "Irrevocable Documentary Credit Application" PDF. Everything in it works (rules, red boxes,
+locked questions, calendar, Check form, Reset form, Previous / Next). ADD two things, change nothing else:
+  1. A "Save form" button at the end of the form.
+  2. A QR code at the end of the form that holds all the answers as JSON, so the next stage (scanning the printed
+     or saved form) can read the data straight from the QR code instead of re-typing or OCR.
+Give me back the SAME PDF, named LC-Application-with-checks.pdf. This is approved work within my bank's policy.
+I open it in Adobe Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's security
+settings. Don't redraw or rebuild the existing pages (rebuilding drops the scripts: if you must touch a page, put
+every existing script and action back exactly as it was and re-run the regression checks).
+
+== WHERE AND HOW IT LOOKS ==
+In the last section ("Declaration and Signature"), to the right of the signature lines / company stamp box, and
+kept on the same page:
+  - the QR code: a square about 150 x 150 pt, with a thin black border, white background, black modules, and under
+    it in 7 pt grey: "Application data (JSON). Updated when you save.";
+  - under it the "Save form" button: about 90 x 18 pt, black box, white Helvetica 9 pt caption "Save form".
+If there is no room beside the stamp box, put them in a row under it. Nothing may overlap anything else.
+The QR code PRINTS (the bank scans printed forms); the button does not print.
+
+== THE QR CODE FIELD ==
+  - An Acrobat barcode form field (the kind made in Acrobat with Prepare Form > Barcode), named "__qr" (the "__"
+    tells the bank's systems it is not an answer).
+  - Symbology: QR Code. Error correction: level M. "Compress data before encoding" OFF (so any phone or scanner
+    reads plain text). Module size so the code fits the 150 pt square.
+  - Calculate action (custom calculation script) EXACTLY:
+        event.value = typeof lcPayload == "function" ? lcPayload(this) : "";
+  - Calculation order (/AcroForm /CO): "__checks" first, then "__qr" (these two only).
+  - Read-only, visible, printed.
+If you cannot make a real Acrobat barcode field, STOP and tell me; do not fake it with a picture or a text box.
+
+== THE DATA FORMAT (why JSON, and what it looks like) ==
+JSON, because the next stage validates it with the bank's JSON Schema for this form (the keys are the form's field
+names, the same as the PDF's fields, so nothing has to be mapped). Only answered questions are included:
+text, dates (DD/MM/YYYY), drop-downs and pick-one answers as text; ticked boxes as true; tick-any as a list.
+Example:
+{"form":"LC-01","version":"1.0","saved":"2026-11-06T10:40","complete":true,"data":{"application_date":"06/11/2026","mode_of_advising":"Full Swift","applicant_name":"ACME TRADING PTE LTD","currency":"USD","amount":"125,000.00","drafts":true,"drafts_at":"Term","term_days":"90","bencert_sent_by":["faxed","couriered"]}}
+  - "complete": true when Check form finds no problems; false for a draft saved with problems.
+  - A QR code holds about 2,300 characters. If the answers are longer (very long goods description or additional
+    conditions), those two paragraphs are shortened in the QR code (ending "...") and listed in "truncated"; the
+    full text is still in the PDF's fields.
+
+== NEW DOCUMENT-LEVEL SCRIPT "lcPayload" (EXACTLY this text; tested) ==
+This is a SECOND document-level script next to "lcRules". After this change there are exactly two document
+scripts: "lcRules" (unchanged, not a character) and "lcPayload".
+---------------- BEGIN lcPayload ----------------
+function lcPayload(d) {
+var G = {"bencert_sent_by": ["faxed","mailed","couriered"]}, LONG = ["goods_description","additional_conditions"], CAP = 2300;
+var data = {}, i, n, f, k, v, g, m, out, cut = [], ok = true, t = new Date();
+for (i = 0; i < d.numFields; i++) {
+  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n)) continue;
+  f = d.getField(n); if (!f || f.type == "button" || f.type == "signature") continue;
+  g = /^(.+)__(\d+)$/.exec(n);
+  if (g && G[g[1]]) { if (f.value != "Off") { if (!data[g[1]]) data[g[1]] = []; data[g[1]].push(G[g[1]][+g[2]]); } continue; }
+  if (f.type == "checkbox") { if (f.value != "Off") data[n] = true; continue; }
+  v = f.type == "radiobutton" ? (f.value == "Off" ? "" : String(f.value)) : String(f.valueAsString).replace(/^\s+|\s+$/g, "");
+  if (v !== "") data[n] = v;
+}
+if (typeof lcRules == "function") { m = lcRules(d); ok = !m.length && !(m.bad || []).length; }
+function pad(x) { return ("0" + x).slice(-2); }
+out = {"form": "LC-01", "version": "1.0", "saved": t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()) + "T" + pad(t.getHours()) + ":" + pad(t.getMinutes()), "complete": ok, "data": data};
+// A QR code holds about 2,300 characters: if the answers are longer, shorten the two long paragraphs and say so.
+for (i = 0; i < LONG.length && JSON.stringify(out).length > CAP; i++) {
+  k = LONG[i]; if (!data[k]) continue;
+  cut.push(k); out.truncated = cut;
+  v = JSON.stringify(out).length - CAP + 3;
+  data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
+}
+return JSON.stringify(out);
+}
+---------------- END lcPayload ----------------
+
+== THE "SAVE FORM" BUTTON ==
+Real push-button field "__btn_save" (Btn, /Ff 65536), on top of everything, visible, not printed, not read-only.
+Same button settings as the others so the caption never disappears: /DA "/Helv 9 Tf 1 g"; /MK << /BG [0] /BC [0]
+/CA (Save form) >>; highlight /P or /N (not /I); normal appearance black box with white centred caption.
+Mouse Up action (the widget's /A) EXACTLY:
+---------------- BEGIN Save form ----------------
+this.calculateNow();
+var m = typeof lcRules == "function" ? lcRules(this) : [], n = m.length + (m.bad || []).length;
+if (n && app.alert("This form still has " + n + " problem" + (n > 1 ? "s" : "") + " (boxes outlined in red). Press Check form to see them.\n\nSave it anyway as a draft? The QR code will mark it as not complete.", 2, 2) != 4) {
+  var g = m.first && this.getField(m.first); if (g) g.setFocus();
+} else {
+  try { app.execMenuItem("SaveAs"); } catch (e) { app.alert("Please save the form now with File > Save As (Ctrl+Shift+S).", 3); }
+}
+---------------- END Save form ----------------
+
+== CHECKLIST (on the final file; mark EVERY item PASS or FAIL; fix any FAIL and re-run ALL items) ==
+New:
+  1. "__qr" is a real QR Code barcode field, level M, not compressed, 150 pt square, printed, with the exact
+     Calculate action; /CO is exactly ["__checks", "__qr"].
+  2. Document scripts: exactly "lcRules" (identical to before) and "lcPayload" (identical to the text above).
+  3. "__btn_save" is a real push-button at the end, with the exact action and white-on-black settings.
+  4. Run lcPayload in code against a stand-in for Acrobat (numFields, getNthFieldName, getField returning objects
+     with type / value / valueAsString): blank form -> "data" holds only the starting answers (mode_of_advising
+     "Full Swift", presentation_days "21", bank_charges true, bank_charges_for, post_shipment_financing true,
+     debit_issuance_charges true) and "complete": false; no "__" field and no button appears in "data".
+  5. Tick Beneficiary's certificate and tick faxed and couriered -> "bencert_sent_by":["faxed","couriered"].
+  6. Goods description of 6,500 characters -> the JSON is at most 2,300 characters, "truncated" lists
+     "goods_description", and it still parses as JSON.
+  7. In Acrobat: Save form on a blank form asks "Save it anyway as a draft?"; "No" puts the cursor on the first red
+     box; "Yes" opens Save As. On a fully correct form it opens Save As straight away.
+  8. Scanning the QR code with a phone camera shows the JSON text.
+Regression (must all still work exactly as before):
+  9. Blank form: only the always-mandatory blank boxes red; filled boxes have no red outline.
+ 10. Tick "Drafts for 100% invoice value at": Drafts at unlocks and turns red; Term / Date unlock their questions;
+     untick: locked, grey, cleared.
+ 11. Date boxes show the calendar; typing filters unchanged.
+ 12. Check form, Reset form (captions stay white), Previous / Next work; Reset also resets the QR code to the
+     blank-form data.
+Reply with: the PASS / FAIL list 1 to 12 with how you tested each, anything that fails or could not be tested,
+and LAST the PDF file.
