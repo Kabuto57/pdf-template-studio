@@ -156,7 +156,7 @@ describe("the JavaScript version", async () => {
   });
   it("Confirm & Print Form: lists the problems and doesn't print; prints once the form is right", () => {
     const button = doc.getForm().getButton("__confirm_print").acroField.getWidgets();
-    expect(button).toHaveLength(doc.getPageCount());
+    expect(button.map(w => w.P()?.toString())).toEqual([doc.getPages()[doc.getPageCount() - 1].ref.toString()]); // once, at the end
     const code = js(button[0].dict.lookup(PDFName.of("A")));
     expect(code).toBe(confirmPrint);
     const press = (missing: string[]) => {
@@ -195,6 +195,7 @@ describe("the JavaScript version", async () => {
     expect(out).toMatchObject({ form: "LC-01", version: "1.0", complete: true });
     expect(out.data).toMatchObject({ mode_of_advising: "Full Swift", presentation_days: "21", bank_charges: true, post_shipment_financing: true });
     expect(Object.keys(out.data).some(k => k.startsWith("__"))).toBe(false);
+    expect(new Function(`${payloadScript(LC.template)}; return lcPayload(this);`).call(d)).toHaveLength(2300); // padded: always the same size of code
   });
   it("text boxes: letters upper-cased as typed, characters SWIFT can't carry refused", () => {
     const k = js((doc.getForm().getTextField("applicant_name").acroField.dict.lookup(PDFName.of("AA")) as PDFDict).lookup(PDFName.of("K")));

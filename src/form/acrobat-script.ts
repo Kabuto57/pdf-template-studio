@@ -94,7 +94,9 @@ for (i = 0; i < LONG.length && JSON.stringify(out).length > CAP; i++) {
   v = JSON.stringify(out).length - CAP + 3;
   data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
 }
-return JSON.stringify(out);
+// Padded with spaces to the full length: the QR code is then always the same size (version 40) and fills its frame.
+v = JSON.stringify(out); while (v.length < CAP) v += " ";
+return v;
 }`;
 }
 
@@ -109,7 +111,7 @@ if (t.length) { app.alert("This form cannot be printed yet. The boxes concerned 
 else { this.calculateNow(); this.print(true, 0, this.numPages - 1, false, true); }`;
 
 export function addChecks(doc: PDFDocument, form: Form, page: PDFPage, font: PDFFont, t: Template, js: JS,
-  underlined: Set<string> = new Set(), toolbar?: PDFPage[], qr?: { page: PDFPage; x: number; y: number; size: number }) {
+  underlined: Set<string> = new Set(), toolbar?: PDFPage[], qr?: { page: PDFPage; x: number; y: number; size: number; button: { x: number; y: number } }) {
   const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
   const asList = (rules: Rule[]) => rules.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]);
 
@@ -273,8 +275,10 @@ ${payloadScript(t)}` : script, c => c.charCodeAt(0) & 0xff)));
     box.addToPage(qr.page, { x: qr.x, y: qr.y, width: qr.size, height: qr.size, font, borderWidth: 0 });
     box.setFontSize(8);
     const inches = PDFNumber.of(Math.round(qr.size / 72 * 1000) / 1000);
-    const pmd = doc.context.obj({ Type: "PaperMetaData", Version: 1, Width: inches, Height: inches, XSymWidth: 4, Symbology: "QRCode", ECC: 1 });
-    pmd.set(PDFName.of("Resolution"), new Real("300.0")); // ponytail: 4 px at 300 dpi per module fits up to 208 modules (QR version 40) in 200 pt
+    // Module width in pixels at 300 dpi: the largest that fits a version 40 code (177 modules + 4 each side) in the box.
+    const module = Math.floor(qr.size / 72 * 300 / 185);
+    const pmd = doc.context.obj({ Type: "PaperMetaData", Version: 1, Width: inches, Height: inches, XSymWidth: module, Symbology: "QRCode", ECC: 1 });
+    pmd.set(PDFName.of("Resolution"), new Real("300.0"));
     for (const d of [box.acroField.dict, ...box.acroField.getWidgets().map(w => w.dict)]) {
       d.set(PDFName.of("PMD"), doc.context.register(pmd));
       d.set(PDFName.of("DataPrep"), PDFNumber.of(0)); // optional in the spec, but Acrobat won't draw the code without it
@@ -300,7 +304,6 @@ this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lc
   const style = toolbar ? { font, textColor: WHITE, backgroundColor: ACCENT, borderColor: ACCENT } : { font, textColor: WHITE, backgroundColor: INK, borderColor: INK };
   // [name, caption, script, width]; laid out right to left, 4 pt apart, ending at the right margin.
   const buttons: [string, string, string, number][] = [
-    ...(qr ? [["__confirm_print", "Confirm & Print Form", confirmPrint, 92]] as [string, string, string, number][] : []),
     ["__check_form", "Check form", report(true), 64],
     ...(toolbar ? [["__reset_form", "Reset form", reset, 64]] as [string, string, string, number][] : [])];
   buttons.forEach(([name, caption, code, width], i) => {
@@ -314,5 +317,14 @@ this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lc
       w.dict.set(PDFName.of("F"), PDFNumber.of(0));  // shown on screen, not printed
     }
   });
+  // "Confirm & Print Form": once, at the end of the form, under the QR code.
+  if (qr) {
+    const button = form.createButton("__confirm_print");
+    button.addToPage("Confirm & Print Form", qr.page, { x: qr.button.x, y: qr.button.y, width: 160, height: 22, ...style });
+    button.setFontSize(10);
+    const w = button.acroField.getWidgets()[0];
+    w.dict.set(PDFName.of("A"), js(confirmPrint));
+    w.dict.set(PDFName.of("F"), PDFNumber.of(0));
+  }
   doc.catalog.set(PDFName.of("AA"), doc.context.obj({ WS: js(report(false)), WP: js(report(false)) })); // WS / WP = before save / print
 }

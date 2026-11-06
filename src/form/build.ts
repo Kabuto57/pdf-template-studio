@@ -412,7 +412,7 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
 
   // 5. JavaScript version: a last page for the QR code of the answers ("Confirm & Print Form" prints it with the form).
   const formLast = page;
-  let qr: { page: PDFPage; x: number; y: number; size: number } | undefined;
+  let qr: { page: PDFPage; x: number; y: number; size: number; button: { x: number; y: number } } | undefined;
   if (mode === "javascript" && js) {
     page = doc.addPage([W, H]); strip(false);
     page.drawText("APPLICATION QR CODE (FOR BANK USE)", { x: M, y: H - 56, size: 11, font: bold, color: INK });
@@ -420,10 +420,11 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     for (const line of wrap("This page is printed with the form by Confirm & Print Form. The Bank scans the code to read the application (all the answers, as JSON). Do not write on or fold the code.", font, 8, W - 2 * M)) {
       page.drawText(line, { x: M, y, size: 8, font, color: GREY }); y -= 10;
     }
-    qr = { page, x: (W - 200) / 2, y: y - 220, size: 200 };
-    page.drawRectangle({ x: qr.x - 6, y: qr.y - 6, width: 212, height: 212, borderColor: RULE, borderWidth: 0.5 });
+    const size = 450; // the code fills this square; Confirm & Print Form goes under it, at the end of the form
+    qr = { page, x: (W - size) / 2, y: y - 14 - size, size, button: { x: (W - 160) / 2, y: y - 14 - size - 52 } };
+    page.drawRectangle({ x: qr.x, y: qr.y, width: size, height: size, borderColor: RULE, borderWidth: 0.5 });
     const code = safe(t.formCode ?? t.title);
-    page.drawText(code, { x: (W - font.widthOfTextAtSize(code, 7)) / 2, y: qr.y - 18, size: 7, font, color: GREY });
+    page.drawText(code, { x: (W - font.widthOfTextAtSize(code, 7)) / 2, y: qr.y - 14, size: 7, font, color: GREY });
   }
 
   // 6. Footers: the title, and "Page x of y".

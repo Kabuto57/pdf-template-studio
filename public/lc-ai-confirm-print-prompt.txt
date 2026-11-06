@@ -6,17 +6,16 @@ PDF, the layout broke: things moved out of place. Squeezing new items into the l
 redrawn. So:
   1. REVERT to the last working version (attached: the PDF from BEFORE the Save form / QR change).
   2. Then add the feature the way the bank's old smart form did it, WITHOUT touching any existing page:
-       - a "Confirm & Print Form" button in the header of every page (next to Check form / Reset form): it checks
-         the form; if anything is missing or wrong it lists the problems and does NOT print; if all is correct it
-         updates the barcode and opens the print dialog;
-       - the barcode (a QR code holding the answers as JSON) on ONE NEW PAGE added at the END of the PDF.
+       - ONE NEW PAGE added at the END of the PDF, holding a large QR code of the answers (JSON) and, under it, the
+         "Confirm & Print Form" button: it checks the form; if anything is missing or wrong it lists the problems
+         and does NOT print; if all is correct it updates the QR code and opens the print dialog.
      No Save form button (Ctrl+S / File > Save already saves the filled form).
 Give me back LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open it in Adobe
 Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's security settings.
 
 == THE ONE RULE THAT PREVENTS THE BREAKAGE ==
-Do NOT change, redraw, re-flow, re-render or re-save the content of ANY existing page. Existing pages may only get
-new button widgets placed ON TOP of empty header space. Everything else new goes on the NEW last page.
+Do NOT change, redraw, re-flow, re-render or re-save the content of ANY existing page, and add nothing to them.
+Everything new goes on the NEW last page.
 If a step seems to need changing an existing page, STOP and tell me instead.
 
 == STEP 1: REVERT ==
@@ -25,11 +24,10 @@ If a step seems to need changing an existing page, STOP and tell me instead.
     calculation order (/AcroForm /CO) is ["__checks"]. Tell me what you found.
   - If I attached only the broken PDF, STOP and tell me (don't try to move things back by guessing).
 
-== STEP 2: THE "CONFIRM & PRINT FORM" BUTTON (every page, header) ==
-  - Real push-button fields, one per page: __btn_print_1, __btn_print_2, ... (Btn, /Ff 65536).
-  - Position: in the header strip, on the same line as Check form / Reset form, directly to their LEFT, 4 pt gap;
-    about 90 x 13 pt. It must not overlap the bank name text or anything else.
-  - Look (same as the other buttons, so the caption never disappears): /DA "/Helv 8 Tf 1 g"; /MK << /BG [0] /BC [0]
+== STEP 2: THE "CONFIRM & PRINT FORM" BUTTON (once, at the end of the form, under the QR code on the new page) ==
+  - One real push-button field "__confirm_print" (Btn, /Ff 65536), with one widget on the NEW last page only.
+  - Position: centred under the QR code (Step 3), about 160 x 22 pt, about 40 pt below the code.
+  - Look (same as the other buttons, so the caption never disappears): /DA "/Helv 10 Tf 1 g"; /MK << /BG [0] /BC [0]
     /CA (Confirm & Print Form) >>; highlight /P or /N (not /I); normal appearance black box, white centred caption.
   - Visible, NOT printed, not read-only, nothing on top of it.
   - Mouse Up action (the widget's /A) EXACTLY (tested):
@@ -46,16 +44,17 @@ else { this.calculateNow(); this.print(true, 0, this.numPages - 1, false, true);
 == STEP 3: THE NEW LAST PAGE (the barcode page) ==
   - Add ONE new page at the end, same size as the others (A4 portrait).
   - At the top: "DEMO BANK · TRADE SERVICES" in bold black, a black rule under it, then the heading
-    "APPLICATION BARCODE (FOR BANK USE)" in bold, then in 8 pt grey: "This page is printed with the form. The Bank
-    scans the code to read the application. Do not write on or fold the code."
+    "APPLICATION QR CODE (FOR BANK USE)" in bold, then in 8 pt grey: "This page is printed with the form by Confirm &
+    Print Form. The Bank scans the code to read the application (all the answers, as JSON). Do not write on or fold
+    the code."
   - The QR code: a barcode form field "__qr" (Acrobat barcode field, as made with Prepare Form > Barcode), centred,
-    about 200 x 200 pt. Symbology QR Code, error correction level M, "Compress data before encoding" OFF.
-    Visible, PRINTED, read-only. Calculate action EXACTLY:
+    450 x 450 pt, with a thin grey frame exactly around it. Symbology QR Code, error correction level M, "Compress
+    data before encoding" OFF, module (X dimension) 10 pixels at 300 dpi (/PMD: XSymWidth 10, Resolution 300.0), so
+    the code fills the frame. lcPayload pads the text to 2,300 characters, so the code is always the same size
+    (version 40). Visible, PRINTED, read-only. Calculate action EXACTLY:
         event.value = typeof lcPayload == "function" ? lcPayload(this) : "";
-  - Under the code, in 8 pt grey: "Form LC-01 · v1.0".
+  - Under the code, in 7 pt grey: "Form LC-01 · v1.0 · Nov 2026"; under that the Confirm & Print Form button.
   - Calculation order (/AcroForm /CO): exactly ["__checks", "__qr"].
-  - No buttons on this page except Confirm & Print Form / Check form / Reset form if you can place them on the same
-    header line without overlapping anything (otherwise none).
   - The existing pages' footers still say "Page x of y" with the old total: leave them as they are (do not edit existing pages). The
     barcode page has no page number.
   - If you cannot make a real Acrobat barcode field, STOP and tell me; don't fake it with a picture or text box.
@@ -87,21 +86,24 @@ for (i = 0; i < LONG.length && JSON.stringify(out).length > CAP; i++) {
   v = JSON.stringify(out).length - CAP + 3;
   data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
 }
-return JSON.stringify(out);
+// Padded with spaces to the full length: the QR code is then always the same size (version 40) and fills its frame.
+v = JSON.stringify(out); while (v.length < CAP) v += " ";
+return v;
 }
 ---------------- END lcPayload ----------------
 
 == CHECKLIST (on the final file; mark EVERY item PASS or FAIL; fix any FAIL and re-run ALL items) ==
 Layout (the reason for this prompt):
-  1. Render every EXISTING page of the attached working PDF and of your result, and compare: identical, except
-     the new Confirm & Print Form button in the header. Show me the comparison (e.g. pixel difference only in the
-     button's rectangle). Same number of existing pages; one extra page at the end.
-  2. The new last page looks as described; the QR code is centred, about 200 pt, and prints.
+  1. Render every EXISTING page of the attached working PDF and of your result, and compare: identical (show me
+     the comparison, e.g. zero pixel difference). Same number of existing pages; one extra page at the end.
+  2. The new last page looks as described; the QR code is centred, fills its 450 pt frame, and prints; the button is
+     under it.
 Structure:
   3. Document scripts: exactly "lcRules" (identical to the working version) and "lcPayload" (identical to above).
   4. /CO is ["__checks", "__qr"]; "__qr" is a QR Code barcode field, level M, not compressed, with the exact
      Calculate action.
-  5. Every page has __btn_print_N with the exact action and white-on-black settings, not printed, nothing on top.
+  5. "__confirm_print" is on the last page only, under the code, with the exact action and white-on-black
+     settings, not printed, nothing on top.
 Behaviour (run the scripts in code against a stand-in for Acrobat, then describe what Acrobat will show):
   6. Confirm & Print Form on the blank form: message "This form cannot be printed yet ..." listing the missing
      answers, cursor goes to Date, and NO print dialog.
