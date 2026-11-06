@@ -2,7 +2,11 @@
 //   the blank LC application PDFs, the filled samples, the LC's JSON Schema, and its ready-made Ajv checker.
 //   npm run pdfs
 import { it } from "vitest";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import standaloneCode from "ajv/dist/standalone";
 import { buildLcPdf } from "../src/lc-pdf";
@@ -10,6 +14,7 @@ import { buildPdf } from "../src/pdf";
 import { LC } from "../src/lc";
 import { SAMPLES, samplePdf } from "../src/demo-applications";
 import { toSchema } from "../src/form/schema";
+import { lcSpec } from "./lc-spec.test";
 
 it.skipIf(!process.env.LC_PDFS && process.env.npm_lifecycle_event !== "pdfs")("blank LC PDFs, samples, schema", async () => {
   writeFileSync("public/LC-Application-original-look.pdf", await buildLcPdf(LC.defaults));
@@ -22,6 +27,13 @@ it.skipIf(!process.env.LC_PDFS && process.env.npm_lifecycle_event !== "pdfs")("b
   // The JSON Schema, and Ajv's checker for it as plain JavaScript (the site can't compile one while it runs).
   // The form itself (questions, options, rules) as JSON, for builders in other languages (public/make_lc_pdf.py).
   writeFileSync("public/lc-template.json", JSON.stringify(LC.template, null, 2) + "\n");
+  // The JavaScript PDF as a full build specification, for public/build_lc_pdf.py. Built once here with Python, so the
+  // spec carries the SHA-256 the builder's output must have (the builder ignores that key).
+  const spec = await lcSpec();
+  writeFileSync("public/lc-build-spec.json", JSON.stringify(spec) + "\n");
+  const out = join(tmpdir(), "lc-from-spec.pdf");
+  execFileSync("python3", ["public/build_lc_pdf.py", "public/lc-build-spec.json", out]);
+  writeFileSync("public/lc-build-spec.json", JSON.stringify({ expectedSha256: createHash("sha256").update(readFileSync(out)).digest("hex"), ...spec }) + "\n");
   const schema = toSchema(LC.template);
   writeFileSync("public/lc-application.schema.json", JSON.stringify(schema, null, 2) + "\n");
   const ajv = new Ajv2020({ allErrors: true, strict: false, code: { source: true, esm: true } });

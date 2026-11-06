@@ -1,0 +1,151 @@
+MASTER PROMPT (BUILD FROM SPECIFICATION): BUILD THE "IRREVOCABLE DOCUMENTARY CREDIT APPLICATION" PDF EXACTLY FROM
+THE ATTACHED SPECIFICATION FILE, THEN CHECK IT
+
+== WHAT I NEED ==
+I work in Trade Finance at a bank. Build the finished, self-checking "Irrevocable Documentary Credit Application"
+PDF and give me the file LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open it in
+Adobe Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's security settings.
+
+Earlier attempts to design and script this form from a written description kept breaking (buttons black or dead,
+QR code shown as text, scripts lost). So this time you do NOT design anything. The attached file
+lc-build-spec.json is the complete, tested form, object by object, taken from a PDF that works in Acrobat:
+  - 4 A4 pages: the 18 numbered sections, then a QR code page;
+  - 119 form fields with their exact positions, looks, options, flags and appearance;
+  - every action: the red / locked / cleared checks after each answer, typing filters, Acrobat's calendar on the
+    dates, "Check form" and "Reset form" on every page, Previous / Next page links, and on the last page a real QR
+    code field with "Generate QR Code" and "Print Form";
+  - the one document-level JavaScript ("lcRules", 23,020 characters).
+Your job: turn the specification into the PDF with the program below, then run the checks. Nothing else.
+
+== LIBRARIES ==
+  - Building: Python 3 standard library ONLY (json, sys). No pip install. The program is below; it writes the PDF
+    file itself, object for object. Do not use pikepdf, PyMuPDF, reportlab, pdf-lib or any other library to build,
+    re-save, "repair", flatten or regenerate the file: they can drop the JavaScript, redraw the buttons black, or turn
+    the QR field into a text box (exactly the bugs we had).
+  - Checking (read-only, optional): you may OPEN the finished file with pikepdf or PyMuPDF (fitz) to inspect and to
+    render pages to images, but never save it with them.
+
+== STEP 1: BUILD ==
+  1. Save the attached specification as lc-build-spec.json (unchanged; it is about 593 KB of JSON).
+     If you cannot read the attachment, or it is not valid JSON, STOP and tell me. Do not write your own.
+  2. Save the program below as build_lc_pdf.py, EXACTLY as written (between the BEGIN / END lines).
+  3. Run:  python build_lc_pdf.py lc-build-spec.json LC-Application-with-checks.pdf
+  4. Compute the SHA-256 of LC-Application-with-checks.pdf. It must equal the spec's "expectedSha256":
+       e7c7e86435b5586b5fb48cee0c4f7f3f180a5e6b866ab42cf4eaf8e019c71c74
+     If it is equal, the file is byte-for-byte the tested form: go to step 2.
+     If it is not, do NOT try to fix it: tell me the hash you got, the Python version, and the first 300 bytes
+     of the file, and stop.
+
+---------------- BEGIN build_lc_pdf.py ----------------
+"""BUILD THE LC APPLICATION PDF FROM ITS SPECIFICATION (plain Python 3, standard library only: no pip install)
+
+    python build_lc_pdf.py lc-build-spec.json LC-Application-with-checks.pdf
+
+lc-build-spec.json describes the working "Irrevocable Documentary Credit Application" PDF completely: every page
+(its drawing as PDF content-stream text), every form field and widget (position, look, flags, options, appearance
+streams), every action and the document-level JavaScript. This script writes it out as a PDF file, object for
+object; it adds nothing and changes nothing. Do not edit the spec or this script to "improve" the form.
+
+The spec's format:
+  {"root": {"ref": n}, "objects": {"n": <value>, ...}}
+  <value> is one of:
+    a JSON number                       -> a PDF number
+    {"real": "300.0"}                   -> a PDF number written exactly so (Acrobat needs "300.0" in barcode fields)
+    "/Name"                             -> a PDF name (written as given)
+    {"s": "text"}                       -> a PDF text string
+    {"ref": n}                          -> a reference to object n ("n 0 R")
+    [ ... ]                             -> an array
+    {"/Key": <value>, ...}              -> a dictionary
+    {"stream": {...}, "text": "..."}    -> a stream: its dictionary, and its data as Latin-1 text (written as is)
+    true / false / null
+"""
+import json
+import sys
+
+
+def number(x):
+    if isinstance(x, int):
+        return str(x)
+    if x == int(x):
+        return str(int(x))
+    return ("%.10f" % x).rstrip("0").rstrip(".")
+
+
+def text(s):
+    if all(ord(c) < 128 for c in s):  # plain ASCII: a literal string, e.g. (0 0 0 rg /Helvetica 8 Tf)
+        return "(" + s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)").replace("\r", "\\r").replace("\n", "\\n") + ")"
+    return "<FEFF" + s.encode("utf-16-be").hex().upper() + ">"  # anything else: UTF-16 with its byte-order mark
+
+
+def value(v):
+    if v is True:
+        return "true"
+    if v is False:
+        return "false"
+    if v is None:
+        return "null"
+    if isinstance(v, (int, float)):
+        return number(v)
+    if isinstance(v, str):
+        return v
+    if isinstance(v, list):
+        return "[" + " ".join(value(x) for x in v) + "]"
+    if "ref" in v and len(v) == 1:
+        return "%d 0 R" % v["ref"]
+    if "s" in v and len(v) == 1:
+        return text(v["s"])
+    if "real" in v and len(v) == 1:
+        return v["real"]
+    return "<<" + " ".join(k + " " + value(x) for k, x in v.items()) + ">>"
+
+
+def build(spec_path, out_path):
+    spec = json.load(open(spec_path, encoding="utf-8"))
+    objects = {int(n): v for n, v in spec["objects"].items()}
+    out = bytearray(b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n")
+    where = {}
+    for n in sorted(objects):
+        v = objects[n]
+        where[n] = len(out)
+        out += b"%d 0 obj\n" % n
+        if isinstance(v, dict) and "stream" in v:
+            data = v["text"].encode("latin-1")  # not compressed: the same bytes on every computer (see the SHA-256 check)
+            d = dict(v["stream"], **{"/Length": len(data)})
+            out += value(d).encode("latin-1") + b"\nstream\n" + data + b"\nendstream"
+        else:
+            out += value(v).encode("latin-1")
+        out += b"\nendobj\n"
+    size = max(objects) + 1
+    xref = len(out)
+    out += b"xref\n0 %d\n" % size
+    out += b"0000000000 65535 f \n"
+    for n in range(1, size):
+        out += (b"%010d 00000 n \n" % where[n]) if n in where else b"0000000000 65535 f \n"
+    out += b"trailer\n" + ("<< /Size %d /Root %s >>" % (size, value(spec["root"]))).encode("latin-1")
+    out += b"\nstartxref\n%d\n%%%%EOF\n" % xref
+    open(out_path, "wb").write(out)
+
+
+if __name__ == "__main__":
+    build(sys.argv[1] if len(sys.argv) > 1 else "lc-build-spec.json",
+          sys.argv[2] if len(sys.argv) > 2 else "LC-Application-with-checks.pdf")
+    print("written")
+---------------- END build_lc_pdf.py ----------------
+
+== STEP 2: CHECK (read-only; mark EVERY item PASS or FAIL) ==
+  1. SHA-256 equals e7c7e86435b5586b5fb48cee0c4f7f3f180a5e6b866ab42cf4eaf8e019c71c74.
+  2. The file opens in pikepdf (or PyMuPDF) with 4 pages, size 595.28 x 841.89 pt each.
+  3. Form fields: 119 in /AcroForm /Fields, including "__check_form" and "__reset_form" (one widget on each of the
+     4 pages), "__generate_qr", "__print_form" and "__qr" (on page 4), "__checks" (hidden helper).
+  4. Exactly one document-level JavaScript, named "lcRules", 23,020 characters long, containing
+     "function lcRules(", "function lcDates(" and "function lcPayload(".
+  5. "__qr" carries /PMD with /Symbology /QRCode and /DataPrep 0, and the raw file contains "/Resolution 300.0".
+  6. Render the 4 pages to images (e.g. PyMuPDF) and show them to me: page 1 starts "DEMO BANK · TRADE SERVICES"
+     and "Irrevocable Documentary Credit Application"; black "Check form" / "Reset form" buttons with WHITE captions
+     at the top right of every page; page 4 has the 450 pt QR frame and the "Generate QR Code" / "Print Form"
+     buttons under it.
+Reply with: the SHA-256 you got, the PASS / FAIL list 1 to 6, the page images, and LAST the PDF file.
+
+== IF SOMETHING DOES NOT WORK IN ACROBAT LATER ==
+Do not edit the PDF or the specification. I will report the bug and send a corrected lc-build-spec.json; you then
+repeat steps 1 and 2 with the new file. One bug at a time.
