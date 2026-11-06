@@ -4,6 +4,7 @@
 //     it doesn't apply, and the checks across answers (dates in order, amount above zero, insurance against price basis)
 //   - a "Check form" button that lists what is missing or wrong and puts the cursor on the first one
 //   - a "Reset form" button (addToolbar)
+//   - (JavaScript version) on a last page, a QR code of the answers as JSON, with "Generate QR Code" and "Print Form"
 //   - a warning when saving or printing an incomplete form
 //   - typing filters on amount / phone / account / number boxes, and upper case + SWIFT characters on the rest
 // With JavaScript off, none of this runs; red-frames.ts and the workbench cover that case.
@@ -50,8 +51,75 @@ interface Model {
   check?: [string, string] | 1;    // typed answer: [format pattern, message], or 1 = characters only
 }
 
+/** A real number written with its decimal point ("300.0"): Acrobat ignores a barcode field whose /Resolution is "300". */
+class Real extends PDFObject {
+  constructor(private text: string) { super(); }
+  clone() { return new Real(this.text); }
+  toString() { return this.text; }
+  sizeInBytes() { return this.text.length; }
+  copyBytesInto(buffer: Uint8Array, offset: number) {
+    for (let i = 0; i < this.text.length; i++) buffer[offset + i] = this.text.charCodeAt(i);
+    return this.text.length;
+  }
+}
+
+/** The QR code's text (lcPayload): every answered question as JSON, keyed by field name, so the next stage can check
+ *  it with the form's JSON Schema. A QR code holds about 2,300 characters: longer paragraphs are shortened and listed
+ *  in "truncated" (the full text stays in the PDF's fields). Also given word for word to the company AI
+ *  (public/lc-ai-confirm-print-prompt.txt); tests/pdf.test.ts checks the two match. */
+export function payloadScript(t: Template) {
+  const all = t.sections.flatMap(s => s.fields);
+  const groups = all.filter(f => f.kind === "checks").map(f => `${JSON.stringify(f.id)}: ${JSON.stringify(f.options ?? [])}`).join(", ");
+  const long = JSON.stringify(all.filter(f => f.kind === "long").map(f => f.id));
+  const form = JSON.stringify(/[A-Z]+-\d+/.exec(t.formCode ?? "")?.[0] ?? safe(t.title)), version = JSON.stringify(/v([\d.]+)/.exec(t.formCode ?? "")?.[1] ?? "1");
+  return String.raw`function lcPayload(d) {
+var G = {${groups}}, LONG = ${long}, CAP = 2300;
+var data = {}, i, n, f, k, v, g, m, out, cut = [], ok = true, t = new Date();
+for (i = 0; i < d.numFields; i++) {
+  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n)) continue;
+  f = d.getField(n); if (!f || f.type == "button" || f.type == "signature") continue;
+  g = /^(.+)__(\d+)$/.exec(n);
+  if (g && G[g[1]]) { if (f.value != "Off") { if (!data[g[1]]) data[g[1]] = []; data[g[1]].push(G[g[1]][+g[2]]); } continue; }
+  if (f.type == "checkbox") { if (f.value != "Off") data[n] = true; continue; }
+  v = f.type == "radiobutton" ? (f.value == "Off" ? "" : String(f.value)) : String(f.valueAsString).replace(/^\s+|\s+$/g, "");
+  if (v !== "") data[n] = v;
+}
+if (typeof lcRules == "function") { m = lcRules(d); ok = !m.length && !(m.bad || []).length; }
+function pad(x) { return ("0" + x).slice(-2); }
+out = {"form": ${form}, "version": ${version}, "saved": t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()) + "T" + pad(t.getHours()) + ":" + pad(t.getMinutes()), "complete": ok, "data": data};
+// A QR code holds about 2,300 characters: if the answers are longer, shorten the two long paragraphs and say so.
+for (i = 0; i < LONG.length && JSON.stringify(out).length > CAP; i++) {
+  k = LONG[i]; if (!data[k]) continue;
+  cut.push(k); out.truncated = cut;
+  v = JSON.stringify(out).length - CAP + 3;
+  data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
+}
+// Padded with spaces to the full length: the QR code is then always the same size (version 40) and fills its frame.
+v = JSON.stringify(out); while (v.length < CAP) v += " ";
+return v;
+}`;
+}
+
+/** "Generate QR Code": problems are listed and no code is made; otherwise the QR code is made from the answers and
+ *  the form goes to its page. */
+export const generateQr = String.raw`var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("The QR code cannot be generated yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Generate QR Code again.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else { this.getField("__qr").value = lcPayload(this); this.pageNum = this.numPages - 1;
+  app.alert("The QR code has been generated from your answers. Press Print Form to print the form with the QR code.", 3); }`;
+
+/** "Print Form": prints only once the QR code exists and still matches the answers. */
+export const printForm = String.raw`var q = this.getField("__qr"), now = typeof lcPayload == "function" ? lcPayload(this) : "", same = false;
+try { same = JSON.stringify(JSON.parse(q.value).data) == JSON.stringify(JSON.parse(now).data); } catch (e) {}
+if (!/\S/.test(q.value)) app.alert("Please press Generate QR Code first, so the printed form carries the QR code.", 1);
+else if (!same) app.alert("Your answers have changed since the QR code was generated. Please press Generate QR Code again, then Print Form.", 1);
+else this.print(true, 0, this.numPages - 1, false, true);`;
+
 export function addChecks(doc: PDFDocument, form: Form, page: PDFPage, font: PDFFont, t: Template, js: JS,
-  underlined: Set<string> = new Set(), toolbar?: PDFPage[]) {
+  underlined: Set<string> = new Set(), toolbar?: PDFPage[], qr?: { page: PDFPage; x: number; y: number; size: number; button: { x: number; y: number } }) {
   const all = t.sections.flatMap(s => s.fields), byId = new Map(all.map(f => [f.id, f]));
   const asList = (rules: Rule[]) => rules.map(r => [r.field, r.values.map(safe), r.not ? 1 : 0] as [string, string[], 0 | 1]);
 
@@ -181,7 +249,8 @@ function lcDates(d) {
 // On opening in Acrobat: show the calendars, and set every box's colour and lock.
 if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lcDates(this); lcRules(this); }`;
   // Stored as a stream, not a string: no 32,767-byte limit however many rules a form has.
-  const scriptRef = doc.context.register(doc.context.flateStream(Uint8Array.from(script, c => c.charCodeAt(0) & 0xff)));
+  const scriptRef = doc.context.register(doc.context.flateStream(Uint8Array.from(qr ? `${script}
+${payloadScript(t)}` : script, c => c.charCodeAt(0) & 0xff)));
   doc.catalog.set(PDFName.of("Names"), doc.context.obj({
     JavaScript: doc.context.obj({ Names: [PDFHexString.fromText("lcRules"), doc.context.obj({ S: "JavaScript", JS: scriptRef })] }),
   }));
@@ -207,6 +276,24 @@ if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lc
   recalc.acroField.dict.set(PDFName.of("AA"), doc.context.obj({ C: run() }));      // C = calculate
   form.acroForm.dict.set(PDFName.of("CO"), doc.context.obj([recalc.ref]));
 
+  // ... and the QR code (JavaScript version): an Acrobat barcode field (a text field with paper metadata, /PMD, as in
+  // Adobe's Implementation Note E-7), filled only when "Generate QR Code" is pressed.
+  if (qr) {
+    const box = form.createTextField("__qr");
+    box.addToPage(qr.page, { x: qr.x, y: qr.y, width: qr.size, height: qr.size, font, borderWidth: 0 });
+    box.setFontSize(8);
+    const inches = PDFNumber.of(Math.round(qr.size / 72 * 1000) / 1000);
+    // Module width in pixels at 300 dpi: the largest that fits a version 40 code (177 modules + 4 each side) in the box.
+    const module = Math.floor(qr.size / 72 * 300 / 185);
+    const pmd = doc.context.obj({ Type: "PaperMetaData", Version: 1, Width: inches, Height: inches, XSymWidth: module, Symbology: "QRCode", ECC: 1 });
+    pmd.set(PDFName.of("Resolution"), new Real("300.0"));
+    for (const d of [box.acroField.dict, ...box.acroField.getWidgets().map(w => w.dict)]) {
+      d.set(PDFName.of("PMD"), doc.context.register(pmd));
+      d.set(PDFName.of("DataPrep"), PDFNumber.of(0)); // optional in the spec, but Acrobat won't draw the code without it
+    }
+    box.acroField.dict.set(PDFName.of("Ff"), PDFNumber.of(1 | 4 | 4096 | 4194304)); // read-only, no export, multiline, no spell check (as Acrobat sets them)
+  }
+
   // 4. The "Check form" button, and the same report before saving or printing.
   const report = (always: boolean) => `var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
 function list(a) { return "- " + a.slice(0, 15).join("\\n- ") + (a.length > 15 ? "\\n- ... and " + (a.length - 15) + " more" : ""); }
@@ -221,16 +308,29 @@ this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lc
   // Each button is one field with a widget per page: at the top right of page 1, or (toolbar) at the top right of
   // every page, beside "Reset form", like the toolbar on the bank's smart form.
   const style = toolbar ? { font, textColor: WHITE, backgroundColor: ACCENT, borderColor: ACCENT } : { font, textColor: WHITE, backgroundColor: INK, borderColor: INK };
-  const buttons: [string, string, string][] = [["__check_form", "Check form", report(true)], ...(toolbar ? [["__reset_form", "Reset form", reset]] as [string, string, string][] : [])];
-  buttons.forEach(([name, caption, code], i) => {
+  // [name, caption, script, width]; laid out right to left, 4 pt apart, ending at the right margin.
+  const buttons: [string, string, string, number][] = [
+    ["__check_form", "Check form", report(true), 64],
+    ...(toolbar ? [["__reset_form", "Reset form", reset, 64]] as [string, string, string, number][] : [])];
+  buttons.forEach(([name, caption, code, width], i) => {
     const button = form.createButton(name);
+    const x = W - M - buttons.slice(i).reduce((sum, b) => sum + b[3] + 4, 0) + 4;
     for (const p of toolbar ?? [page])
-      button.addToPage(caption, p, toolbar ? { x: W - M - 68 * (buttons.length - i) + 4, y: H - 25, width: 64, height: 13, ...style } : { x: W - M - 84, y: H - 44, width: 84, height: 18, ...style });
+      button.addToPage(caption, p, toolbar ? { x, y: H - 25, width, height: 13, ...style } : { x: W - M - 84, y: H - 44, width: 84, height: 18, ...style });
     button.setFontSize(toolbar ? 8 : 9);
     for (const w of button.acroField.getWidgets()) {
       w.dict.set(PDFName.of("A"), js(code));         // A = on click
       w.dict.set(PDFName.of("F"), PDFNumber.of(0));  // shown on screen, not printed
     }
+  });
+  // "Generate QR Code" then "Print Form": once, at the end of the form, under the QR code.
+  if (qr) ([["__generate_qr", "Generate QR Code", generateQr], ["__print_form", "Print Form", printForm]] as const).forEach(([name, caption, code], i) => {
+    const button = form.createButton(name);
+    button.addToPage(caption, qr.page, { x: qr.button.x + i * 162, y: qr.button.y, width: 150, height: 22, ...style });
+    button.setFontSize(10);
+    const w = button.acroField.getWidgets()[0];
+    w.dict.set(PDFName.of("A"), js(code));
+    w.dict.set(PDFName.of("F"), PDFNumber.of(0));
   });
   doc.catalog.set(PDFName.of("AA"), doc.context.obj({ WS: js(report(false)), WP: js(report(false)) })); // WS / WP = before save / print
 }

@@ -1,0 +1,137 @@
+MASTER PROMPT: REVERT THE BROKEN FORM, THEN ADD THE QR CODE PAGE WITH "GENERATE QR CODE" AND "PRINT FORM"
+
+== WHAT HAPPENED, AND THE NEW APPROACH ==
+After the "Save form" button and QR code were added to the end of the "Irrevocable Documentary Credit Application"
+PDF, the layout broke: things moved out of place. Squeezing new items into the last section made the pages get
+redrawn. So:
+  1. REVERT to the last working version (attached: the PDF from BEFORE the Save form / QR change).
+  2. Then add the feature the way the bank's old smart form did it, WITHOUT touching any existing page:
+       - ONE NEW PAGE added at the END of the PDF, holding a large QR code of the answers (JSON) and, under it, two
+         buttons used in this order:
+           1. "Generate QR Code": checks the form; if anything is missing or wrong it lists the problems and makes no
+              code; if all is correct it makes the QR code from the answers and goes to that page;
+           2. "Print Form": prints the form with the code, but only if the code exists and still matches the
+              answers (otherwise it asks to press Generate QR Code again).
+         The QR code is NOT recalculated after every answer: it is made only by Generate QR Code.
+     No Save form button (Ctrl+S / File > Save already saves the filled form).
+Give me back LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open it in Adobe
+Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's security settings.
+
+== THE ONE RULE THAT PREVENTS THE BREAKAGE ==
+Do NOT change, redraw, re-flow, re-render or re-save the content of ANY existing page, and add nothing to them.
+Everything new goes on the NEW last page.
+If a step seems to need changing an existing page, STOP and tell me instead.
+
+== STEP 1: REVERT ==
+  - Start from the attached last working PDF (before the Save form / QR change). Do not start from the broken one.
+  - Check it is the working version: one document script "lcRules"; no "__qr", no "__btn_save", no "lcPayload";
+    calculation order (/AcroForm /CO) is ["__checks"]. Tell me what you found.
+  - If I attached only the broken PDF, STOP and tell me (don't try to move things back by guessing).
+
+== STEP 2: THE TWO BUTTONS (once, at the end of the form, under the QR code on the new page) ==
+  - Two real push-button fields, "__generate_qr" and "__print_form" (Btn, /Ff 65536), each with one widget on the
+    NEW last page only, side by side under the QR code (Step 3), each about 150 x 22 pt, 12 pt apart, centred
+    together, about 40 pt below the code: Generate QR Code on the left, Print Form on the right.
+  - Look (same as the other buttons, so the caption never disappears): /DA "/Helv 10 Tf 1 g"; /MK << /BG [0] /BC [0]
+    /CA (Generate QR Code) >> (or (Print Form)); highlight /P or /N (not /I); black box, white centred caption.
+  - Visible, NOT printed, not read-only, nothing on top of them.
+  - Mouse Up action (the widget's /A) EXACTLY (tested):
+"Generate QR Code":
+---------------- BEGIN Generate QR Code ----------------
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("The QR code cannot be generated yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Generate QR Code again.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else { this.getField("__qr").value = lcPayload(this); this.pageNum = this.numPages - 1;
+  app.alert("The QR code has been generated from your answers. Press Print Form to print the form with the QR code.", 3); }
+---------------- END Generate QR Code ----------------
+"Print Form":
+---------------- BEGIN Print Form ----------------
+var q = this.getField("__qr"), now = typeof lcPayload == "function" ? lcPayload(this) : "", same = false;
+try { same = JSON.stringify(JSON.parse(q.value).data) == JSON.stringify(JSON.parse(now).data); } catch (e) {}
+if (!/\S/.test(q.value)) app.alert("Please press Generate QR Code first, so the printed form carries the QR code.", 1);
+else if (!same) app.alert("Your answers have changed since the QR code was generated. Please press Generate QR Code again, then Print Form.", 1);
+else this.print(true, 0, this.numPages - 1, false, true);
+---------------- END Print Form ----------------
+
+== STEP 3: THE NEW LAST PAGE (the barcode page) ==
+  - Add ONE new page at the end, same size as the others (A4 portrait).
+  - At the top: "DEMO BANK · TRADE SERVICES" in bold black, a black rule under it, then the heading
+    "APPLICATION QR CODE (FOR BANK USE)" in bold, then in 8 pt grey: "When the form is filled in, press Generate QR
+    Code (under the code), then Print Form. The Bank scans the code to read the application (all the answers, as
+    JSON). Do not write on or fold the code."
+  - The QR code: a barcode form field "__qr" (Acrobat barcode field, as made with Prepare Form > Barcode), centred,
+    450 x 450 pt, with a thin grey frame exactly around it. Symbology QR Code, error correction level M, "Compress
+    data before encoding" OFF, module (X dimension) 10 pixels at 300 dpi (/PMD: XSymWidth 10, Resolution 300.0), so
+    the code fills the frame. lcPayload pads the text to 2,300 characters, so the code is always the same size
+    (version 40). Visible, PRINTED, read-only. NO Calculate action: only Generate QR Code fills it. Empty at first.
+  - Under the code, in 7 pt grey: "Form LC-01 · v1.0 · Nov 2026"; under that the two buttons (Step 2).
+  - Calculation order (/AcroForm /CO) stays exactly ["__checks"] (do NOT add "__qr").
+  - The existing pages' footers still say "Page x of y" with the old total: leave them as they are (do not edit existing pages). The
+    barcode page has no page number.
+  - If you cannot make a real Acrobat barcode field, STOP and tell me; don't fake it with a picture or text box.
+
+== STEP 4: SECOND DOCUMENT SCRIPT "lcPayload" (EXACTLY this text; tested) ==
+After this there are exactly two document scripts: "lcRules" (unchanged, not a character) and "lcPayload".
+The QR code then holds the answers as JSON, keyed by the form's field names, for example:
+{"form":"LC-01","version":"1.0","saved":"2026-11-06T10:40","complete":true,"data":{"applicant_name":"ACME TRADING PTE LTD","currency":"USD","amount":"125,000.00","drafts":true,"drafts_at":"Term"}}
+---------------- BEGIN lcPayload ----------------
+function lcPayload(d) {
+var G = {"bencert_sent_by": ["faxed","mailed","couriered"]}, LONG = ["goods_description","additional_conditions"], CAP = 2300;
+var data = {}, i, n, f, k, v, g, m, out, cut = [], ok = true, t = new Date();
+for (i = 0; i < d.numFields; i++) {
+  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n)) continue;
+  f = d.getField(n); if (!f || f.type == "button" || f.type == "signature") continue;
+  g = /^(.+)__(\d+)$/.exec(n);
+  if (g && G[g[1]]) { if (f.value != "Off") { if (!data[g[1]]) data[g[1]] = []; data[g[1]].push(G[g[1]][+g[2]]); } continue; }
+  if (f.type == "checkbox") { if (f.value != "Off") data[n] = true; continue; }
+  v = f.type == "radiobutton" ? (f.value == "Off" ? "" : String(f.value)) : String(f.valueAsString).replace(/^\s+|\s+$/g, "");
+  if (v !== "") data[n] = v;
+}
+if (typeof lcRules == "function") { m = lcRules(d); ok = !m.length && !(m.bad || []).length; }
+function pad(x) { return ("0" + x).slice(-2); }
+out = {"form": "LC-01", "version": "1.0", "saved": t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()) + "T" + pad(t.getHours()) + ":" + pad(t.getMinutes()), "complete": ok, "data": data};
+// A QR code holds about 2,300 characters: if the answers are longer, shorten the two long paragraphs and say so.
+for (i = 0; i < LONG.length && JSON.stringify(out).length > CAP; i++) {
+  k = LONG[i]; if (!data[k]) continue;
+  cut.push(k); out.truncated = cut;
+  v = JSON.stringify(out).length - CAP + 3;
+  data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
+}
+// Padded with spaces to the full length: the QR code is then always the same size (version 40) and fills its frame.
+v = JSON.stringify(out); while (v.length < CAP) v += " ";
+return v;
+}
+---------------- END lcPayload ----------------
+
+== CHECKLIST (on the final file; mark EVERY item PASS or FAIL; fix any FAIL and re-run ALL items) ==
+Layout (the reason for this prompt):
+  1. Render every EXISTING page of the attached working PDF and of your result, and compare: identical (show me
+     the comparison, e.g. zero pixel difference). Same number of existing pages; one extra page at the end.
+  2. The new last page looks as described; the QR code is centred, fills its 450 pt frame, and prints; the two
+     buttons are under it.
+Structure:
+  3. Document scripts: exactly "lcRules" (identical to the working version) and "lcPayload" (identical to above).
+  4. /CO is ["__checks"]; "__qr" is a QR Code barcode field, level M, not compressed, with NO Calculate action.
+  5. "__generate_qr" and "__print_form" are on the last page only, under the code, with the exact actions and
+     white-on-black settings, not printed, nothing on top.
+Behaviour (run the scripts in code against a stand-in for Acrobat, then describe what Acrobat will show):
+  6. Generate QR Code on the blank form: message "The QR code cannot be generated yet ..." listing the missing
+     answers, cursor goes to Date, the QR code stays empty. Print Form then: "Please press Generate QR Code first".
+  7. Amount "1,25,000.0.0": Generate QR Code lists "Amount: is not an amount"; no code.
+  8. Fully correct form: Generate QR Code makes the code ("complete": true) and goes to its page; Print Form opens
+     the print dialog for all pages; change an answer and press Print Form: "Your answers have changed ..." and no
+     print until Generate QR Code is pressed again. The buttons don't print.
+  9. lcPayload: only answered questions; tick-any as a list (bencert_sent_by ["faxed","couriered"]); no "__" fields
+     or buttons; a 6,500-character goods description gives JSON of at most 2,300 characters with "truncated".
+ 10. Scanning the printed QR code with a phone shows the JSON.
+Regression (all must still work exactly as in the working version):
+ 11. Blank form: only the always-mandatory blank boxes red; filled boxes have no red outline.
+ 12. Tick "Drafts for 100% invoice value at": Drafts at unlocks and turns red; Term / Date unlock their questions;
+     untick: locked, grey, cleared.
+ 13. Date boxes show the calendar; typing filters unchanged.
+ 14. Check form, Reset form (captions stay white), Previous / Next work; Reset also empties the QR code.
+Reply with: what you found in Step 1, the PASS / FAIL list 1 to 14 with how you tested each, anything that fails or
+could not be tested, and LAST the PDF file.

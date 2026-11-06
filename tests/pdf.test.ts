@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRawStream, PDFDropdown, PDFTextField, decodePDFRawStream } from "pdf-lib";
+import { PDFArray, PDFButton, PDFCheckBox, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRadioGroup, PDFRawStream, PDFDropdown, PDFTextField, decodePDFRawStream } from "pdf-lib";
+import { readFileSync } from "fs";
+import { inflateSync } from "zlib";
+import { generateQr, payloadScript, printForm } from "../src/form/acrobat-script";
 import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
 import { LC } from "../src/lc";
@@ -138,7 +141,7 @@ it("the Check form button and the save / print warnings are valid scripts", asyn
 });
 
 describe("the JavaScript version", async () => {
-  const doc = await PDFDocument.load(await buildPdf(LC.template, LC.defaults, "javascript"));
+  const bytes = await buildPdf(LC.template, LC.defaults, "javascript"), doc = await PDFDocument.load(bytes);
   const js = (o: unknown) => (((o as PDFDict).lookup(PDFName.of("JS"))) as PDFHexString).decodeText();
   it("has Check form and Reset form on every page; Reset asks first, then clears and re-checks", () => {
     for (const n of ["__check_form", "__reset_form"]) expect(doc.getForm().getButton(n).acroField.getWidgets()).toHaveLength(doc.getPageCount());
@@ -150,6 +153,76 @@ describe("the JavaScript version", async () => {
     expect(calls).toEqual(["reset", "rules"]);
     // Reset goes back to the starting answers (e.g. Full Swift), not to blank.
     expect(doc.getForm().getRadioGroup("mode_of_advising").acroField.dict.get(PDFName.of("DV"))).toBeDefined();
+  });
+  it("Generate QR Code, then Print Form: problems stop both; Print Form needs an up-to-date code", () => {
+    const last = doc.getPages()[doc.getPageCount() - 1].ref.toString();
+    const action = (n: string) => {
+      const ws = doc.getForm().getButton(n).acroField.getWidgets();
+      expect(ws.map(w => w.P()?.toString())).toEqual([last]); // once, at the end of the form
+      return js(ws[0].dict.lookup(PDFName.of("A")));
+    };
+    expect(action("__generate_qr")).toBe(generateQr);
+    expect(action("__print_form")).toBe(printForm);
+    // ... word for word the scripts given to the company AI.
+    const prompt = readFileSync("public/lc-ai-confirm-print-prompt.txt", "utf8");
+    const block = (name: string) => prompt.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
+    expect([block("Generate QR Code"), block("Print Form")]).toEqual([generateQr, printForm]);
+    // The from-scratch prompt carries the same: the document script (lcRules then lcPayload) and both buttons.
+    const full = readFileSync("public/lc-ai-complete-build-prompt.txt", "utf8");
+    const of = (name: string) => full.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
+    expect(`${of("lcRules")}\n${of("lcPayload")}`).toBe(library(doc));
+    expect([of("Generate QR Code"), of("Print Form")]).toEqual([generateQr, printForm]);
+    // The step-by-step prompts (for when the working PDF arrives with its scripts stripped) carry the same texts.
+    const step = (file: string) => { const t = readFileSync(file, "utf8"); return (name: string) => t.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0]; };
+    const s1 = step("public/lc-ai-step1-buttons-prompt.txt"), s2 = step("public/lc-ai-step2-qr-page-prompt.txt");
+    const act = (n: string) => js(doc.getForm().getButton(n).acroField.getWidgets()[0].dict.lookup(PDFName.of("A")));
+    expect(s1("Document script lcRules")).toBe(library(doc));
+    expect([s1("Check form"), s1("Reset form")]).toEqual([act("__check_form"), act("__reset_form")]);
+    expect([s2("Generate QR Code"), s2("Print Form")]).toEqual([generateQr, printForm]);
+    // A stand-in for Acrobat: the QR field, the answers lcPayload reports, and what happens.
+    const run = (code: string, qr: { value: string }, missing: string[], answers: string) => {
+      const log: string[] = [];
+      const d = { numPages: 4, pageNum: 0, print: (...a: unknown[]) => log.push(`print ${a.join(",")}`), getField: (n: string) => n === "__qr" ? qr : { setFocus: () => log.push(`focus ${n}`) } };
+      const lcRules = () => Object.assign([...missing], { bad: [], first: missing.length ? "application_date" : "" });
+      const lcPayload = () => JSON.stringify({ saved: String(Math.random()), data: { applicant_name: answers } }) + "   ";
+      new Function("app", "lcRules", "lcPayload", code).call(d, { alert: (m: string) => log.push(m.split(".")[0]) }, lcRules, lcPayload);
+      return { log, page: d.pageNum };
+    };
+    const qr = { value: "" };
+    expect(run(generateQr, qr, ["Date"], "ACME").log).toEqual(["The QR code cannot be generated yet", "focus application_date"]);
+    expect(qr.value).toBe("");
+    expect(run(printForm, qr, [], "ACME").log).toEqual(["Please press Generate QR Code first, so the printed form carries the QR code"]);
+    expect(run(generateQr, qr, [], "ACME")).toEqual({ log: ["The QR code has been generated from your answers"], page: 3 });
+    expect(JSON.parse(qr.value).data.applicant_name).toBe("ACME");
+    expect(run(printForm, qr, [], "ACME").log).toEqual(["print true,0,3,false,true"]);   // same answers (a later time is fine)
+    expect(run(printForm, qr, [], "ACME LTD").log).toEqual(["Your answers have changed since the QR code was generated"]);
+  });
+  it("QR code: an Acrobat barcode field on the last page, holding the answers as JSON", () => {
+    const form = doc.getForm(), box = form.getTextField("__qr"), last = doc.getPages()[doc.getPageCount() - 1];
+    expect(box.acroField.getWidgets()[0].P()?.toString()).toBe(last.ref.toString());
+    const pmd = box.acroField.dict.lookup(PDFName.of("PMD"), PDFDict);
+    expect(pmd.get(PDFName.of("Symbology"))).toBe(PDFName.of("QRCode"));
+    // Written "300.0" (Acrobat ignores "300"); reading the file back turns it into a number, so look in the file itself.
+    const raw = Buffer.from(bytes).toString("latin1"), streams = [...raw.matchAll(/stream\r?\n([\s\S]*?)endstream/g)];
+    expect(streams.some(m => { try { return /\/Resolution 300\.0/.test(inflateSync(Buffer.from(m[1], "latin1")).toString("latin1")); } catch { return false; } })).toBe(true);
+    expect(box.acroField.dict.has(PDFName.of("AA"))).toBe(false); // not recalculated: made only by Generate QR Code
+    // The script given to the company AI word for word is the one in this PDF.
+    const prompt = readFileSync("public/lc-ai-confirm-print-prompt.txt", "utf8");
+    expect(prompt.split("---------------- BEGIN lcPayload ----------------\n")[1].split("\n---------------- END lcPayload")[0]).toBe(payloadScript(LC.template));
+    // Run it on the starting answers: only answered questions, keyed by field name; no "__" fields or buttons.
+    const fields = form.getFields();
+    const as = (f: (typeof fields)[number]) =>
+      f instanceof PDFTextField ? { type: "text", value: f.getText() ?? "", valueAsString: f.getText() ?? "" } :
+      f instanceof PDFCheckBox ? { type: "checkbox", value: f.isChecked() ? "Yes" : "Off" } :
+      f instanceof PDFRadioGroup ? { type: "radiobutton", value: f.getSelected() ?? "Off" } :
+      f instanceof PDFDropdown ? { type: "combobox", value: f.getSelected()[0] ?? "", valueAsString: f.getSelected()[0] ?? "" } :
+      f instanceof PDFButton ? { type: "button" } : { type: "text", value: "", valueAsString: "" };
+    const d = { numFields: fields.length, getNthFieldName: (i: number) => fields[i].getName(), getField: (n: string) => { const f = form.getFieldMaybe(n); return f && as(f); } };
+    const out = JSON.parse(new Function(`${payloadScript(LC.template)}; return lcPayload(this);`).call(d));
+    expect(out).toMatchObject({ form: "LC-01", version: "1.0", complete: true });
+    expect(out.data).toMatchObject({ mode_of_advising: "Full Swift", presentation_days: "21", bank_charges: true, post_shipment_financing: true });
+    expect(Object.keys(out.data).some(k => k.startsWith("__"))).toBe(false);
+    expect(new Function(`${payloadScript(LC.template)}; return lcPayload(this);`).call(d)).toHaveLength(2300); // padded: always the same size of code
   });
   it("text boxes: letters upper-cased as typed, characters SWIFT can't carry refused", () => {
     const k = js((doc.getForm().getTextField("applicant_name").acroField.dict.lookup(PDFName.of("AA")) as PDFDict).lookup(PDFName.of("K")));

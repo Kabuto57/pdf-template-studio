@@ -1,0 +1,210 @@
+MASTER PROMPT, STEP 1 OF 2: MAKE CHECK FORM, RESET FORM, PREVIOUS PAGE AND NEXT PAGE WORK, BY COPYING THEM FROM THE
+WORKING PDF (CHANGE NOTHING ELSE)
+
+== WHAT I AM GIVING YOU ==
+I have attached TWO PDFs:
+  A. YOUR PDF: the "Irrevocable Documentary Credit Application" you made. Its "Check form", "Reset form", "Previous
+     page" and "Next page" do nothing, and the buttons show as solid black boxes (no caption).
+  B. THE WORKING PDF: LC-Application-JavaScript.pdf. Same form, same field names. In Acrobat everything in it works,
+     BUT the copy you receive has had ALL its JavaScript removed by our security scanning (no document script, no
+     button actions). So use B ONLY for the layout and look: positions (/Rect), colours and captions (/MK, /DA), the
+     appearance streams (/AP), the flags (/F, /Ff) and the page links. The JavaScript comes from THIS PROMPT: the
+     texts between the BEGIN / END lines below, copied character for character (they were taken from the working
+     PDF and are tested). Do not re-write, shorten or "improve" them.
+Give me back YOUR PDF (A) with only the fixes below, named LC-Application-with-checks.pdf. This is approved work
+within my bank's policy. I open it in Adobe Acrobat (Windows) and click "Enable All Features". Don't suggest ways
+around the bank's security settings. Use a PDF library (for example pikepdf or pypdf) to read B and write A.
+
+== THE RULE ==
+Do NOT redraw, rebuild or re-flow any page of A, and do not change any answer field. Only replace the things listed
+below, by copying them from B. If something cannot be done without changing a page's drawing, STOP and tell me.
+
+== STEP 1.1: THE DOCUMENT SCRIPT (from this prompt) ==
+  - In A, delete EVERY document-level JavaScript (all entries in /Root /Names /JavaScript, and any /OpenAction that
+    runs JavaScript), then add exactly ONE entry named "lcRules" whose /JS is the text below, character for character
+    (it contains lcRules, lcDates and lcPayload; store it as a stream). It is 23,020 characters long.
+  - Report: the length of the script you stored (must be 23,020) and that it parses as JavaScript.
+---------------- BEGIN Document script lcRules ----------------
+function lcRules(d) {
+var M = {"application_date":{"kind":"date","label":"Date","hasRule":1,"always":1,"check":1},"mode_of_advising":{"kind":"radio","label":"Mode of advising","hasRule":1,"always":1},"applicant_name":{"kind":"text","label":"Applicant name","hasRule":1,"always":1,"check":1},"applicant_address_1":{"kind":"text","label":"Applicant address","hasRule":1,"always":1,"check":1},"applicant_address_2":{"kind":"text","label":"Applicant address (line 2)","check":1},"applicant_address_3":{"kind":"text","label":"Applicant address (line 3)","check":1},"applicant_address_4":{"kind":"text","label":"Applicant address (line 4)","check":1},"contact_name":{"kind":"text","label":"Contact party for this application & confirmation of FX rate: Name","hasRule":1,"always":1,"check":1},"contact_tel":{"kind":"text","label":"Contact party: Tel no","hasRule":1,"always":1,"check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"contact_fax":{"kind":"text","label":"Contact party: Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"dc_no":{"kind":"text","label":"DC no","check":1},"bank_code":{"kind":"text","label":"Bank code","check":1},"advising_bank_name":{"kind":"text","label":"Name","check":1},"advising_bank_address_1":{"kind":"text","label":"Address","check":1},"advising_bank_address_2":{"kind":"text","label":"Address (line 2)","check":1},"advising_bank_address_3":{"kind":"text","label":"Address (line 3)","check":1},"third_party_name":{"kind":"text","label":"Name","check":1},"third_party_address_1":{"kind":"text","label":"Address","check":1},"third_party_address_2":{"kind":"text","label":"Address (line 2)","check":1},"third_party_address_3":{"kind":"text","label":"Address (line 3)","check":1},"beneficiary_name":{"kind":"text","label":"Beneficiary's name","hasRule":1,"always":1,"check":1},"beneficiary_address_1":{"kind":"text","label":"Beneficiary's address","hasRule":1,"always":1,"check":1},"beneficiary_address_2":{"kind":"text","label":"Beneficiary's address (line 2)","check":1},"beneficiary_address_3":{"kind":"text","label":"Beneficiary's address (line 3)","check":1},"beneficiary_address_4":{"kind":"text","label":"Beneficiary's address (line 4)","check":1},"beneficiary_contact":{"kind":"text","label":"Contact person","check":1},"beneficiary_tel":{"kind":"text","label":"Tel no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"beneficiary_fax":{"kind":"text","label":"Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"currency":{"kind":"select","label":"Currency","hasRule":1,"always":1},"amount":{"kind":"text","label":"Amount","hasRule":1,"always":1,"check":["^\\d{1,3}(,?\\d{3})*(\\.\\d{1,2})?$","is not an amount"]},"tolerance":{"kind":"check","label":"Tolerance on credit amount & goods quantity"},"tolerance_plus":{"kind":"text","label":"Tolerance + (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"tolerance_minus":{"kind":"text","label":"Tolerance - (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"price_basis":{"kind":"radio","label":"Price basis","hasRule":1,"always":1},"price_basis_other":{"kind":"text","label":"Others (please specify)","hasRule":1,"requiredIf":[["price_basis",["Others"],0]],"activeIf":[["price_basis",["Others"],0]],"check":1},"partial_shipment":{"kind":"radio","label":"Partial shipment","hasRule":1,"always":1},"transhipment":{"kind":"radio","label":"Transhipment","hasRule":1,"always":1},"shipment_from":{"kind":"select","label":"Shipment from"},"shipment_from_place":{"kind":"text","label":"Shipment from: place","hasRule":1,"requiredIf":[["shipment_from",[""],1]],"check":1},"shipment_from_place_2":{"kind":"text","label":"Shipment from: place (line 2)","check":1},"shipment_to":{"kind":"select","label":"Shipment to"},"shipment_to_place":{"kind":"text","label":"Shipment to: place","hasRule":1,"requiredIf":[["shipment_to",[""],1]],"check":1},"shipment_to_place_2":{"kind":"text","label":"Shipment to: place (line 2)","check":1},"latest_shipment_date":{"kind":"date","label":"Latest shipment date","check":1},"expiry_date":{"kind":"date","label":"Date of expiry (in beneficiary's country)","hasRule":1,"always":1,"check":1},"presentation_days":{"kind":"text","label":"Presentation period (days after shipment)","check":["^\\d+$","should be a whole number"]},"back_to_back":{"kind":"check","label":"This is a back-to-back DC to be issued against the master credit (the \"Master DC\")"},"master_dc_no":{"kind":"text","label":"Master credit no","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"master_dc_issued_by":{"kind":"text","label":"Issued by","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"drafts":{"kind":"check","label":"Drafts for 100% invoice value at"},"drafts_at":{"kind":"radio","label":"Drafts at","hasRule":1,"requiredIf":[["drafts",["true"],0]],"activeIf":[["drafts",["true"],0]]},"term_days":{"kind":"text","label":"Term: days","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":["^\\d+$","should be a whole number"]},"term_after":{"kind":"text","label":"days after","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":1},"draft_date":{"kind":"date","label":"Date","hasRule":1,"requiredIf":[["drafts_at",["Date"],0]],"activeIf":[["drafts_at",["Date"],0]],"check":1},"term_prepay":{"kind":"radio","label":"If it is a term LC, please select one","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]]},"doc_bill_of_lading":{"kind":"check","label":"Full set of Clean on Board marine bills of lading"},"bl_made_out_to":{"kind":"radio","label":"Made out to","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_made_out_to_other":{"kind":"text","label":"Made out to (other)","hasRule":1,"requiredIf":[["bl_made_out_to",["other (specify)"],0]],"activeIf":[["bl_made_out_to",["other (specify)"],0]],"check":1},"bl_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]],"check":1},"doc_air_waybill":{"kind":"check","label":"Original Air Waybill consigned to the Bank"},"awb_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]]},"awb_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]],"check":1},"doc_delivery_order":{"kind":"check","label":"Delivery order signed by beneficiary made out to applicant"},"do_originals":{"kind":"text","label":"Delivery order: originals","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_copies":{"kind":"text","label":"Delivery order: copies","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_countersigned_by":{"kind":"select","label":"Countersigned by how many of our signatories","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"do_signature_verified":{"kind":"select","label":"Whose signature(s) ... to be verified by the Bank","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"doc_insurance":{"kind":"check","label":"Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion"},"insurance_arrangement":{"kind":"select","label":"For FOB/CFR/FCA/CPT","activeIf":[["doc_insurance",["true"],0]]},"insurance_cover_no":{"kind":"text","label":"Open cover no","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"insurance_cover_with":{"kind":"text","label":"With","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"doc_beneficiary_certificate":{"kind":"check","label":"Beneficiary's certificate stating 1 set of non-negotiable documents has been sent to applicant"},"bencert_sent_by":{"kind":"checks","label":"Sent by","options":["faxed","mailed","couriered"],"hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]]},"bencert_days":{"kind":"text","label":"Within (days after shipment)","hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_commercial_invoice":{"kind":"check","label":"Signed commercial invoice"},"invoice_originals":{"kind":"text","label":"Commercial invoice: originals","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"invoice_copies":{"kind":"text","label":"Commercial invoice: copies","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_packing_list":{"kind":"check","label":"Packing list"},"packing_list_originals":{"kind":"text","label":"Packing list: originals","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"packing_list_copies":{"kind":"text","label":"Packing list: copies","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_weight_note":{"kind":"check","label":"Weight note"},"weight_note_originals":{"kind":"text","label":"Weight note: originals","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"weight_note_copies":{"kind":"text","label":"Weight note: copies","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_certificate_of_origin":{"kind":"check","label":"Certificate of origin"},"origin_originals":{"kind":"text","label":"Certificate of origin: originals","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_copies":{"kind":"text","label":"Certificate of origin: copies","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_country":{"kind":"text","label":"Showing country of origin as","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":1},"doc_other":{"kind":"check","label":"Other documents"},"other_documents_1":{"kind":"text","label":"Other documents","hasRule":1,"requiredIf":[["doc_other",["true"],0]],"activeIf":[["doc_other",["true"],0]],"check":1},"other_documents_2":{"kind":"text","label":"Other documents (line 2)","activeIf":[["doc_other",["true"],0]],"check":1},"goods_description":{"kind":"long","label":"Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","hasRule":1,"always":1,"check":1},"additional_conditions":{"kind":"long","label":"Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","check":1},"bank_charges":{"kind":"check","label":"All bank charges are for account of","hasRule":1,"always":1},"bank_charges_for":{"kind":"radio","label":"Charges for account of","hasRule":1,"requiredIf":[["bank_charges",["true"],0]],"activeIf":[["bank_charges",["true"],0]]},"confirmation":{"kind":"check","label":"Confirmation required"},"confirmation_charges":{"kind":"radio","label":"Confirmation charges","hasRule":1,"requiredIf":[["confirmation",["true"],0]],"activeIf":[["confirmation",["true"],0]]},"post_shipment_financing":{"kind":"check","label":"Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies"},"financing_type":{"kind":"radio","label":"Financing","hasRule":1,"requiredIf":[["post_shipment_financing",["true"],0]],"activeIf":[["post_shipment_financing",["true"],0]]},"financing_currency":{"kind":"select","label":"Foreign currency financing in (type of currency)","hasRule":1,"requiredIf":[["financing_type",["Foreign Currency Financing"],0]],"activeIf":[["financing_type",["Foreign Currency Financing"],0]]},"forward_contract_no":{"kind":"text","label":"Forward contract no","hasRule":1,"requiredIf":[["financing_type",["Apply Forward Contract"],0]],"activeIf":[["financing_type",["Apply Forward Contract"],0]],"check":1},"advance_payment":{"kind":"check","label":"We authorise you to debit DC amount in full from our account for advance payment"},"advance_payment_account":{"kind":"text","label":"Account no for advance payment","hasRule":1,"requiredIf":[["advance_payment",["true"],0]],"activeIf":[["advance_payment",["true"],0]],"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"issuance_charges_account":{"kind":"text","label":"Account no for DC issuance charges","hasRule":1,"always":1,"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"authorised_person":{"kind":"text","label":"Name and title of authorised person(s)","check":1}};
+function has(list, x) { for (var i = 0; i < list.length; i++) if (list[i] == x) return true; return false; }
+
+// The answer to question id, read from the PDF's fields.
+function val(id) {
+  var m = M[id], f, a = [], i;
+  if (m.kind == "checks") { for (i = 0; i < m.options.length; i++) { f = d.getField(id + "__" + i); if (f && f.value != "Off") a.push(m.options[i]); } return a; }
+  if (m.kind == "date" && shown(id)) return d.getField(id).valueAsString;
+  if (m.kind == "date" && d.getField(id + "__list")) { a = /^(\d\d) (\w{3}) (\d{4})$/.exec(d.getField(id + "__list").valueAsString);
+    return a ? a[1] + "/" + ("0" + ("JanFebMarAprMayJunJulAugSepOctNovDec".indexOf(a[2]) / 3 + 1)).slice(-2) + "/" + a[3] : ""; }
+  f = d.getField(id); if (!f) return "";
+  if (m.kind == "check") return f.value != "Off" ? "true" : "false";
+  return f.value == "Off" ? "" : String(f.value);
+}
+function shown(id) { var f = d.getField(id); return !!f && f.display != 1; } // 1 = display.hidden
+function empty(x) { return typeof x == "object" ? !x.length : x === ""; }
+
+// Does any of these rules hold?
+function any(rules) {
+  var i, j, x, hit;
+  for (i = 0; i < rules.length; i++) {
+    x = val(rules[i][0]); hit = false;
+    if (typeof x == "object") { for (j = 0; j < x.length; j++) if (has(rules[i][1], x[j])) hit = true; } else hit = has(rules[i][1], x);
+    if (rules[i][2] ? !hit && !empty(x) : hit) return true;
+  }
+  return false;
+}
+function mandatory(id) { var m = M[id]; return m.always ? true : any(m.requiredIf || []); }
+
+// What is wrong with a typed answer, or "".
+function wrong(id) {
+  var m = M[id], f = d.getField(id), s = m.kind == "date" ? val(id) : f ? f.valueAsString : "", x, k;
+  if (!m.check || !s) return "";
+  x = s.match(new RegExp("[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]", "g"));
+  if (x) { k = []; for (var i = 0; i < x.length; i++) if (!has(k, x[i])) k.push(x[i]); return "remove " + k.join(" ") + " (letters, digits and . , - / ( ) ' : ? + # & @ % only)"; }
+  if (m.kind == "date") { x = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s); k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? "" : "not a real date (DD/MM/YYYY)"; }
+  return m.check.length && !new RegExp(m.check[0]).test(s) ? m.check[1] : "";
+}
+
+// A real DD/MM/YYYY date as a Date, or null.
+function day(s) { var x = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s), k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? k : null; }
+function v(id) { return M[id] ? val(id) : ""; }
+
+// Checks across answers (the same as cross-checks in form/validate.ts). Skipped when a form doesn't have the fields.
+function across() {
+  var X = {}, A = day(v("application_date")), S = day(v("latest_shipment_date")), E = day(v("expiry_date")), a = v("amount"), pb = v("price_basis");
+  if (S && E && E < S) X.expiry_date = "is before the latest shipment date";
+  else if (A && E && E < A) X.expiry_date = "is before the application date";
+  if (A && S && S < A) X.latest_shipment_date = "is before the application date";
+  if (A && A.getTime() > new Date().getTime()) X.application_date = "is in the future";
+  if (/^[\d,]+(\.\d+)?$/.test(a) && !(Number(a.replace(/,/g, "")) > 0)) X.amount = "must be more than zero";
+  if (v("insurance_arrangement") && (pb == "CIF" || pb == "CIP")) X.insurance_arrangement = "is only for FOB/CFR/FCA/CPT, but price basis is " + pb + " (the beneficiary insures)";
+  return X;
+}
+
+// Clears a question's box, so an answer can't stay behind in a question that doesn't apply.
+function clear(f, kind) {
+  if (kind == "check" || kind == "checks" || kind == "radio") { if (f.value != "Off") f.value = "Off"; }
+  else if (f.type == "combobox" && /__list$/.test(f["name"])) { if (f.currentValueIndices != 0) f.currentValueIndices = 0; } // a date list: back to "Pick a date"
+  else if (f.value !== "" && f.value != null) f.value = "";
+}
+
+// Go through every question: work out its state, then colour (and lock) its boxes.
+var missing = [], bad = [], first = "", id, m, applies, required, problem, whatsWrong, names, i, f, X;
+try {
+X = across();
+for (id in M) {
+  m = M[id]; if (!m.hasRule && !m.check && !m.activeIf) continue;
+  applies = !m.activeIf || any(m.activeIf);
+  required = m.hasRule && applies ? mandatory(id) : false;
+  problem = required && (m.kind == "check" ? val(id) != "true" : empty(val(id)));
+  if (problem) missing.push(m.label);
+  whatsWrong = applies ? wrong(id) || X[id] || "" : ""; if (whatsWrong) { bad.push(m.label + ": " + whatsWrong); problem = true; }
+  names = [id]; if (m.kind == "checks") { names = []; for (i = 0; i < m.options.length; i++) names.push(id + "__" + i); }
+  if (m.kind == "date" && !shown(id) && d.getField(id + "__list")) names = [id + "__list"];
+  if (problem && !first) first = names[0];
+  for (i = 0; i < names.length; i++) {
+    f = d.getField(names[i]); if (!f) continue;
+    if (m.hasRule && m.kind != "checks") f.required = !!(required && problem); // only while blank or wrong: Acrobat outlines Required boxes in red even when filled
+    if (m.activeIf) f.readonly = !applies;                                                   // locked until it applies
+    if (!applies) { clear(f, m.kind); f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; } // grey, cleared
+    f.lineWidth = problem || !m.underlined ? 1 : 0;
+    f.strokeColor = problem ? color.red : m.underlined ? color.transparent : color.black;    // red when blank or wrong
+    f.fillColor = problem ? ["RGB", 1, 0.88, 0.88] : m.underlined ? color.transparent : color.white;
+  }
+}
+} catch (e) { console.println("lcRules: " + e); }
+missing.bad = bad;
+missing.first = first; // the field of the first problem, for "Check form" to go to
+return missing;
+}
+
+// Acrobat only: show each date's calendar box and hide its drop-down list.
+function lcDates(d) {
+  var D = ["application_date","latest_shipment_date","expiry_date","draft_date"], i, t, p;
+  for (i = 0; i < D.length; i++) { t = d.getField(D[i]); if (!t) continue; t.display = display.visible;
+    p = d.getField(D[i] + "__list"); if (p) p.display = display.hidden; }
+}
+// On opening in Acrobat: show the calendars, and set every box's colour and lock.
+if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lcDates(this); lcRules(this); }
+function lcPayload(d) {
+var G = {"bencert_sent_by": ["faxed","mailed","couriered"]}, LONG = ["goods_description","additional_conditions"], CAP = 2300;
+var data = {}, i, n, f, k, v, g, m, out, cut = [], ok = true, t = new Date();
+for (i = 0; i < d.numFields; i++) {
+  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n)) continue;
+  f = d.getField(n); if (!f || f.type == "button" || f.type == "signature") continue;
+  g = /^(.+)__(\d+)$/.exec(n);
+  if (g && G[g[1]]) { if (f.value != "Off") { if (!data[g[1]]) data[g[1]] = []; data[g[1]].push(G[g[1]][+g[2]]); } continue; }
+  if (f.type == "checkbox") { if (f.value != "Off") data[n] = true; continue; }
+  v = f.type == "radiobutton" ? (f.value == "Off" ? "" : String(f.value)) : String(f.valueAsString).replace(/^\s+|\s+$/g, "");
+  if (v !== "") data[n] = v;
+}
+if (typeof lcRules == "function") { m = lcRules(d); ok = !m.length && !(m.bad || []).length; }
+function pad(x) { return ("0" + x).slice(-2); }
+out = {"form": "LC-01", "version": "1.0", "saved": t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()) + "T" + pad(t.getHours()) + ":" + pad(t.getMinutes()), "complete": ok, "data": data};
+// A QR code holds about 2,300 characters: if the answers are longer, shorten the two long paragraphs and say so.
+for (i = 0; i < LONG.length && JSON.stringify(out).length > CAP; i++) {
+  k = LONG[i]; if (!data[k]) continue;
+  cut.push(k); out.truncated = cut;
+  v = JSON.stringify(out).length - CAP + 3;
+  data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
+}
+// Padded with spaces to the full length: the QR code is then always the same size (version 40) and fills its frame.
+v = JSON.stringify(out); while (v.length < CAP) v += " ";
+return v;
+}
+---------------- END Document script lcRules ----------------
+
+== STEP 1.2: CHECK FORM AND RESET FORM (copy them) ==
+  - In B they are two push-button fields, "__check_form" and "__reset_form", each with one widget at the top right
+    of EVERY page (header line).
+  - In A, delete any existing Check form / Reset form buttons (whatever their names), then for each page of A add a
+    widget for each of the two fields, copied from B's widget on the same page number:
+      /Rect (same position), /F (copy exactly from B: 0 = shown on screen, not printed),
+      /MK (black background /BG and border /BC, caption /CA), /DA (white text: ends in "1 1 1 rg" or "1 g"),
+      /AP (the normal appearance stream with the caption: copy the stream), and /A = << /S /JavaScript /JS (...) >>
+      with the text below (B's copy has no action, so take it from here):
+---------------- BEGIN Check form ----------------
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("This form is not ready to send. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them before you send the form.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else app.alert("All mandatory questions are answered and every answer is in the right format. You can save the form and send it.", 3);
+---------------- END Check form ----------------
+---------------- BEGIN Reset form ----------------
+if (app.alert("Are you sure you want to reset the form? All your answers will be cleared.", 2, 2) == 4) {
+this.resetForm(); if (typeof lcDates == "function") lcDates(this); if (typeof lcRules == "function") lcRules(this); }
+---------------- END Reset form ----------------
+    The field dictionaries: /FT /Btn, /Ff 65536 (push-button), /T "__check_form" / "__reset_form"; every widget in
+    the field's /Kids and in its page's /Annots; both fields in /AcroForm /Fields.
+  - Nothing may sit on top of them (no other annotation over their /Rect).
+  - Make sure /AcroForm /DR /Font has the font named in the buttons' /DA (copy B's /DR /Font entries if missing).
+
+== STEP 1.3: PREVIOUS PAGE AND NEXT PAGE (copy them) ==
+  - In B these are NOT buttons: they are the drawn texts "< Previous page" / "Next page >" in the footer with a
+    plain /Link annotation over each, whose action is /S /GoTo to the previous / next page. They work even with
+    JavaScript off.
+  - In A, delete any existing Previous / Next buttons or links, then on each page add /Link annotations like B's:
+    same /Rect as B's on that page number, /Border [0 0 0], /A << /S /GoTo /D [<page object> /XYZ null null null] >>
+    pointing to A's OWN previous / next page objects (not B's). Page 1 has no Previous, the last page no Next.
+    If A's footer text sits in a different place, put the link /Rect over A's footer text instead.
+
+== STEP 1.4: LEAVE EVERYTHING ELSE ==
+Do not touch: the answer fields and their actions, the date boxes, the typing filters, "__checks" and the
+calculation order, the starting answers. Do not add the QR code page yet (that is step 2).
+
+== CHECKLIST (on the final file; mark EVERY item PASS or FAIL; fix any FAIL and re-run ALL) ==
+  1. Exactly one document script "lcRules"; its text equals the prompt's character for character (show its length:
+     23,020).
+  2. "__check_form" and "__reset_form": push-buttons, one widget per page at the top right, /MK /BG black with the
+     caption, /DA white, an /AP with the caption, /A equal to the prompt's text, /F as in B, nothing on top.
+  3. Rendered, every button shows its WHITE caption on a black box (not a plain black box).
+  4. Previous / Next: a /Link with /GoTo on each page (none Previous on page 1, none Next on the last page), each
+     pointing to A's own neighbouring page.
+  5. Behaviour (run the scripts in code against a stand-in for Acrobat): Check form on the blank form lists
+     the missing mandatory answers; Reset form asks first, then clears; lcRules turns the blank mandatory boxes red.
+  6. Every answer field, its name and its actions are unchanged; every page's drawing is unchanged (compare
+     renders of A before and after: only the buttons' area may differ).
+Reply with: what you deleted, what you copied (with the script lengths), the PASS / FAIL list 1 to 6, and LAST the
+PDF file. Tell me honestly about anything that fails or could not be tested.
