@@ -167,6 +167,11 @@ describe("the JavaScript version", async () => {
     const prompt = readFileSync("public/lc-ai-confirm-print-prompt.txt", "utf8");
     const block = (name: string) => prompt.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
     expect([block("Generate QR Code"), block("Print Form")]).toEqual([generateQr, printForm]);
+    // The from-scratch prompt carries the same: the document script (lcRules then lcPayload) and both buttons.
+    const full = readFileSync("public/lc-ai-complete-build-prompt.txt", "utf8");
+    const of = (name: string) => full.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
+    expect(`${of("lcRules")}\n${of("lcPayload")}`).toBe(library(doc));
+    expect([of("Generate QR Code"), of("Print Form")]).toEqual([generateQr, printForm]);
     // A stand-in for Acrobat: the QR field, the answers lcPayload reports, and what happens.
     const run = (code: string, qr: { value: string }, missing: string[], answers: string) => {
       const log: string[] = [];
