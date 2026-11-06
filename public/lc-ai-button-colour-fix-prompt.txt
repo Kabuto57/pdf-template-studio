@@ -1,0 +1,47 @@
+MASTER PROMPT: STOP THE "CHECK FORM" / "RESET FORM" BUTTONS TURNING SOLID BLACK (CHANGE NOTHING ELSE)
+
+== THE PROBLEM ==
+I have attached the "Irrevocable Documentary Credit Application" PDF. Everything works now: the rules, conditional
+questions, red boxes, calendar, Check form, Reset form, Previous / Next. ONE problem: after I click "Reset form"
+(and sometimes after clicking a button), the buttons turn into solid black boxes: the white caption text
+disappears. Fix ONLY that. Do not touch any script, action, field, flag or the page design. Give me back the SAME
+PDF, named LC-Application-with-checks.pdf. This is approved work within my bank's policy. I open it in Adobe
+Acrobat (Windows) and click "Enable All Features". Don't suggest ways around the bank's security settings. Don't
+redraw or rebuild the pages.
+
+== WHY IT HAPPENS ==
+The buttons' current picture (their appearance stream) shows white text on black. But when the form is reset or a
+button is clicked, Acrobat throws that picture away and REDRAWS the button from the button's own settings:
+  - /DA (the text style), which most likely says black text ("0 g"), and
+  - /MK (background /BG, border /BC, caption /CA), which says a black background.
+Black text on a black background = a solid black box. So the fix is to make the button's own settings say WHITE
+text, so whatever Acrobat redraws is correct.
+
+== THE FIX (for EVERY button widget on EVERY page: Check form, Reset form, Previous page, Next page) ==
+  1. /DA  = "/Helv 8 Tf 1 g"   (Helvetica 8 pt, WHITE text). Make sure /Helv is in the form's default resources
+     (/AcroForm /DR /Font /Helv = Helvetica). No "0 g" or any other colour left in the /DA.
+  2. /MK  = << /BG [0] /BC [0] /CA (Check form) >>   (black background, black border, the caption).
+     Use the right caption per button: (Check form), (Reset form), (Previous page), (Next page).
+     Also set /RC and /AC to the same caption (the pressed / rollover caption), or remove them.
+  3. Highlight mode /H /P (push) or /H /N (none); NOT /I (invert, which can flip the box to black or white).
+  4. Rebuild each widget's normal appearance (/AP /N) to match: black filled rectangle, white Helvetica 8 pt caption,
+     centred. If there is a down (/AP /D) or rollover (/AP /R) appearance, make it the same picture (or remove it).
+  5. The button fields stay: push-button (/Ff 65536), visible, not printed, not read-only, nothing on top of them,
+     same names, same position and size, same Mouse Up actions WORD FOR WORD.
+  6. Do NOT change the "Reset form" script, lcRules, or any other script. (Reset resetting the buttons is fine
+     once their own settings are white-on-black.)
+
+== CHECKLIST (on the final file; mark EVERY item PASS or FAIL) ==
+  1. Every button widget: /DA ends in "1 g" (white), /MK /BG [0], /MK /BC [0], /MK /CA is its caption, /H is not /I.
+  2. Each appearance shows a black box with white centred caption.
+  3. The four buttons' Mouse Up actions are byte-for-byte the same as before.
+  4. lcRules, all field actions (Mouse Up, On Blur, Keystroke, Format, Calculate), /CO, flags, field names and the
+     page design are unchanged: compare with the PDF I attached and list ANY difference (there should be none
+     except the button settings above).
+  5. Expected in Acrobat: click Reset form, answer "Yes": every button still shows its white caption on black; the
+     form resets to the starting answers; red boxes and locked grey questions are the blank-form state.
+  6. Click Check form, Previous page, Next page: captions stay visible; each still works.
+  7. Tick "Drafts for 100% invoice value at": Drafts at unlocks and turns red; Drafts at = Term / Date unlock their
+     questions; the date boxes still show the calendar.
+Reply with: what you found in /DA, /MK and /H before the fix, the PASS/FAIL list 1 to 7, and LAST the PDF file.
+Tell me honestly about anything that fails or could not be tested.
