@@ -2,9 +2,21 @@
  {
   "code": "LC",
   "template": {
-   "title": "Irrevocable Documentary Credit (LC)",
+   "title": "Irrevocable Documentary Credit Application",
    "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
    "sections": [
+    {
+     "title": "Application",
+     "fields": [
+      {
+       "id": "application_date",
+       "label": "Date",
+       "kind": "date",
+       "half": true,
+       "required": true
+      }
+     ]
+    },
     {
      "title": "Mode of Advising",
      "fields": [
@@ -57,6 +69,13 @@
        "max": 35
       },
       {
+       "id": "applicant_address_4",
+       "label": "Applicant address (line 4)",
+       "kind": "text",
+       "half": false,
+       "max": 35
+      },
+      {
        "id": "contact_name",
        "label": "Contact party for this application & confirmation of FX rate: Name",
        "kind": "text",
@@ -70,19 +89,22 @@
        "kind": "text",
        "half": true,
        "required": true,
-       "max": 15
+       "max": 15,
+       "format": "phone"
       },
       {
        "id": "contact_fax",
        "label": "Contact party: Fax no",
        "kind": "text",
        "half": true,
-       "max": 15
+       "max": 15,
+       "format": "phone"
       }
      ]
     },
     {
-     "title": "For Bank Use",
+     "title": "For Bank Use Only",
+     "bankOnly": true,
      "fields": [
       {
        "id": "dc_no",
@@ -198,6 +220,13 @@
        "max": 35
       },
       {
+       "id": "beneficiary_address_4",
+       "label": "Beneficiary's address (line 4)",
+       "kind": "text",
+       "half": false,
+       "max": 35
+      },
+      {
        "id": "beneficiary_contact",
        "label": "Contact person",
        "kind": "text",
@@ -209,14 +238,16 @@
        "label": "Tel no",
        "kind": "text",
        "half": true,
-       "max": 15
+       "max": 15,
+       "format": "phone"
       },
       {
        "id": "beneficiary_fax",
        "label": "Fax no",
        "kind": "text",
        "half": true,
-       "max": 15
+       "max": 15,
+       "format": "phone"
       }
      ]
     },
@@ -541,7 +572,7 @@
        "id": "shipment_from_place_2",
        "label": "Shipment from: place (line 2)",
        "kind": "text",
-       "half": true
+       "half": false
       },
       {
        "id": "shipment_to",
@@ -575,7 +606,7 @@
        "id": "shipment_to_place_2",
        "label": "Shipment to: place (line 2)",
        "kind": "text",
-       "half": true
+       "half": false
       },
       {
        "id": "latest_shipment_date",
@@ -649,8 +680,24 @@
      "fields": [
       {
        "id": "drafts",
-       "label": "Drafts for 100% invoice value at",
+       "label": "Drafts for the percentage of invoice value below, at",
        "kind": "check"
+      },
+      {
+       "id": "drafts_percent",
+       "label": "Percentage of invoice value (%)",
+       "kind": "text",
+       "half": true,
+       "requiredIf": [
+        {
+         "field": "drafts",
+         "values": [
+          "true"
+         ]
+        }
+       ],
+       "format": "number",
+       "max": 3
       },
       {
        "id": "drafts_at",
@@ -933,6 +980,14 @@
         "Covered by ultimate buyer",
         "Please arrange insurance on our behalf",
         "Insurance covered by applicant under open Cover No."
+       ],
+       "activeIf": [
+        {
+         "field": "doc_insurance",
+         "values": [
+          "true"
+         ]
+        }
        ]
       },
       {
@@ -1191,7 +1246,15 @@
        "label": "Other documents (line 2)",
        "kind": "text",
        "half": false,
-       "max": 70
+       "max": 70,
+       "activeIf": [
+        {
+         "field": "doc_other",
+         "values": [
+          "true"
+         ]
+        }
+       ]
       }
      ]
     },
@@ -1245,11 +1308,6 @@
        ]
       },
       {
-       "id": "pay_at_counters",
-       "label": "Pay upon receipt of documents at the Bank's counters in Singapore (if not checked, a Reimbursing Bank may be nominated)",
-       "kind": "check"
-      },
-      {
        "id": "confirmation",
        "label": "Confirmation required",
        "kind": "check"
@@ -1297,9 +1355,170 @@
       {
        "id": "financing_currency",
        "label": "Foreign currency financing in (type of currency)",
-       "kind": "text",
+       "kind": "select",
        "half": true,
-       "max": 20,
+       "options": [
+        "SGD",
+        "USD",
+        "EUR",
+        "GBP",
+        "JPY",
+        "CNY",
+        "HKD",
+        "AUD",
+        "NZD",
+        "CAD",
+        "CHF",
+        "MYR",
+        "IDR",
+        "THB",
+        "INR",
+        "KRW",
+        "TWD",
+        "PHP",
+        "VND",
+        "AED",
+        "SAR",
+        "AFN",
+        "ALL",
+        "AMD",
+        "ANG",
+        "AOA",
+        "ARS",
+        "AWG",
+        "AZN",
+        "BAM",
+        "BBD",
+        "BDT",
+        "BGN",
+        "BHD",
+        "BIF",
+        "BMD",
+        "BND",
+        "BOB",
+        "BRL",
+        "BSD",
+        "BTN",
+        "BWP",
+        "BYN",
+        "BZD",
+        "CDF",
+        "CLP",
+        "COP",
+        "CRC",
+        "CUC",
+        "CUP",
+        "CVE",
+        "CZK",
+        "DJF",
+        "DKK",
+        "DOP",
+        "DZD",
+        "EGP",
+        "ERN",
+        "ETB",
+        "FJD",
+        "FKP",
+        "GEL",
+        "GHS",
+        "GIP",
+        "GMD",
+        "GNF",
+        "GTQ",
+        "GYD",
+        "HNL",
+        "HRK",
+        "HTG",
+        "HUF",
+        "ILS",
+        "IQD",
+        "IRR",
+        "ISK",
+        "JMD",
+        "JOD",
+        "KES",
+        "KGS",
+        "KHR",
+        "KMF",
+        "KPW",
+        "KWD",
+        "KYD",
+        "KZT",
+        "LAK",
+        "LBP",
+        "LKR",
+        "LRD",
+        "LSL",
+        "LYD",
+        "MAD",
+        "MDL",
+        "MGA",
+        "MKD",
+        "MMK",
+        "MNT",
+        "MOP",
+        "MRU",
+        "MUR",
+        "MVR",
+        "MWK",
+        "MXN",
+        "MZN",
+        "NAD",
+        "NGN",
+        "NIO",
+        "NOK",
+        "NPR",
+        "OMR",
+        "PAB",
+        "PEN",
+        "PGK",
+        "PKR",
+        "PLN",
+        "PYG",
+        "QAR",
+        "RON",
+        "RSD",
+        "RUB",
+        "RWF",
+        "SBD",
+        "SCR",
+        "SDG",
+        "SEK",
+        "SHP",
+        "SLE",
+        "SOS",
+        "SRD",
+        "SSP",
+        "STN",
+        "SVC",
+        "SYP",
+        "SZL",
+        "TJS",
+        "TMT",
+        "TND",
+        "TOP",
+        "TRY",
+        "TTD",
+        "TZS",
+        "UAH",
+        "UGX",
+        "UYU",
+        "UZS",
+        "VES",
+        "VUV",
+        "WST",
+        "XAF",
+        "XCD",
+        "XCG",
+        "XDR",
+        "XOF",
+        "XPF",
+        "XSU",
+        "YER",
+        "ZAR",
+        "ZMW",
+        "ZWG"
+       ],
        "requiredIf": [
         {
          "field": "financing_type",
@@ -1342,12 +1561,8 @@
          ]
         }
        ],
-       "max": 20
-      },
-      {
-       "id": "tt_reimbursement",
-       "label": "T/T reimbursement allowed",
-       "kind": "check"
+       "max": 20,
+       "format": "account"
       },
       {
        "id": "debit_issuance_charges",
@@ -1360,22 +1575,27 @@
        "kind": "text",
        "half": true,
        "required": true,
-       "max": 17
+       "max": 17,
+       "format": "account"
       }
      ]
     },
     {
-     "title": "Signature",
+     "title": "Declaration and Signature",
+     "signoff": true,
+     "note": "We request you to issue an irrevocable documentary credit on the terms above. We confirm that the details given are true and complete, and agree that the credit is subject to the Uniform Customs and Practice for Documentary Credits (UCP 600) and to the Bank's terms and conditions for documentary credits.",
      "fields": [
       {
        "id": "authorised_person",
-       "label": "Authorised person(s) & company stamp",
+       "label": "Name and title of authorised person(s)",
        "kind": "text",
        "half": false
       }
      ]
     }
-   ]
+   ],
+   "issuer": "Demo Bank · Trade Services",
+   "formCode": "Form LC-01 · v1.0 · Nov 2026"
   },
   "defaults": {
    "mode_of_advising": "Full Swift",

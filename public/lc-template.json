@@ -677,8 +677,24 @@
       "fields": [
         {
           "id": "drafts",
-          "label": "Drafts for 100% invoice value at",
+          "label": "Drafts for the percentage of invoice value below, at",
           "kind": "check"
+        },
+        {
+          "id": "drafts_percent",
+          "label": "Percentage of invoice value (%)",
+          "kind": "text",
+          "half": true,
+          "requiredIf": [
+            {
+              "field": "drafts",
+              "values": [
+                "true"
+              ]
+            }
+          ],
+          "format": "number",
+          "max": 3
         },
         {
           "id": "drafts_at",

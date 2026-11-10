@@ -971,8 +971,28 @@
       ]
     },
     "drafts": {
-      "title": "Drafts for 100% invoice value at",
+      "title": "Drafts for the percentage of invoice value below, at",
       "type": "boolean"
+    },
+    "drafts_percent": {
+      "title": "Percentage of invoice value (%)",
+      "type": "string",
+      "allOf": [
+        {
+          "pattern": "^$|^\\d+$",
+          "description": "should be a whole number"
+        },
+        {
+          "not": {
+            "pattern": "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]"
+          },
+          "description": "has characters the bank's SWIFT messages can't carry"
+        },
+        {
+          "maxLength": 3,
+          "description": "is longer than 3 characters"
+        }
+      ]
     },
     "drafts_at": {
       "title": "Drafts at",
@@ -2135,6 +2155,55 @@
       },
       "then": {
         "required": [
+          "drafts_percent"
+        ],
+        "properties": {
+          "drafts_percent": {
+            "minLength": 1
+          }
+        },
+        "description": "is mandatory because Drafts for the percentage of invoice value below, at is ticked"
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": [
+            "drafts"
+          ],
+          "properties": {
+            "drafts": {
+              "enum": [
+                true
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "drafts_percent": {
+            "maxLength": 0
+          }
+        },
+        "description": "only applies when Drafts for the percentage of invoice value below, at is ticked"
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "drafts"
+        ],
+        "properties": {
+          "drafts": {
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
           "drafts_at"
         ],
         "properties": {
@@ -2142,7 +2211,7 @@
             "minLength": 1
           }
         },
-        "description": "is mandatory because Drafts for 100% invoice value at is ticked"
+        "description": "is mandatory because Drafts for the percentage of invoice value below, at is ticked"
       }
     },
     {
@@ -2166,7 +2235,7 @@
             "maxLength": 0
           }
         },
-        "description": "only applies when Drafts for 100% invoice value at is ticked"
+        "description": "only applies when Drafts for the percentage of invoice value below, at is ticked"
       }
     },
     {

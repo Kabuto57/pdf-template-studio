@@ -171,6 +171,9 @@ describe("the JavaScript version", async () => {
     const fx = (name: string) => fix.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
     expect([fx("lcQrMatrix and lcDrawQr"), fx("Generate QR Code")]).toEqual([qrScript, generateQr]);
     expect([of("Generate QR Code"), of("Print Form")]).toEqual([generateQr, printForm]);
+    // ... and the drafts-percentage update carries the same lcRules.
+    const drafts = readFileSync("public/lc-ai-drafts-percent-prompt.txt", "utf8");
+    expect(drafts.split("---------------- BEGIN lcRules ----------------\n")[1].split("\n---------------- END lcRules")[0]).toBe(of("lcRules"));
     // A stand-in for Acrobat: the QR field, the answers lcPayload reports, and what happens.
     const run = (code: string, qr: { value: string }, missing: string[], answers: string) => {
       const log: string[] = [];

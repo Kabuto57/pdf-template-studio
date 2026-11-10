@@ -101,6 +101,7 @@ const FIELDS: Record<string, string | string[]> = {
   [P + "subfrmDrafts.subfrmBtoB.txtIssuBy"]: "master_dc_issued_by",
   [P + "subfrmDrafts.subfrmBtoB.chkBTB"]: "back_to_back",
   [P + "subfrmDrafts.sufrmDraft.chkDraft"]: "drafts",
+  [P + "subfrmDrafts.sufrmDraft.txtPercent"]: "drafts_percent", // ours: the bank form prints a fixed 100%
   [P + "subfrmDrafts.sufrmDraft.radDrafts"]: "drafts_at",
   [P + "subfrmDrafts.sufrmDraft.txtTerm"]: "term_days",
   [P + "subfrmDrafts.sufrmDraft.txtDaysAfter"]: "term_after",

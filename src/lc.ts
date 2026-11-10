@@ -101,7 +101,8 @@ const sections: Section[] = [
     text("master_dc_issued_by", "Issued by", { requiredIf: ticked("back_to_back"), max: 35 }),
   ] },
   { title: "Drafts", fields: [
-    tick("drafts", "Drafts for 100% invoice value at"),
+    tick("drafts", "Drafts for the percentage of invoice value below, at"),
+    text("drafts_percent", "Percentage of invoice value (%)", { requiredIf: ticked("drafts"), format: "number", max: 3 }),
     pick("drafts_at", "Drafts at", ["Sight", "Term", "Date"], { requiredIf: ticked("drafts") }),
     text("term_days", "Term: days", { requiredIf: when("drafts_at", "Term"), format: "number" }),
     text("term_after", "days after", { requiredIf: when("drafts_at", "Term"), max: 35 }),
@@ -206,7 +207,7 @@ export const LC_SAMPLE: Values = {
   shipment_from: "Port of Loading / Airport of Departure", shipment_from_place: "Shanghai, China",
   shipment_to: "Port of Discharge / Airport of Destination", shipment_to_place: "Singapore",
   latest_shipment_date: "15/12/2026", expiry_date: "31/12/2026", presentation_days: "21",
-  drafts: true, drafts_at: "Term", term_days: "90", term_after: "bill of lading date", term_prepay: "You may not prepay the acceptance of this term LC",
+  drafts: true, drafts_percent: "100", drafts_at: "Term", term_days: "90", term_after: "bill of lading date", term_prepay: "You may not prepay the acceptance of this term LC",
   doc_bill_of_lading: true, bl_made_out_to: "order of the Bank", bl_freight: "Collect", bl_notify_party: "TAN ENGINEERING PTE LTD, 12 Marina Boulevard, Singapore 018982",
   doc_insurance: true, insurance_arrangement: "Insurance covered by applicant under open Cover No.", insurance_cover_no: "OC-2026-0457", insurance_cover_with: "Example Insurance Pte Ltd",
   doc_commercial_invoice: true, invoice_originals: "3", invoice_copies: "3",
