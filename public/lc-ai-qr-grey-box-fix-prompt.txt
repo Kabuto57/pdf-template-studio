@@ -1,0 +1,163 @@
+MASTER PROMPT: THE QR BOX IS STILL A PLAIN GREY BOX ON MY WORK LAPTOP. FIND WHY, FIX IT, CHANGE NOTHING ELSE
+
+== THE PROBLEM ==
+I have attached LC-Application-with-checks.pdf, which you built. On my work laptop (Adobe Acrobat, Windows, "Enable All
+Features" clicked) I fill in the form and press "Generate QR Code": the 450 x 450 pt QR box on the last page stays one
+flat grey square. No black squares appear anywhere. The work laptop's Acrobat does NOT draw barcode fields (Acrobat's
+barcode feature is missing there), so a field with /PMD shows exactly this: a grey box.
+The QR code must be drawn as 177 ordinary text boxes, one per row of the code, filled with black squares (the
+ZapfDingbats character "n"). The form's own JavaScript (lcQrMatrix + lcDrawQr) works out the rows. Ordinary text
+boxes display on every Acrobat. This is approved work within my bank's policy. Don't suggest ways around the bank's
+security settings. Use pikepdf to read, edit and save (not PyMuPDF for saving). Give me back the same PDF, named
+LC-Application-with-checks.pdf.
+
+== PART A: INSPECT FIRST, REPORT, CHANGE NOTHING YET ==
+Open the attached PDF with pikepdf and report each item below as FOUND / NOT FOUND, with the value you saw:
+  A1. Every field or widget whose /Rect overlaps the QR frame on the last page (x 72.64-522.64, y 287.89-737.89):
+      its name, /FT, /F, /Ff, whether it has /PMD or /DataPrep, its /MK (/BG, /BC), and whether its /AP draws a fill
+      (an "re f" or "rg" in the stream). List them in the order they appear in the page's /Annots.
+  A2. "__qr": does it still have /PMD or /DataPrep? Is its widget visible (/F not 2) and on the frame?
+  A3. How many fields "__qr_0" ... "__qr_176" exist (expected 177), and for __qr_0: /Ff, /MaxLen, the field's /DA,
+      whether the widget has its own /DA, /MK, /F, /Rect.
+  A4. /AcroForm /DR /Font: does it contain /ZaDb with /BaseFont /ZapfDingbats?
+  A5. The document script "lcRules": its length, and whether it contains "function lcQrMatrix(" and
+      "function lcDrawQr(".
+  A6. The "__generate_qr" widget's /A /JS: does it contain "lcDrawQr(this, q.value)"?
+  A7. The last page's content stream: is the QR frame drawn as an outline only ("re S", grey stroke), or as a grey
+      FILLED rectangle ("re f")? Quote the operators.
+  A8. /AcroForm /NeedAppearances: present? value?
+Then say which of these explains the grey box (more than one may).
+
+== PART B: FIX (apply ALL of these, whatever Part A found) ==
+B1. "__qr" keeps its name and holds the JSON, but must be invisible and must not be a barcode: delete /PMD and
+    /DataPrep from the field AND its widget, remove /MK and /AP from its widget, set /Ff 0, widget /F 2 (hidden),
+    widget /Rect [-20 -20 -19 -19] (off the page).
+B2. No other field or widget may cover the frame except the 177 rows: remove any other widget on the frame (from
+    the page's /Annots AND from /AcroForm /Fields), unless it is "__generate_qr" or "__print_form" (those sit under
+    the frame, not on it).
+B3. The 177 row fields "__qr_0" ... "__qr_176" (row 0 at the top). If any are missing or different, delete all of
+    them and create them again, exactly:
+      field:  /FT /Tx  /T (__qr_N)  /Ff 16777217 (comb + read-only)  /MaxLen 177  /DA (/ZaDb 3.515 Tf 0 g)
+      widget: /Type /Annot /Subtype /Widget /P <last page> /F 4 /BS << /W 0 >>
+              NO /DA on the widget (it uses the field's), NO /MK (no background, no border), NO /AP
+              /Rect [82.3697  yN  512.9102  yN+2.4324]   with   yN = 737.89 - (5 + N) * 2.432432
+      (field and widget may be one merged dictionary; then put /DA on it, still no /MK and no /AP)
+    Each in /AcroForm /Fields and in the last page's /Annots, AFTER every other annotation on that page (so they are
+    drawn on top). Not in /AcroForm /CO, no actions.
+B4. /AcroForm /DR /Font must have /ZaDb << /Type /Font /Subtype /Type1 /BaseFont /ZapfDingbats >> and /Helv.
+    Do not set /NeedAppearances (remove it if you added it).
+B5. The frame on the last page is an OUTLINE only: if the page content fills the frame with grey ("re f" or
+    "re B" with a grey fill), change only that operator so it strokes (grey 0.5 pt line, white inside). Change
+    nothing else in the page drawing.
+B6. If the "lcRules" script does not contain "function lcQrMatrix(" and "function lcDrawQr(", append the text
+    between the BEGIN / END lines below to the END of "lcRules", on a new line, character for character (no second
+    document script). If it already contains them, compare them with the text below and replace them if different.
+---------------- BEGIN lcQrMatrix and lcDrawQr ----------------
+// QR code (version 40, error correction M, byte mode, mask 0) drawn without Acrobat's barcode feature:
+// one comb text field per row ("__qr_0" ... "__qr_176"), dark modules as ZapfDingbats "n" (a black square).
+function lcQrMatrix(text) {
+  var N = 177, i, j, x, y, m = [], f = [], bytes = [], s = unescape(encodeURIComponent(text));
+  for (i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i) & 255);
+  for (y = 0; y < N; y++) { m.push([]); f.push([]); for (x = 0; x < N; x++) { m[y].push(false); f[y].push(false); } }
+  function set(x, y, dark) { m[y][x] = dark; f[y][x] = true; }
+  function mul(a, b) { var z = 0; for (var k = 7; k >= 0; k--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((b >>> k) & 1) * a; } return z; }
+  // Function patterns: timing, finders, alignment, format area, version, dark module.
+  for (i = 0; i < N; i++) { set(6, i, i % 2 == 0); set(i, 6, i % 2 == 0); }
+  function finder(cx, cy) { for (var dy = -4; dy <= 4; dy++) for (var dx = -4; dx <= 4; dx++) {
+    var d = Math.max(Math.abs(dx), Math.abs(dy)), xx = cx + dx, yy = cy + dy;
+    if (xx >= 0 && xx < N && yy >= 0 && yy < N) set(xx, yy, d != 2 && d != 4); } }
+  finder(3, 3); finder(N - 4, 3); finder(3, N - 4);
+  var A = [6, 30, 58, 86, 114, 142, 170];
+  for (i = 0; i < A.length; i++) for (j = 0; j < A.length; j++) {
+    if ((i == 0 && j == 0) || (i == 0 && j == A.length - 1) || (i == A.length - 1 && j == 0)) continue;
+    for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) set(A[i] + dx, A[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) != 1);
+  }
+  var rem = 0, fmt; for (i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+  fmt = ((0 << 10) | rem) ^ 0x5412; // error correction M (00), mask 0
+  function bit(v, k) { return ((v >>> k) & 1) != 0; }
+  for (i = 0; i <= 5; i++) set(8, i, bit(fmt, i));
+  set(8, 7, bit(fmt, 6)); set(8, 8, bit(fmt, 7)); set(7, 8, bit(fmt, 8));
+  for (i = 9; i < 15; i++) set(14 - i, 8, bit(fmt, i));
+  for (i = 0; i < 8; i++) set(N - 1 - i, 8, bit(fmt, i));
+  for (i = 8; i < 15; i++) set(8, N - 15 + i, bit(fmt, i));
+  set(8, N - 8, true);
+  rem = 40; for (i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+  var ver = (40 << 12) | rem;
+  for (i = 0; i < 18; i++) { var a = N - 11 + i % 3, b = Math.floor(i / 3); set(a, b, bit(ver, i)); set(b, a, bit(ver, i)); }
+  // Data: mode 0100, 16-bit length, the bytes, terminator, padding to 2,334 data codewords.
+  var bits = [], cap = 2334 * 8;
+  function put(v, n) { for (var k = n - 1; k >= 0; k--) bits.push((v >>> k) & 1); }
+  put(4, 4); put(bytes.length, 16); for (i = 0; i < bytes.length; i++) put(bytes[i], 8);
+  put(0, Math.min(4, cap - bits.length)); while (bits.length % 8) bits.push(0);
+  var data = []; for (i = 0; i < bits.length; i += 8) { var v = 0; for (j = 0; j < 8; j++) v = (v << 1) | bits[i + j]; data.push(v); }
+  for (i = 0; data.length < 2334; i++) data.push(i % 2 ? 0x11 : 0xEC);
+  // Reed-Solomon: 49 blocks (18 of 47 + 31 of 48 data codewords), 28 error-correction codewords each.
+  var div = [], root = 1; for (i = 0; i < 27; i++) div.push(0); div.push(1);
+  for (i = 0; i < 28; i++) { for (j = 0; j < 28; j++) { div[j] = mul(div[j], root); if (j + 1 < 28) div[j] ^= div[j + 1]; } root = mul(root, 2); }
+  var blocks = [], k = 0;
+  for (i = 0; i < 49; i++) {
+    var len = i < 18 ? 47 : 48, dat = data.slice(k, k + len), ecc = []; k += len;
+    for (j = 0; j < 28; j++) ecc.push(0);
+    for (j = 0; j < dat.length; j++) { var fct = dat[j] ^ ecc.shift(); ecc.push(0); for (var t = 0; t < 28; t++) ecc[t] ^= mul(div[t], fct); }
+    if (i < 18) dat.push(-1);
+    blocks.push(dat.concat(ecc));
+  }
+  var all = [];
+  for (i = 0; i < blocks[0].length; i++) for (j = 0; j < 49; j++) if (blocks[j][i] != -1) all.push(blocks[j][i]);
+  // Place the codewords in the zigzag, then mask 0 ((x + y) even flips).
+  var n = 0;
+  for (var right = N - 1; right >= 1; right -= 2) {
+    if (right == 6) right = 5;
+    for (var vert = 0; vert < N; vert++) for (j = 0; j < 2; j++) {
+      x = right - j; var up = ((right + 1) & 2) == 0; y = up ? N - 1 - vert : vert;
+      if (!f[y][x] && n < all.length * 8) { m[y][x] = ((all[n >>> 3] >>> (7 - (n & 7))) & 1) != 0; n++; }
+    }
+  }
+  for (y = 0; y < N; y++) for (x = 0; x < N; x++) if (!f[y][x] && (x + y) % 2 == 0) m[y][x] = !m[y][x];
+  return m;
+}
+function lcDrawQr(d, text) {
+  var m = lcQrMatrix(text), y, x, s, calc = d.calculate;
+  d.calculate = false; // 177 rows: don't re-run the checks after each one
+  try { for (y = 0; y < m.length; y++) { s = ""; for (x = 0; x < m.length; x++) s += m[y][x] ? "n" : " "; d.getField("__qr_" + y).value = s; } }
+  finally { d.calculate = calc; }
+}
+---------------- END lcQrMatrix and lcDrawQr ----------------
+    After this the script is 27,674 characters and contains "function lcRules(", "function lcPayload(",
+    "function lcQrMatrix(" and "function lcDrawQr(".
+B7. Set the "__generate_qr" widget's /A to << /S /JavaScript /JS (text) >> with exactly this text:
+---------------- BEGIN Generate QR Code ----------------
+var m = typeof lcRules == "function" ? lcRules(this) : [], b = m.bad || [], t = [];
+function list(a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+if (t.length) { app.alert("The QR code cannot be generated yet. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them, then press Generate QR Code again.", 1);
+  var g = m.first && this.getField(m.first); if (g) g.setFocus(); }
+else { try { var q = this.getField("__qr"); q.value = lcPayload(this); lcDrawQr(this, q.value); this.pageNum = this.numPages - 1;
+  app.alert("The QR code has been generated from your answers (" + q.value.length + " characters). Press Print Form to print the form with the QR code.", 3); }
+  catch (e) { app.alert("The QR code could not be generated: " + e + "\nPlease send this message to the form's maintainer.", 1); } }
+---------------- END Generate QR Code ----------------
+    "Print Form", "Check form", "Reset form", Previous / Next and every other field stay exactly as they are.
+
+== PART C: CHECKLIST (on the SAVED file; mark EVERY item PASS or FAIL; fix any FAIL and re-run all) ==
+  1. No field or widget anywhere has /PMD or /DataPrep.
+  2. "__qr": hidden (/F 2), off the page, no /MK, no /AP.
+  3. Exactly 177 fields "__qr_0" ... "__qr_176" as in B3 (check /Ff, /MaxLen, field /DA "/ZaDb 3.515 Tf 0 g", no
+     widget /DA, no /MK, no /AP, /F 4, the rectangles: row 0 top 728.1602, row 176 bottom 297.6198, rows touching, no gaps).
+  4. The only widgets on the frame are the 177 rows, and they are the LAST entries of the page's /Annots.
+  5. /DR /Font has /ZaDb (ZapfDingbats) and /Helv; no /NeedAppearances.
+  6. The frame is drawn as an outline, not a grey fill.
+  7. One document script "lcRules", 27,674 characters, with the four functions.
+  8. "__generate_qr" /A equals the B7 text.
+  9. Run lcQrMatrix in Node.js on a 2,300-character test text: 177 rows of 177. If you have a QR reader (zxing-cpp,
+     pyzbar or OpenCV QRCodeDetector), draw the matrix (4 px per module, white margin) and decode it: it must equal
+     the test text.
+ 10. Render the last page with PyMuPDF AFTER putting a test row value into __qr_0 ... __qr_176 on a COPY of the file
+     (for example every row = "n n n n ..." 177 characters) and generating appearances on that copy only: black
+     squares must appear inside the frame. Do NOT send me this copy; send the file without test values.
+Reply with: the Part A report, what you changed, the PASS / FAIL list 1 to 10, and LAST the PDF file.
+
+== WHAT I WILL SEE ==
+Before pressing the button the frame is white with a thin grey outline (the rows are empty). After filling the form
+and pressing Generate QR Code, the message "The QR code has been generated from your answers (2300 characters)"
+appears and the frame fills with a black-and-white QR code that a phone camera reads as the JSON.
