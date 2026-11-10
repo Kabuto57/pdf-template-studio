@@ -1,0 +1,1604 @@
+{
+ "title": "Irrevocable Documentary Credit Application",
+ "note": "Please complete in block letters. Dates are DD/MM/YYYY.",
+ "sections": [
+  {
+   "title": "Application",
+   "fields": [
+    {
+     "id": "application_date",
+     "label": "Date",
+     "kind": "date",
+     "half": true,
+     "required": true
+    }
+   ]
+  },
+  {
+   "title": "Mode of Advising",
+   "fields": [
+    {
+     "id": "mode_of_advising",
+     "label": "Mode of advising",
+     "kind": "radio",
+     "options": [
+      "Full Swift",
+      "Registered Airmail",
+      "Airmail with Brief Swift",
+      "Courier Service",
+      "Courier Service with Brief Swift"
+     ],
+     "required": true
+    }
+   ]
+  },
+  {
+   "title": "Applicant",
+   "fields": [
+    {
+     "id": "applicant_name",
+     "label": "Applicant name",
+     "kind": "text",
+     "half": false,
+     "required": true,
+     "max": 35
+    },
+    {
+     "id": "applicant_address_1",
+     "label": "Applicant address",
+     "kind": "text",
+     "half": false,
+     "required": true,
+     "max": 35
+    },
+    {
+     "id": "applicant_address_2",
+     "label": "Applicant address (line 2)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "applicant_address_3",
+     "label": "Applicant address (line 3)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "applicant_address_4",
+     "label": "Applicant address (line 4)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "contact_name",
+     "label": "Contact party for this application & confirmation of FX rate: Name",
+     "kind": "text",
+     "half": false,
+     "required": true,
+     "max": 35
+    },
+    {
+     "id": "contact_tel",
+     "label": "Contact party: Tel no",
+     "kind": "text",
+     "half": true,
+     "required": true,
+     "max": 15,
+     "format": "phone"
+    },
+    {
+     "id": "contact_fax",
+     "label": "Contact party: Fax no",
+     "kind": "text",
+     "half": true,
+     "max": 15,
+     "format": "phone"
+    }
+   ]
+  },
+  {
+   "title": "For Bank Use Only",
+   "bankOnly": true,
+   "fields": [
+    {
+     "id": "dc_no",
+     "label": "DC no",
+     "kind": "text",
+     "half": true
+    },
+    {
+     "id": "bank_code",
+     "label": "Bank code",
+     "kind": "text",
+     "half": true
+    }
+   ]
+  },
+  {
+   "title": "Advising Bank (at Issuing Bank's option, if no nomination)",
+   "fields": [
+    {
+     "id": "advising_bank_name",
+     "label": "Name",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "advising_bank_address_1",
+     "label": "Address",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "advising_bank_address_2",
+     "label": "Address (line 2)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "advising_bank_address_3",
+     "label": "Address (line 3)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    }
+   ]
+  },
+  {
+   "title": "For the Benefit of a 3rd Party",
+   "fields": [
+    {
+     "id": "third_party_name",
+     "label": "Name",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "third_party_address_1",
+     "label": "Address",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "third_party_address_2",
+     "label": "Address (line 2)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "third_party_address_3",
+     "label": "Address (line 3)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    }
+   ]
+  },
+  {
+   "title": "Beneficiary",
+   "fields": [
+    {
+     "id": "beneficiary_name",
+     "label": "Beneficiary's name",
+     "kind": "text",
+     "half": false,
+     "required": true,
+     "max": 35
+    },
+    {
+     "id": "beneficiary_address_1",
+     "label": "Beneficiary's address",
+     "kind": "text",
+     "half": false,
+     "required": true,
+     "max": 35
+    },
+    {
+     "id": "beneficiary_address_2",
+     "label": "Beneficiary's address (line 2)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "beneficiary_address_3",
+     "label": "Beneficiary's address (line 3)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "beneficiary_address_4",
+     "label": "Beneficiary's address (line 4)",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "beneficiary_contact",
+     "label": "Contact person",
+     "kind": "text",
+     "half": false,
+     "max": 35
+    },
+    {
+     "id": "beneficiary_tel",
+     "label": "Tel no",
+     "kind": "text",
+     "half": true,
+     "max": 15,
+     "format": "phone"
+    },
+    {
+     "id": "beneficiary_fax",
+     "label": "Fax no",
+     "kind": "text",
+     "half": true,
+     "max": 15,
+     "format": "phone"
+    }
+   ]
+  },
+  {
+   "title": "Credit Amount (Currency & Figures)",
+   "fields": [
+    {
+     "id": "currency",
+     "label": "Currency",
+     "kind": "select",
+     "options": [
+      "SGD",
+      "USD",
+      "EUR",
+      "GBP",
+      "JPY",
+      "CNY",
+      "HKD",
+      "AUD",
+      "NZD",
+      "CAD",
+      "CHF",
+      "MYR",
+      "IDR",
+      "THB",
+      "INR",
+      "KRW",
+      "TWD",
+      "PHP",
+      "VND",
+      "AED",
+      "SAR",
+      "AFN",
+      "ALL",
+      "AMD",
+      "ANG",
+      "AOA",
+      "ARS",
+      "AWG",
+      "AZN",
+      "BAM",
+      "BBD",
+      "BDT",
+      "BGN",
+      "BHD",
+      "BIF",
+      "BMD",
+      "BND",
+      "BOB",
+      "BRL",
+      "BSD",
+      "BTN",
+      "BWP",
+      "BYN",
+      "BZD",
+      "CDF",
+      "CLP",
+      "COP",
+      "CRC",
+      "CUC",
+      "CUP",
+      "CVE",
+      "CZK",
+      "DJF",
+      "DKK",
+      "DOP",
+      "DZD",
+      "EGP",
+      "ERN",
+      "ETB",
+      "FJD",
+      "FKP",
+      "GEL",
+      "GHS",
+      "GIP",
+      "GMD",
+      "GNF",
+      "GTQ",
+      "GYD",
+      "HNL",
+      "HRK",
+      "HTG",
+      "HUF",
+      "ILS",
+      "IQD",
+      "IRR",
+      "ISK",
+      "JMD",
+      "JOD",
+      "KES",
+      "KGS",
+      "KHR",
+      "KMF",
+      "KPW",
+      "KWD",
+      "KYD",
+      "KZT",
+      "LAK",
+      "LBP",
+      "LKR",
+      "LRD",
+      "LSL",
+      "LYD",
+      "MAD",
+      "MDL",
+      "MGA",
+      "MKD",
+      "MMK",
+      "MNT",
+      "MOP",
+      "MRU",
+      "MUR",
+      "MVR",
+      "MWK",
+      "MXN",
+      "MZN",
+      "NAD",
+      "NGN",
+      "NIO",
+      "NOK",
+      "NPR",
+      "OMR",
+      "PAB",
+      "PEN",
+      "PGK",
+      "PKR",
+      "PLN",
+      "PYG",
+      "QAR",
+      "RON",
+      "RSD",
+      "RUB",
+      "RWF",
+      "SBD",
+      "SCR",
+      "SDG",
+      "SEK",
+      "SHP",
+      "SLE",
+      "SOS",
+      "SRD",
+      "SSP",
+      "STN",
+      "SVC",
+      "SYP",
+      "SZL",
+      "TJS",
+      "TMT",
+      "TND",
+      "TOP",
+      "TRY",
+      "TTD",
+      "TZS",
+      "UAH",
+      "UGX",
+      "UYU",
+      "UZS",
+      "VES",
+      "VUV",
+      "WST",
+      "XAF",
+      "XCD",
+      "XCG",
+      "XDR",
+      "XOF",
+      "XPF",
+      "XSU",
+      "YER",
+      "ZAR",
+      "ZMW",
+      "ZWG"
+     ],
+     "half": true,
+     "required": true
+    },
+    {
+     "id": "amount",
+     "label": "Amount",
+     "kind": "text",
+     "half": true,
+     "required": true,
+     "format": "amount"
+    },
+    {
+     "id": "gst",
+     "label": "For local DCs, amount is (if not checked, it will be inclusive of GST)",
+     "kind": "radio",
+     "options": [
+      "inclusive of GST",
+      "No GST"
+     ]
+    },
+    {
+     "id": "tolerance",
+     "label": "Tolerance on credit amount & goods quantity",
+     "kind": "check"
+    },
+    {
+     "id": "tolerance_plus",
+     "label": "Tolerance + (%)",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "tolerance",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "tolerance_minus",
+     "label": "Tolerance - (%)",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "tolerance",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    }
+   ]
+  },
+  {
+   "title": "Price Basis",
+   "fields": [
+    {
+     "id": "price_basis",
+     "label": "Price basis",
+     "kind": "radio",
+     "options": [
+      "FOB",
+      "CFR",
+      "CIF",
+      "Local Delivery",
+      "FCA",
+      "CIP",
+      "CPT",
+      "Others"
+     ],
+     "required": true
+    },
+    {
+     "id": "price_basis_other",
+     "label": "Others (please specify)",
+     "kind": "text",
+     "half": false,
+     "max": 35,
+     "requiredIf": [
+      {
+       "field": "price_basis",
+       "values": [
+        "Others"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Shipment",
+   "fields": [
+    {
+     "id": "partial_shipment",
+     "label": "Partial shipment",
+     "kind": "radio",
+     "options": [
+      "allowed",
+      "not allowed"
+     ],
+     "required": true,
+     "half": true
+    },
+    {
+     "id": "transhipment",
+     "label": "Transhipment",
+     "kind": "radio",
+     "options": [
+      "allowed",
+      "not allowed"
+     ],
+     "required": true,
+     "half": true
+    },
+    {
+     "id": "shipment_from",
+     "label": "Shipment from",
+     "kind": "select",
+     "half": true,
+     "options": [
+      "Port of Loading / Airport of Departure",
+      "Dispatch from",
+      "Place of Taking in charge",
+      "Place of Receipt"
+     ]
+    },
+    {
+     "id": "shipment_from_place",
+     "label": "Shipment from: place",
+     "kind": "text",
+     "half": true,
+     "max": 35,
+     "requiredIf": [
+      {
+       "field": "shipment_from",
+       "values": [
+        ""
+       ],
+       "not": true
+      }
+     ]
+    },
+    {
+     "id": "shipment_from_place_2",
+     "label": "Shipment from: place (line 2)",
+     "kind": "text",
+     "half": false
+    },
+    {
+     "id": "shipment_to",
+     "label": "Shipment to",
+     "kind": "select",
+     "half": true,
+     "options": [
+      "Port of Discharge / Airport of Destination",
+      "For Transportation to",
+      "Place of Final Destination",
+      "Place of Delivery"
+     ]
+    },
+    {
+     "id": "shipment_to_place",
+     "label": "Shipment to: place",
+     "kind": "text",
+     "half": true,
+     "max": 35,
+     "requiredIf": [
+      {
+       "field": "shipment_to",
+       "values": [
+        ""
+       ],
+       "not": true
+      }
+     ]
+    },
+    {
+     "id": "shipment_to_place_2",
+     "label": "Shipment to: place (line 2)",
+     "kind": "text",
+     "half": false
+    },
+    {
+     "id": "latest_shipment_date",
+     "label": "Latest shipment date",
+     "kind": "date",
+     "half": true
+    }
+   ]
+  },
+  {
+   "title": "Expiry and Presentation",
+   "fields": [
+    {
+     "id": "expiry_date",
+     "label": "Date of expiry (in beneficiary's country)",
+     "kind": "date",
+     "half": true,
+     "required": true
+    },
+    {
+     "id": "presentation_days",
+     "label": "Presentation period (days after shipment)",
+     "kind": "text",
+     "half": true,
+     "format": "number"
+    }
+   ]
+  },
+  {
+   "title": "Back-to-back DC",
+   "fields": [
+    {
+     "id": "back_to_back",
+     "label": "This is a back-to-back DC to be issued against the master credit (the \"Master DC\")",
+     "kind": "check"
+    },
+    {
+     "id": "master_dc_no",
+     "label": "Master credit no",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "back_to_back",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 20
+    },
+    {
+     "id": "master_dc_issued_by",
+     "label": "Issued by",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "back_to_back",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 35
+    }
+   ]
+  },
+  {
+   "title": "Drafts",
+   "fields": [
+    {
+     "id": "drafts",
+     "label": "Drafts for the percentage of invoice value below, at",
+     "kind": "check"
+    },
+    {
+     "id": "drafts_percent",
+     "label": "Percentage of invoice value (%)",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "drafts",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "format": "number",
+     "max": 3
+    },
+    {
+     "id": "drafts_at",
+     "label": "Drafts at",
+     "kind": "radio",
+     "options": [
+      "Sight",
+      "Term",
+      "Date"
+     ],
+     "requiredIf": [
+      {
+       "field": "drafts",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "term_days",
+     "label": "Term: days",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "drafts_at",
+       "values": [
+        "Term"
+       ]
+      }
+     ],
+     "format": "number"
+    },
+    {
+     "id": "term_after",
+     "label": "days after",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "drafts_at",
+       "values": [
+        "Term"
+       ]
+      }
+     ],
+     "max": 35
+    },
+    {
+     "id": "draft_date",
+     "label": "Date",
+     "kind": "date",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "drafts_at",
+       "values": [
+        "Date"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "term_prepay",
+     "label": "If it is a term LC, please select one",
+     "kind": "radio",
+     "options": [
+      "You may prepay the acceptance of this term LC at the cost of beneficiary",
+      "You may not prepay the acceptance of this term LC"
+     ],
+     "requiredIf": [
+      {
+       "field": "drafts_at",
+       "values": [
+        "Term"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Documents Required",
+   "fields": [
+    {
+     "id": "doc_bill_of_lading",
+     "label": "Full set of Clean on Board marine bills of lading",
+     "kind": "check"
+    },
+    {
+     "id": "bl_made_out_to",
+     "label": "Made out to",
+     "kind": "radio",
+     "options": [
+      "order of the Bank",
+      "order blank endorsed",
+      "other (specify)"
+     ],
+     "requiredIf": [
+      {
+       "field": "doc_bill_of_lading",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "bl_made_out_to_other",
+     "label": "Made out to (other)",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "bl_made_out_to",
+       "values": [
+        "other (specify)"
+       ]
+      }
+     ],
+     "max": 70
+    },
+    {
+     "id": "bl_freight",
+     "label": "Marked Freight",
+     "kind": "radio",
+     "options": [
+      "Prepaid",
+      "Collect"
+     ],
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_bill_of_lading",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "bl_notify_party",
+     "label": "Notify party (if not specified, notify party is considered to be applicant)",
+     "kind": "text",
+     "half": false,
+     "max": 114,
+     "requiredIf": [
+      {
+       "field": "doc_bill_of_lading",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "doc_air_waybill",
+     "label": "Original Air Waybill consigned to the Bank",
+     "kind": "check"
+    },
+    {
+     "id": "awb_freight",
+     "label": "Marked Freight",
+     "kind": "radio",
+     "options": [
+      "Prepaid",
+      "Collect"
+     ],
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_air_waybill",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "awb_notify_party",
+     "label": "Notify party (if not specified, notify party is considered to be applicant)",
+     "kind": "text",
+     "half": false,
+     "max": 114,
+     "requiredIf": [
+      {
+       "field": "doc_air_waybill",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "doc_delivery_order",
+     "label": "Delivery order signed by beneficiary made out to applicant",
+     "kind": "check"
+    },
+    {
+     "id": "do_originals",
+     "label": "Delivery order: originals",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_delivery_order",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "do_copies",
+     "label": "Delivery order: copies",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_delivery_order",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "do_countersigned_by",
+     "label": "Countersigned by how many of our signatories",
+     "kind": "select",
+     "half": true,
+     "options": [
+      "One",
+      "Two"
+     ],
+     "requiredIf": [
+      {
+       "field": "doc_delivery_order",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "do_signature_verified",
+     "label": "Whose signature(s) ... to be verified by the Bank",
+     "kind": "select",
+     "half": true,
+     "options": [
+      "need",
+      "need not"
+     ],
+     "requiredIf": [
+      {
+       "field": "doc_delivery_order",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "doc_insurance",
+     "label": "Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion",
+     "kind": "check"
+    },
+    {
+     "id": "insurance_arrangement",
+     "label": "For FOB/CFR/FCA/CPT",
+     "kind": "select",
+     "half": false,
+     "options": [
+      "Insurance cover note attached",
+      "Covered by ultimate buyer",
+      "Please arrange insurance on our behalf",
+      "Insurance covered by applicant under open Cover No."
+     ],
+     "activeIf": [
+      {
+       "field": "doc_insurance",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "insurance_cover_no",
+     "label": "Open cover no",
+     "kind": "text",
+     "half": true,
+     "max": 20,
+     "requiredIf": [
+      {
+       "field": "insurance_arrangement",
+       "values": [
+        "Insurance covered by applicant under open Cover No."
+       ]
+      }
+     ]
+    },
+    {
+     "id": "insurance_cover_with",
+     "label": "With",
+     "kind": "text",
+     "half": true,
+     "max": 35,
+     "requiredIf": [
+      {
+       "field": "insurance_arrangement",
+       "values": [
+        "Insurance covered by applicant under open Cover No."
+       ]
+      }
+     ]
+    },
+    {
+     "id": "doc_beneficiary_certificate",
+     "label": "Beneficiary's certificate stating 1 set of non-negotiable documents has been sent to applicant",
+     "kind": "check"
+    },
+    {
+     "id": "bencert_sent_by",
+     "label": "Sent by",
+     "kind": "checks",
+     "options": [
+      "faxed",
+      "mailed",
+      "couriered"
+     ],
+     "requiredIf": [
+      {
+       "field": "doc_beneficiary_certificate",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "bencert_days",
+     "label": "Within (days after shipment)",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_beneficiary_certificate",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "format": "number"
+    },
+    {
+     "id": "doc_commercial_invoice",
+     "label": "Signed commercial invoice",
+     "kind": "check"
+    },
+    {
+     "id": "invoice_originals",
+     "label": "Commercial invoice: originals",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_commercial_invoice",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "invoice_copies",
+     "label": "Commercial invoice: copies",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_commercial_invoice",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "doc_packing_list",
+     "label": "Packing list",
+     "kind": "check"
+    },
+    {
+     "id": "packing_list_originals",
+     "label": "Packing list: originals",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_packing_list",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "packing_list_copies",
+     "label": "Packing list: copies",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_packing_list",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "doc_weight_note",
+     "label": "Weight note",
+     "kind": "check"
+    },
+    {
+     "id": "weight_note_originals",
+     "label": "Weight note: originals",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_weight_note",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "weight_note_copies",
+     "label": "Weight note: copies",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_weight_note",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "doc_certificate_of_origin",
+     "label": "Certificate of origin",
+     "kind": "check"
+    },
+    {
+     "id": "origin_originals",
+     "label": "Certificate of origin: originals",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_certificate_of_origin",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "origin_copies",
+     "label": "Certificate of origin: copies",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_certificate_of_origin",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 2,
+     "format": "number"
+    },
+    {
+     "id": "origin_country",
+     "label": "Showing country of origin as",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "doc_certificate_of_origin",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 35
+    },
+    {
+     "id": "doc_other",
+     "label": "Other documents",
+     "kind": "check"
+    },
+    {
+     "id": "other_documents_1",
+     "label": "Other documents",
+     "kind": "text",
+     "half": false,
+     "max": 70,
+     "requiredIf": [
+      {
+       "field": "doc_other",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "other_documents_2",
+     "label": "Other documents (line 2)",
+     "kind": "text",
+     "half": false,
+     "max": 70,
+     "activeIf": [
+      {
+       "field": "doc_other",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Goods Description",
+   "fields": [
+    {
+     "id": "goods_description",
+     "label": "Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)",
+     "kind": "long",
+     "max": 6500,
+     "required": true
+    }
+   ]
+  },
+  {
+   "title": "Additional Conditions",
+   "fields": [
+    {
+     "id": "additional_conditions",
+     "label": "Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)",
+     "kind": "long",
+     "max": 6500
+    }
+   ]
+  },
+  {
+   "title": "Charges, Confirmation and Settlement",
+   "fields": [
+    {
+     "id": "bank_charges",
+     "label": "All bank charges are for account of",
+     "kind": "check",
+     "required": true
+    },
+    {
+     "id": "bank_charges_for",
+     "label": "Charges for account of",
+     "kind": "radio",
+     "options": [
+      "Beneficiary, except charges at DC Issuing Bank's counter",
+      "Applicant (including all charges incurred inside and outside of DC Issuing Bank's country)"
+     ],
+     "requiredIf": [
+      {
+       "field": "bank_charges",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "confirmation",
+     "label": "Confirmation required",
+     "kind": "check"
+    },
+    {
+     "id": "confirmation_charges",
+     "label": "Confirmation charges",
+     "kind": "radio",
+     "options": [
+      "Applicant",
+      "Beneficiary"
+     ],
+     "requiredIf": [
+      {
+       "field": "confirmation",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "post_shipment_financing",
+     "label": "Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies",
+     "kind": "check"
+    },
+    {
+     "id": "financing_type",
+     "label": "Financing",
+     "kind": "radio",
+     "options": [
+      "SGD financing",
+      "Foreign Currency Financing",
+      "Apply Forward Contract"
+     ],
+     "requiredIf": [
+      {
+       "field": "post_shipment_financing",
+       "values": [
+        "true"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "financing_currency",
+     "label": "Foreign currency financing in (type of currency)",
+     "kind": "select",
+     "half": true,
+     "options": [
+      "SGD",
+      "USD",
+      "EUR",
+      "GBP",
+      "JPY",
+      "CNY",
+      "HKD",
+      "AUD",
+      "NZD",
+      "CAD",
+      "CHF",
+      "MYR",
+      "IDR",
+      "THB",
+      "INR",
+      "KRW",
+      "TWD",
+      "PHP",
+      "VND",
+      "AED",
+      "SAR",
+      "AFN",
+      "ALL",
+      "AMD",
+      "ANG",
+      "AOA",
+      "ARS",
+      "AWG",
+      "AZN",
+      "BAM",
+      "BBD",
+      "BDT",
+      "BGN",
+      "BHD",
+      "BIF",
+      "BMD",
+      "BND",
+      "BOB",
+      "BRL",
+      "BSD",
+      "BTN",
+      "BWP",
+      "BYN",
+      "BZD",
+      "CDF",
+      "CLP",
+      "COP",
+      "CRC",
+      "CUC",
+      "CUP",
+      "CVE",
+      "CZK",
+      "DJF",
+      "DKK",
+      "DOP",
+      "DZD",
+      "EGP",
+      "ERN",
+      "ETB",
+      "FJD",
+      "FKP",
+      "GEL",
+      "GHS",
+      "GIP",
+      "GMD",
+      "GNF",
+      "GTQ",
+      "GYD",
+      "HNL",
+      "HRK",
+      "HTG",
+      "HUF",
+      "ILS",
+      "IQD",
+      "IRR",
+      "ISK",
+      "JMD",
+      "JOD",
+      "KES",
+      "KGS",
+      "KHR",
+      "KMF",
+      "KPW",
+      "KWD",
+      "KYD",
+      "KZT",
+      "LAK",
+      "LBP",
+      "LKR",
+      "LRD",
+      "LSL",
+      "LYD",
+      "MAD",
+      "MDL",
+      "MGA",
+      "MKD",
+      "MMK",
+      "MNT",
+      "MOP",
+      "MRU",
+      "MUR",
+      "MVR",
+      "MWK",
+      "MXN",
+      "MZN",
+      "NAD",
+      "NGN",
+      "NIO",
+      "NOK",
+      "NPR",
+      "OMR",
+      "PAB",
+      "PEN",
+      "PGK",
+      "PKR",
+      "PLN",
+      "PYG",
+      "QAR",
+      "RON",
+      "RSD",
+      "RUB",
+      "RWF",
+      "SBD",
+      "SCR",
+      "SDG",
+      "SEK",
+      "SHP",
+      "SLE",
+      "SOS",
+      "SRD",
+      "SSP",
+      "STN",
+      "SVC",
+      "SYP",
+      "SZL",
+      "TJS",
+      "TMT",
+      "TND",
+      "TOP",
+      "TRY",
+      "TTD",
+      "TZS",
+      "UAH",
+      "UGX",
+      "UYU",
+      "UZS",
+      "VES",
+      "VUV",
+      "WST",
+      "XAF",
+      "XCD",
+      "XCG",
+      "XDR",
+      "XOF",
+      "XPF",
+      "XSU",
+      "YER",
+      "ZAR",
+      "ZMW",
+      "ZWG"
+     ],
+     "requiredIf": [
+      {
+       "field": "financing_type",
+       "values": [
+        "Foreign Currency Financing"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "forward_contract_no",
+     "label": "Forward contract no",
+     "kind": "text",
+     "half": true,
+     "max": 20,
+     "requiredIf": [
+      {
+       "field": "financing_type",
+       "values": [
+        "Apply Forward Contract"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "advance_payment",
+     "label": "We authorise you to debit DC amount in full from our account for advance payment",
+     "kind": "check"
+    },
+    {
+     "id": "advance_payment_account",
+     "label": "Account no for advance payment",
+     "kind": "text",
+     "half": true,
+     "requiredIf": [
+      {
+       "field": "advance_payment",
+       "values": [
+        "true"
+       ]
+      }
+     ],
+     "max": 20,
+     "format": "account"
+    },
+    {
+     "id": "debit_issuance_charges",
+     "label": "Please debit all DC issuance charges to our account with you",
+     "kind": "check"
+    },
+    {
+     "id": "issuance_charges_account",
+     "label": "Account no for DC issuance charges",
+     "kind": "text",
+     "half": true,
+     "required": true,
+     "max": 17,
+     "format": "account"
+    }
+   ]
+  },
+  {
+   "title": "Declaration and Signature",
+   "signoff": true,
+   "note": "We request you to issue an irrevocable documentary credit on the terms above. We confirm that the details given are true and complete, and agree that the credit is subject to the Uniform Customs and Practice for Documentary Credits (UCP 600) and to the Bank's terms and conditions for documentary credits.",
+   "fields": [
+    {
+     "id": "authorised_person",
+     "label": "Name and title of authorised person(s)",
+     "kind": "text",
+     "half": false
+    }
+   ]
+  }
+ ],
+ "issuer": "Demo Bank · Trade Services",
+ "formCode": "Form LC-01 · v1.0 · Nov 2026",
+ "defaults": {
+  "mode_of_advising": "Full Swift",
+  "presentation_days": "21",
+  "bank_charges": true,
+  "bank_charges_for": "Beneficiary, except charges at DC Issuing Bank's counter",
+  "post_shipment_financing": true,
+  "debit_issuance_charges": true
+ }
+}

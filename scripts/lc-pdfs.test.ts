@@ -19,9 +19,12 @@ import { lcSpec } from "./lc-spec.test";
 it.skipIf(!process.env.LC_PDFS && process.env.npm_lifecycle_event !== "pdfs")("blank LC PDFs, samples, schema", async () => {
   writeFileSync("public/LC-Application-original-look.pdf", await buildLcPdf(LC.defaults));
   writeFileSync("public/LC-Application-new-design.pdf", await buildPdf(LC.template, LC.defaults));
-  // The same form twice: checked by Acrobat's JavaScript, or with no scripts at all.
-  writeFileSync("public/LC-Application-JavaScript.pdf", await buildPdf(LC.template, LC.defaults, "javascript"));
-  writeFileSync("public/LC-Application-no-JavaScript.pdf", await buildPdf(LC.template, LC.defaults, "no-javascript"));
+  // The same form twice, built in Python with pikepdf + PyMuPDF (the company AI's libraries; pdfbuild/build_form.py):
+  // checked by Acrobat's JavaScript, or with no scripts at all. tests/python-build.test.ts checks they match buildPdf.
+  writeFileSync("pdfbuild/forms/LC.json", JSON.stringify({ ...LC.template, defaults: LC.defaults }, null, 1) + "\n");
+  const python = process.env.PYTHON ?? ".venv/bin/python"; // python3 -m venv .venv && .venv/bin/pip install -r pdfbuild/requirements.txt
+  for (const [mode, file] of [["javascript", "LC-Application-JavaScript.pdf"], ["no-javascript", "LC-Application-no-JavaScript.pdf"]])
+    execFileSync(python, ["pdfbuild/build_form.py", "pdfbuild/forms/LC.json", `public/${file}`, "--mode", mode]);
   mkdirSync("public/samples", { recursive: true }); // the workbench's sample applications, filled in
   for (const s of SAMPLES) writeFileSync(`public/samples/${s.file}`, await samplePdf(s));
   // The JSON Schema, and Ajv's checker for it as plain JavaScript (the site can't compile one while it runs).

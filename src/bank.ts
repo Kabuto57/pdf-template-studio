@@ -1,8 +1,6 @@
 // Demo Bank's public website (fictional): the customer downloads the LC application (they email it from their own mail: customer-mail/).
 import "./bank.css";
-import { $, download, h } from "./dom";
-import { LC } from "./lc";
-import { buildPdf } from "./pdf";
+import { $, h } from "./dom";
 import { OPS_ADDRESS } from "./mailbox";
 
 const CATEGORIES: [string, string[]][] = [
@@ -18,8 +16,8 @@ const CATEGORIES: [string, string[]][] = [
   ["Guarantees", ["Banker's Guarantee (BG)", "Standby Letter of Credit (SBLC)", "BG Amendment", "SBLC Amendment"]],
 ];
 
-const pdf = (mode: "javascript" | "no-javascript", name: string) => async () =>
-  download((await buildPdf(LC.template, LC.defaults, mode)) as BlobPart, name, "application/pdf");
+// The PDFs are built in Python (pdfbuild/build_form.py) by `npm run pdfs` and served as files.
+const JS_PDF = "../LC-Application-JavaScript.pdf", PLAIN_PDF = "../LC-Application-no-JavaScript.pdf";
 
 function page() {
   $("#app").replaceChildren(
@@ -42,13 +40,13 @@ function page() {
         "div",
         { className: "dl" },
         h("a", { className: "btn primary", href: "apply.html" }, "Fill online"),
-        h("button", { type: "button", onclick: pdf("javascript", "LC-Application-JavaScript.pdf") }, "Download PDF"),
+        h("a", { className: "btn", href: JS_PDF, download: "LC-Application.pdf" }, "Download PDF"),
       ),
       h(
         "p",
         { className: "small muted flush" },
         "The PDF works in Adobe Acrobat or Reader. Using another PDF viewer? ",
-        h("a", { href: "#", onclick: (e: Event) => { e.preventDefault(); void pdf("no-javascript", "LC-Application-no-JavaScript.pdf")(); } }, "Download the simple version"),
+        h("a", { href: PLAIN_PDF, download: "LC-Application-simple.pdf" }, "Download the simple version"),
         ".",
       ),
     ),

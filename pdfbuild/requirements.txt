@@ -1,0 +1,2 @@
+pikepdf>=9
+pymupdf>=1.24

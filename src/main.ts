@@ -8,10 +8,13 @@ import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
 import { LC } from "./lc";
 import { buildLcPdf } from "./lc-pdf";
+import { showCode } from "./code-view";
 
-/** The LC is drawn in the bank's own layout; other forms in the standard one. */
+/** The LC's "bank's original look" is drawn in the bank's own layout; every other form in the new layout (as the
+ *  website's LC): Demo Bank header, numbered sections, Check form / Reset form, red mandatory boxes and the QR code page. */
+const ISSUER = "Demo Bank · Trade Services";
 const pdfOf = (t: Template, v: Values = {}) =>
-  t.title === LC.template.title && !t.base && !t.design ? buildLcPdf(v) : buildPdf(t, v);
+  t.title === LC.template.title && !t.base && !t.design ? buildLcPdf(v) : buildPdf({ issuer: ISSUER, ...t }, v, "javascript");
 import BANK from "./bank-forms.json";
 import type { Line, Xfa } from "./text";
 
@@ -772,6 +775,7 @@ $<HTMLOptionElement>('#bankForms option[value="bank:LC"]').textContent += ": ban
 document
   .querySelectorAll<HTMLButtonElement>("[data-view]")
   .forEach(b => (b.onclick = () => go(b.dataset.view as View)));
+$("#codeBtn").onclick = () => showCode(t.title === LC.template.title && !t.design ? { ...t, design: "new" } : { issuer: ISSUER, ...t }, view === "fill" ? values : {});
 $("#blankBtn").onclick = async () => download((await pdfOf(t)) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
   const gaps = missing(),
@@ -822,7 +826,8 @@ $("#templateSel").onchange = async e => {
   } // same as the bank site's download
   if (v.startsWith("bank:")) {
     const f = bankForm(v.slice(5));
-    t = clone(f.template);
+    // A form reference for the header and the QR code's "form" ("Form BG-01 · v1.0 · Nov 2026").
+    t = { formCode: `Form ${f.code.toUpperCase().replace(/[^A-Z]/g, "")}-01 · v1.0 · Nov 2026`, ...clone(f.template) };
     values = clone(f.defaults);
   }
   go("design");

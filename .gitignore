@@ -1,3 +1,5 @@
 node_modules
 dist
 HANDOFF.md
+.venv
+__pycache__
