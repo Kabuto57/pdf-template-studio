@@ -119,9 +119,10 @@ input:invalid, select:invalid { box-shadow: none; }
 .sample-files a { display: block; padding: 3px 0; color: var(--ink); }
 
 /* View code (code-view.ts) */
-.code-dialog { width: min(1100px, calc(100vw - 32px)); height: min(820px, calc(100vh - 32px)); padding: 0; border: 1px solid #ccc; border-radius: 8px; display: none; flex-direction: column; }
+.code-dialog { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(760px, 56vw); height: 100vh; max-height: none; padding: 0; border: 0; border-left: 1px solid #ccc; box-shadow: -8px 0 24px rgba(0, 0, 0, .12); display: none; flex-direction: column; z-index: 10; }
 .code-dialog[open] { display: flex; }
-.code-dialog::backdrop { background: rgba(0, 0, 0, .4); }
+.code .chg { background: #fff3b0; }
+@media (max-width: 900px) { .code-dialog { width: 100vw; } }
 .code-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 16px 20px 8px; }
 .code-head h2 { margin: 0 0 4px; font-size: 18px; }
 .code-head p { margin: 0; }
