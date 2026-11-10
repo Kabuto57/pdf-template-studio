@@ -129,14 +129,14 @@ export function liveCode(t: Template, values: Values) {
   col.values = values;
   col.texts = tabsFor(t, values).map(([, text]) => text);
   col.title.textContent = t.base ? "This form is an uploaded PDF: the studio fills its own fields, so this code doesn't build it." :
-    "Edit the Python, or the form on the left: the other follows, and the PDF on the right is rebuilt.";
+    "Edit the Python or the form builder: the other follows, and the PDF is rebuilt.";
   render(col.tab, before);
 }
 
 /** Opens or closes the code column. onEdit receives the form whenever the edited code reads correctly. */
 export function toggleCode(t: Template, values: Values, onEdit: OnEdit) {
-  const main = document.querySelector<HTMLElement>(".main")!;
-  if (col) { col.el.remove(); col = undefined; main.classList.remove("with-code", "no-panel"); return false; }
+  const pane = document.querySelector<HTMLElement>("#codePane")!, split = document.querySelector<HTMLElement>("#codeSplit")!;
+  if (col) { col.el.remove(); col = undefined; pane.hidden = split.hidden = true; window.dispatchEvent(new Event("resize")); return false; }
   const editor = h("textarea", { className: "code-input", spellcheck: false, "aria-label": "This form in Python", wrap: "off" });
   const gutter = h("pre", { className: "gutter", "aria-hidden": "true" });
   const status = h("p", { className: "code-status", role: "status" });
@@ -144,15 +144,10 @@ export function toggleCode(t: Template, values: Values, onEdit: OnEdit) {
   const bar = h("div", { className: "code-tabs", role: "tablist" },
     ...tabsFor(t, values).map(([label], i) => h("button", { type: "button", role: "tab", onclick: () => render(i) }, label)));
   const body = h("div", { className: "code-body" });
-  const builderBtn = h("button", { type: "button", onclick: () => {
-    const hidden = main.classList.toggle("no-panel");
-    builderBtn.textContent = hidden ? "Show form builder" : "Hide form builder";
-  } }, "Hide form builder");
-  const el = h("section", { className: "code-col", "aria-label": "Code that builds this PDF" },
+  const el = h("div", { className: "code-col", "aria-label": "Code that builds this PDF" },
     h("div", { className: "code-head" },
-      h("div", {}, h("h2", {}, "Code"), title),
+      title,
       h("div", { className: "code-actions" },
-        builderBtn,
         h("button", { type: "button", onclick: () => navigator.clipboard.writeText(col?.tab === 0 ? editor.value : col?.texts[col.tab] ?? "").catch(() => undefined) }, "Copy"),
         h("button", { type: "button", className: "primary", onclick: () => col && download(oneFile(col.t, col.values), `build_${slug(col.t.title)}.py`, "text/x-python") }, "Download builder (.py)"),
       ),
@@ -183,8 +178,10 @@ export function toggleCode(t: Template, values: Values, onEdit: OnEdit) {
     editor.setRangeText("    ", editor.selectionStart, editor.selectionEnd, "end");
     editor.dispatchEvent(new Event("input"));
   });
-  main.insertBefore(el, document.querySelector("#preview"));
-  main.classList.add("with-code");
+  document.querySelector("#code")!.replaceChildren(el);
+  pane.hidden = split.hidden = false;
+  pane.classList.remove("collapsed");
+  window.dispatchEvent(new Event("resize"));
   col = { el, bar, body, status, title, editor, gutter, tab: 0, texts: [], t, values };
   liveCode(t, values);
   return true;

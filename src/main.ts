@@ -9,6 +9,7 @@ import { GUARANTEE, sampleFor } from "./sample";
 import { LC } from "./lc";
 import { buildLcPdf } from "./lc-pdf";
 import { liveCode, toggleCode } from "./code-view";
+import { panes } from "./panes";
 
 /** The LC's "bank's original look" is drawn in the bank's own layout; every other form in the new layout (as the
  *  website's LC): Demo Bank header, numbered sections, Check form / Reset form, red mandatory boxes and the QR code page. */
@@ -748,12 +749,34 @@ async function read(bytes: Uint8Array, name: string) {
   }
 }
 
+// The PDF pane: drawn to fit its width ("Fit"), times the zoom; redrawn when the pane changes size.
+let zoom = 1, shown: Uint8Array | undefined;
 async function showPdf(bytes: Uint8Array) {
   const box = $("#preview"),
     mine = ++drawn;
-  const pages = await (await text()).renderPages(bytes, Math.min(box.clientWidth - 32, 900));
+  shown = bytes;
+  const fit = Math.max(200, box.clientWidth - 32);
+  const pages = await (await text()).renderPages(bytes, Math.round(fit * zoom));
   if (mine === drawn) box.replaceChildren(...pages); // a newer edit may have drawn already
+  $("#zoomPct").textContent = zoom === 1 ? "Fit" : `${Math.round(zoom * 100)}%`;
 }
+const setZoom = (z: number) => { zoom = Math.min(4, Math.max(0.25, Math.round(z * 100) / 100)); if (shown) void showPdf(shown); };
+$("#zoomIn").onclick = () => setZoom(zoom * 1.25);
+$("#zoomOut").onclick = () => setZoom(zoom / 1.25);
+$("#zoomFit").onclick = () => setZoom(1);
+$("#preview").addEventListener("wheel", e => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive: false });
+let resized = 0, lastWidth = 0;
+window.addEventListener("resize", () => {
+  clearTimeout(resized);
+  resized = window.setTimeout(() => { const w = $("#preview").clientWidth; if (shown && w && w !== lastWidth) { lastWidth = w; void showPdf(shown); } }, 150);
+});
+new ResizeObserver(() => window.dispatchEvent(new Event("resize"))).observe($("#preview"));
+// The code's text size (A− / A+).
+let codeSize = 12.5;
+const setCodeSize = (n: number) => { codeSize = Math.min(22, Math.max(9, n)); document.documentElement.style.setProperty("--code-size", `${codeSize}px`); };
+$("#codeSmaller").onclick = () => setCodeSize(codeSize - 1);
+$("#codeBigger").onclick = () => setCodeSize(codeSize + 1);
+panes($(".main"));
 
 // ---- Shell ----
 function go(v: View) {

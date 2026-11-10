@@ -33,8 +33,22 @@
     </div>
   </header>
   <main class="main">
-    <div class="panel" id="panel"></div>
-    <div id="preview" role="img" aria-label="PDF preview"></div>
+    <section class="pane" data-name="Form builder">
+      <div class="pane-bar"><button type="button" class="pane-toggle" title="Close Form builder" aria-expanded="true">‹</button><span class="pane-name">Form builder</span></div>
+      <div class="panel" id="panel"></div>
+    </section>
+    <div class="split" role="separator" aria-label="Drag to resize"></div>
+    <section class="pane" data-name="Code" id="codePane" hidden>
+      <div class="pane-bar"><button type="button" class="pane-toggle" title="Close Code" aria-expanded="true">‹</button><span class="pane-name">Code</span>
+        <span class="zoom"><button type="button" id="codeSmaller" title="Smaller text">A−</button><button type="button" id="codeBigger" title="Bigger text">A+</button></span></div>
+      <div class="pane-body" id="code"></div>
+    </section>
+    <div class="split" role="separator" aria-label="Drag to resize" id="codeSplit" hidden></div>
+    <section class="pane" data-name="PDF">
+      <div class="pane-bar"><button type="button" class="pane-toggle" title="Close PDF" aria-expanded="true">‹</button><span class="pane-name">PDF</span>
+        <span class="zoom"><button type="button" id="zoomOut" title="Zoom out">−</button><span id="zoomPct">Fit</span><button type="button" id="zoomIn" title="Zoom in">+</button><button type="button" id="zoomFit">Fit</button></span></div>
+      <div id="preview" role="img" aria-label="PDF preview"></div>
+    </section>
   </main>
   <script type="module" src="/src/main.ts"></script>
 </body>
