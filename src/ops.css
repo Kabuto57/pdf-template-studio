@@ -1,7 +1,7 @@
 /* Trade Ops Workbench: an internal back-office tool. Plain, ruled, formal: square corners, hairlines, one accent. */
 :root {
   --ink: #111; --grey: #666; --rule: #dcdcdc; --hair: #ececec; --bg: #fafafa; --panel: #fff; --head: #f6f6f6;
-  --rail: #111; --teal: #111; --teal-2: #333; --ok: #1e7a46; --ok-bg: #eef6f1; --bad: #c00; --bad-bg: #fdf2f2; --sel: #f0f0f0;
+  --rail: #1f1f1f; --teal: #d2102c; --teal-2: #a80d23; --ok: #1e7a46; --ok-bg: #eef6f1; --bad: #c00; --bad-bg: #fdf2f2; --sel: #fbeef0;
   font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -19,8 +19,9 @@ button:disabled { opacity: .5; cursor: default; }
 .muted { color: var(--grey); } .small { font-size: 12px; } .pad { padding: 14px; }
 
 .app { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.ops-head { height: 52px; flex: none; background: var(--panel); border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 14px; padding: 0 18px; }
-.ops-head b { font-size: 15px; }
+.ops-head { height: 52px; border-top: 3px solid var(--teal); flex: none; background: var(--panel); border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 14px; padding: 0 18px; }
+.ops-head b { font-size: 15px; display: inline-flex; align-items: center; gap: 8px; }
+.ops-head b::before { content: ""; width: 12px; height: 12px; background: var(--teal); }
 .ops-head .crumb { color: var(--grey); border-left: 1px solid var(--rule); padding-left: 14px; }
 .ops-head .who { margin-left: auto; color: var(--grey); font-size: 12px; border: 1px solid var(--rule); border-radius: 4px; padding: 1px 8px; }
 .ops-main { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
