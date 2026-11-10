@@ -4,28 +4,67 @@
 import BUILD_PY from "../pdfbuild/build_form.py?raw";
 import METRICS from "../pdfbuild/helvetica-metrics.json?raw";
 import { download, h } from "./dom";
-import { slug, type Template, type Values } from "./pdf";
+import { slug, type Field, type Rule, type Section, type Template, type Values } from "./pdf";
 
 const JS_FILES = import.meta.glob("../pdfbuild/js/*.js", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const scripts = Object.fromEntries(Object.entries(JS_FILES).map(([path, text]) => [`js/${path.split("/").pop()}`, text]));
 
-/** The form as build_form.py reads it: the description plus its starting answers ("defaults"). */
-export const formJson = (t: Template, values: Values) => {
-  const { base: _base, design: _design, ...rest } = t;
-  return JSON.stringify({ ...rest, defaults: values }, null, 1);
+/** A value as Python source. */
+const py = (v: unknown): string =>
+  typeof v === "string" ? JSON.stringify(v) :
+  typeof v === "boolean" ? (v ? "True" : "False") :
+  typeof v === "number" ? String(v) :
+  Array.isArray(v) ? `[${v.map(py).join(", ")}]` :
+  v && typeof v === "object" ? `{${Object.entries(v).map(([k, x]) => `${JSON.stringify(k)}: ${py(x)}`).join(", ")}}` :
+  "None";
+
+/** A rule as Python: when("drafts", "true"). */
+const rule = (r: Rule) => `when(${[r.field, ...r.values].map(py).join(", ")}${r.not ? ", not_=True" : ""})`;
+
+/** One question as one line of Python: text("applicant_name", "Applicant name", half=True, required=True, max=35). */
+const question = (f: Field) => {
+  const { id, label, kind, options, ...more } = f;
+  const args = [py(id), py(label), ...(options ? [py(options)] : []),
+    ...Object.entries(more).map(([k, v]) => `${k}=${k === "requiredIf" || k === "activeIf" ? `[${(v as Rule[]).map(rule).join(", ")}]` : py(v)}`)];
+  return `${kind}(${args.join(", ")})`;
 };
+
+/** The form written in Python with build_form.py's functions: one line per question, so every edit shows. */
+export function formPython(t: Template, values: Values) {
+  const { base: _base, design: _design, title, note, sections, ...more } = t;
+  return [
+    `# ${t.title}: the form, in Python. build_form.py turns it into the PDF (python build_${slug(t.title)}.py out.pdf).`,
+    `FORM = form(`,
+    `    title=${py(title)},`,
+    `    note=${py(note ?? "")},`,
+    ...Object.entries(more).map(([k, v]) => `    ${k}=${py(v)},`),
+    `    defaults=${py(values)},`,
+    `    sections=[`,
+    ...sections.flatMap((s: Section) => {
+      const { title: st, fields, ...extra } = s;
+      return [
+        `        section(${py(st)},`,
+        ...fields.map(f => `            ${question(f)},`),
+        ...Object.entries(extra).map(([k, v]) => `            ${k}=${py(v)},`), // note, signoff, bankOnly
+        `        ),`,
+      ];
+    }),
+    `    ],`,
+    `)`,
+  ].join("\n");
+}
 
 /** build_form.py with the helper files and this form embedded: one file that builds this one form. */
 export const oneFile = (t: Template, values: Values) =>
   BUILD_PY
     .replace("EMBEDDED = {}", () => `EMBEDDED = ${JSON.stringify({ "helvetica-metrics.json": METRICS, ...scripts })}`)
-    .replace("FORM = None", () => `FORM = json.loads(${JSON.stringify(formJson(t, values))})`);
+    .replace(/^FORM = None.*$/m, () => formPython(t, values));
 
 /** The code view's tabs for this form: [label, text]. */
 function tabsFor(t: Template, values: Values): [string, string][] {
   const name = slug(t.title);
   return [
-    ["Form (form.json)", formJson(t, values)],
+    ["This form (Python)", formPython(t, values)],
     ["build_form.py", BUILD_PY],
     ["How to run", [
       `# 1. The libraries (the company AI already has them):`,
@@ -96,6 +135,9 @@ export function showCode(t: Template, values: Values) {
   dialog.addEventListener("close", () => { dialog.remove(); panel = undefined; });
   document.body.append(dialog);
   panel = { dialog, code, bar, title, tab: 0, texts: [], t, values };
-  dialog.show(); // not modal: the form on the left stays editable
+  // Over the preview, under the studio's header: the form on the left stays editable (not modal), the buttons on top usable.
+  const top = document.querySelector("header")?.getBoundingClientRect().bottom ?? 0;
+  Object.assign(dialog.style, { top: `${top}px`, height: `calc(100vh - ${top}px)` });
+  dialog.show();
   liveCode(t, values);
 }

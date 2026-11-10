@@ -35,9 +35,8 @@ import pymupdf
 from pikepdf import Array, Dictionary, Name, String
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# Template Studio's "Download this builder" fills these two in, so a single .py file builds one form on its own:
+# Template Studio's "Download builder" fills this in (and FORM, at the end), so one .py file builds one form on its own:
 EMBEDDED = {}   # the helper files (helvetica-metrics.json, js/*.js), by name
-FORM = None     # the form's description (with its "defaults")
 
 
 def asset(name):
@@ -989,6 +988,39 @@ def build(t, values=None, mode="javascript"):
     buf = io.BytesIO()
     pdf.save(buf)
     return buf.getvalue()
+
+# ---------------------------------------------------------------- writing a form in Python
+# One line per question, e.g.
+#   FORM = form(title="Banker's Guarantee", sections=[
+#       section("Applicant", text("applicant_name", "Applicant name", half=True, required=True, max=35)),
+#   ])
+# Options for every question: half, required, requiredIf=[when("field", "value")], activeIf, max, format.
+def form(title, sections, note="", **more):
+    """The whole form: title, sections, and optionally issuer, formCode and defaults (starting answers)."""
+    return {"title": title, "note": note, "sections": sections, **more}
+
+
+def section(title, *fields, **more):
+    """A section and its questions (more: note, signoff=True, bankOnly=True)."""
+    return {"title": title, "fields": list(fields), **more}
+
+
+def when(field, *values, not_=False):
+    """A rule: "when FIELD is one of VALUES" (a tick box's values are "true" / "false")."""
+    return {"field": field, "values": list(values), **({"not": True} if not_ else {})}
+
+
+def _question(kind):
+    def make(id, label, options=None, **more):
+        return {"id": id, "label": label, "kind": kind, **({"options": list(options)} if options is not None else {}), **more}
+    make.__name__ = kind
+    return make
+
+
+text, long, date, radio, checks, check, select = (_question(k) for k in ("text", "long", "date", "radio", "checks", "check", "select"))
+
+FORM = None     # Template Studio puts the form here, written with the functions above
+
 
 if __name__ == "__main__":
     args = sys.argv[1:]
