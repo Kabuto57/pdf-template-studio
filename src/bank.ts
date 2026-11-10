@@ -18,132 +18,46 @@ const CATEGORIES: [string, string[]][] = [
   ["Guarantees", ["Banker's Guarantee (BG)", "Standby Letter of Credit (SBLC)", "BG Amendment", "SBLC Amendment"]],
 ];
 
-const lcRow = () =>
-  h(
-    "li",
-    {},
-    h(
-      "span",
-      { className: "name" },
-      h("b", {}, "Irrevocable Documentary Credit Application"),
-      h("span", { className: "tag" }, "UPDATED"),
-      h("small", {}, "Fill online (every answer checked as you type), or download the PDF: the JavaScript version checks everything in Acrobat; the no-JavaScript version works in any viewer."),
-    ),
-    h(
-      "span",
-      { className: "dl" },
-      h("a", { className: "btn primary", href: "apply.html" }, "Fill online"),
-      h(
-        "button",
-        {
-          type: "button",
-          title: "For Adobe Acrobat / Reader with JavaScript on: checks everything as you fill it in, like the old smart form",
-          onclick: async () =>
-            download((await buildPdf(LC.template, LC.defaults, "javascript")) as BlobPart, "LC-Application-JavaScript.pdf", "application/pdf"),
-        },
-        "PDF (JavaScript)",
-      ),
-      h(
-        "button",
-        {
-          type: "button",
-          title: "For any PDF viewer, JavaScript off: no scripts; red frames and drop-down lists guide you",
-          onclick: async () =>
-            download((await buildPdf(LC.template, LC.defaults, "no-javascript")) as BlobPart, "LC-Application-no-JavaScript.pdf", "application/pdf"),
-        },
-        "PDF (no JavaScript)",
-      ),
-    ),
-  );
+const pdf = (mode: "javascript" | "no-javascript", name: string) => async () =>
+  download((await buildPdf(LC.template, LC.defaults, mode)) as BlobPart, name, "application/pdf");
 
 function page() {
   $("#app").replaceChildren(
+    h("div", { className: "title" }, h("h1", {}, "Trade application forms")),
     h(
-      "div",
-      { className: "crumbs" },
-      h("a", { href: "#" }, "Corporate Banking"),
-      "  ›  ",
-      h("a", { href: "#" }, "Forms & Guides"),
-      "  ›  Trade Application Form",
+      "ol",
+      { className: "steps" },
+      h("li", {}, h("b", {}, "Fill in"), " the form online, or download the PDF."),
+      h("li", {}, h("b", {}, "Fix"), " anything marked in red."),
+      h("li", {}, h("b", {}, "Save"), " the completed PDF."),
+      h("li", {}, h("b", {}, "Email"), " it to Trade Ops."),
     ),
-    h("div", { className: "title" }, h("h1", {}, "Trade Application Form")),
+    h("p", { className: "send" }, "Trade Ops email: ", h("span", { className: "addr" }, OPS_ADDRESS)),
     h(
-      "div",
-      { className: "layout" },
+      "section",
+      { className: "feature" },
+      h("h2", {}, "Irrevocable Documentary Credit Application"),
+      h("p", { className: "muted flush" }, "Every answer is checked as you fill it in."),
       h(
         "div",
-        {},
-        h(
-          "div",
-          { className: "steps" },
-          h("h4", {}, "How to apply"),
-          h(
-            "ol",
-            {},
-            h("li", {}, h("b", {}, "Download"), " the form below and save it to your computer."),
-            h(
-              "li",
-              {},
-              h("b", {}, "Fill it in"),
-              ". Easiest: ",
-              h("b", {}, "Fill online"),
-              ", which checks every answer as you go. Or download a PDF: the JavaScript version (Adobe Acrobat / Reader with JavaScript on) checks everything and has a ",
-              h("b", {}, "Check form"),
-              " button; the no-JavaScript version works in any viewer and outlines mandatory boxes in red.",
-            ),
-            h("li", {}, h("b", {}, "Save"), " the completed PDF."),
-            h(
-              "li",
-              {},
-              h("b", {}, "Email"),
-              " it as an attachment from your company email to ",
-              h("b", {}, OPS_ADDRESS),
-              ". One application per email.",
-            ),
-          ),
-        ),
-        ...CATEGORIES.map(([cat, forms]) =>
-          h(
-            "section",
-            { className: "cat" },
-            h("h3", {}, cat),
-            h(
-              "ul",
-              {},
-              ...forms.map(f =>
-                f.startsWith("Irrevocable")
-                  ? lcRow()
-                  : h(
-                      "li",
-                      {},
-                      h("span", { className: "name" }, f, h("small", {}, "Not part of this demonstration")),
-                      h("button", { type: "button", disabled: true }, "Download Form"),
-                    ),
-              ),
-            ),
-          ),
-        ),
+        { className: "dl" },
+        h("a", { className: "btn primary", href: "apply.html" }, "Fill online"),
+        h("button", { type: "button", onclick: pdf("javascript", "LC-Application-JavaScript.pdf") }, "Download PDF"),
       ),
       h(
-        "aside",
-        { className: "side" },
-        h(
-          "div",
-          { className: "box" },
-          h("h5", {}, "Send your completed form to"),
-          h("p", { className: "addr" }, OPS_ADDRESS),
-          h("p", { className: "small muted" }, "We will contact you if anything is missing or unclear."),
-        ),
-        h(
-          "div",
-          { className: "box" },
-          h("h5", {}, "Need help?"),
-          h(
-            "p",
-            { className: "small" },
-            "Call Trade Services on 1800 000 0000, 8.30am to 6.00pm, Monday to Friday (excluding public holidays).",
-          ),
-        ),
+        "p",
+        { className: "small muted flush" },
+        "The PDF works in Adobe Acrobat or Reader. Using another PDF viewer? ",
+        h("a", { href: "#", onclick: (e: Event) => { e.preventDefault(); void pdf("no-javascript", "LC-Application-no-JavaScript.pdf")(); } }, "Download the simple version"),
+        ".",
+      ),
+    ),
+    ...CATEGORIES.map(([cat, forms]) =>
+      h(
+        "section",
+        { className: "cat" },
+        h("h3", {}, cat),
+        h("ul", {}, ...forms.filter(f => !f.startsWith("Irrevocable")).map(f => h("li", {}, h("span", {}, f), h("span", {}, "Coming soon")))),
       ),
     ),
   );

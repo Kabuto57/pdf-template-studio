@@ -8,15 +8,14 @@
   <meta name="description" content="Internal workbench (demo): open emailed trade application PDFs and read their data.">
 </head>
 <body class="ops">
-  <nav class="rail" aria-label="Workbench"><div class="mark">TO</div><span class="on">Inbox</span><span>Cases</span><span>Reports</span></nav>
   <div class="app">
-    <header class="ops-head"><b>Trade Operations Workbench</b><span class="crumb">Import · Documentary Credit · Intake</span><span class="who"><span class="badge">Demo</span>Ops officer<i>OP</i></span></header>
+    <header class="ops-head"><b>Trade Ops Workbench</b><span class="crumb">LC applications</span><span class="who">Demo</span></header>
     <div class="ops-main">
       <aside class="inbox">
-        <div class="inbox-head"><span>Trade Ops mailbox</span><span id="count"></span></div>
+        <div class="inbox-head"><span>Mailbox</span><span id="count"></span></div>
         <div class="inbox-tools"><button type="button" id="clear">Empty</button></div>
         <div class="inbox-list" id="inbox"></div>
-        <label class="drop" id="drop" for="pdfIn">PDFs received by other email?<br><b>Drop them here</b> or click to choose (several at once is fine)<input type="file" id="pdfIn" accept="application/pdf,.pdf" multiple class="sr"></label>
+        <label class="drop" id="drop" for="pdfIn"><b>Add PDFs</b>: drop here or click<input type="file" id="pdfIn" accept="application/pdf,.pdf" multiple class="sr"></label>
       </aside>
       <main class="work" id="work"><div class="empty-state"><h2>No application open</h2><p>Select an email in the mailbox, or drop a PDF.</p></div></main>
     </div>

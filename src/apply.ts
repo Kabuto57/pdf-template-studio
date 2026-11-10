@@ -97,8 +97,6 @@ function render() {
             h("button", { type: "button", onclick: async () => download((await buildPdf(t, answers())) as BlobPart, "LC-application.pdf", "application/pdf") }, "Download PDF"),
             h("button", { type: "button", className: "link", onclick: () => { values = { ...LC_SAMPLE, application_date: today() }; touched.clear(); showAll = false; render(); } }, "Fill with sample answers (demo)"),
           ),
-          h("p", { className: "small muted" }, "Checked against the bank's ",
-            h("a", { href: "../lc-application.schema.json", target: "_blank" }, "LC JSON Schema"), " (json-schema.org standard), with Ajv."),
         ),
       ),
     ),
