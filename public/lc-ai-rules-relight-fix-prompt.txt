@@ -6,8 +6,8 @@ I have attached LC-Application-with-checks.pdf, which you built. In Adobe Acroba
   2. I fill the form from the top. Each box I fill turns black. Correct.
   3. Around question 9 (Price basis) the checking stops: from then on the boxes at the top no longer change colour.
   4. If I now delete the answer in a mandatory box (e.g. Applicant name), it stays black. WRONG: it must turn red again.
-The working form (built by the bank's own tools) re-colours every box on every change, so the rules are right; the
-copy in this PDF, or the way it is called, is broken. This is approved work within my bank's policy. Don't suggest ways
+My reference copy of this form, with the same rules, re-colours every box on every change (tested), so the rules are
+right; the copy in this PDF, or the way it is called, is broken. This is approved work within my bank's policy. Don't suggest ways
 around the bank's security settings. Use pikepdf to read and save, and Node.js to run the tests below. Give me back the
 same PDF, named LC-Application-with-checks.pdf.
 
