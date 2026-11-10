@@ -1,0 +1,87 @@
+MASTER PROMPT: RED BOXES STOP UPDATING PART-WAY THROUGH THE FORM. FIND WHY, FIX IT, CHANGE NOTHING ELSE
+
+== THE PROBLEM ==
+I have attached LC-Application-with-checks.pdf, which you built. In Adobe Acrobat (Windows, "Enable All Features"):
+  1. On opening, the blank mandatory boxes are red. Correct.
+  2. I fill the form from the top. Each box I fill turns black. Correct.
+  3. Around question 9 (Price basis) the checking stops: from then on the boxes at the top no longer change colour.
+  4. If I now delete the answer in a mandatory box (e.g. Applicant name), it stays black. WRONG: it must turn red again.
+The working form (built by the bank's own tools) re-colours every box on every change, so the rules are right; the
+copy in this PDF, or the way it is called, is broken. This is approved work within my bank's policy. Don't suggest ways
+around the bank's security settings. Use pikepdf to read and save, and Node.js to run the tests below. Give me back the
+same PDF, named LC-Application-with-checks.pdf.
+
+== HOW THE CHECKING IS MEANT TO WORK (so you know what to look for) ==
+  - ONE document-level JavaScript, named "lcRules", holds function lcRules(d) (with the table "var M = {...}" of every
+    question), function lcDates, function lcPayload, lcQrMatrix and lcDrawQr.
+  - lcRules(this) runs: when the form opens; when you leave a text box, list or date (widget /AA /Bl); when you click a
+    tick box or option (widget /AA /U); after ANY value changes (the hidden text field "__checks" has /AA /C
+    "lcRules(this);" and is the only entry in /AcroForm /CO); and from Check form, Generate QR Code, save and print.
+  - Each run: X = across() (checks across answers), then for EVERY question in M: works out whether it applies and is
+    mandatory now; blank or wrong -> red outline, pink fill, required = true; answered and right -> black outline,
+    white fill, required = false; doesn't apply -> grey, locked, answer cleared.
+  - Everything after "try {" is inside one try / catch that prints "lcRules: <error>" to Acrobat's JavaScript console.
+    So ONE error (for example in across(), or at one field) stops the colouring for every box after it, or for all of
+    them if it happens in across(). That matches what I see.
+
+== PART A: FIND THE CAUSE (report each item, change nothing yet) ==
+  A1. Is there exactly one document script "lcRules"? Its length? Does it contain "function lcRules(", "function across(",
+      "function lcPayload(", "function lcQrMatrix(", "function lcDrawQr("? Does any OTHER document script, field action
+      or the catalog /OpenAction define a second lcRules or change it?
+  A2. Run the test in PART C on the attached PDF as it is, and report its output. It shows the step where colouring
+      stops, and the error that lcRules printed (the "CONSOLE" lines).
+  A3. For every question in the table M: does a field of that name exist (dates: "<id>" and "<id>__list"; tick-any:
+      "<id>__0", "<id>__1", ...)? Is its type what M says (text / radio / check box / list)? List every mismatch.
+  A4. Does every widget of those fields carry its action: /AA /Bl "lcRules(this);" for text boxes, lists and the date
+      box; /AA /U "lcRules(this);" for tick boxes, option buttons and the date list? List the ones that don't.
+  A5. Does "__checks" exist, hidden, with /AA /C "lcRules(this);", and is it the only entry in /AcroForm /CO?
+  A6. Price basis ("price_basis") and "price_basis_other": field types and options. Acrobat must report the chosen
+      price basis as its name ("CIF", "Others"): the option buttons need /Opt with the names in order (or export values
+      that are the names). Same for every other option-button question.
+Then say which item causes the problem.
+
+== PART B: FIX ==
+  - Fix only what Part A found, so that PART C passes. Typical fixes: a field missing or of the wrong type -> make it
+    exactly as M describes; a missing /Bl or /U action -> add it; "__checks" missing -> add it as in A5; option export
+    values -> make /Opt the option names in order; a changed or second copy of lcRules -> put back the one original
+    script (do not edit the rules themselves).
+  - Change nothing else: layout, wording, buttons, QR code page, scripts' text.
+
+== PART C: THE TEST (Node.js; a stand-in for Acrobat that runs the PDF's own script) ==
+Read the PDF with pikepdf, write every field to fields.json as {"name": ..., "type": "text"|"combobox"|"radiobutton"|
+"checkbox", "value": ...} (option buttons: the chosen option's name, or "Off"; tick box: its on value or "Off"; date "__list" fields:
+"display": 1, all others "display": 0), write the document script "lcRules" to doc.js, then run this file with Node.js
+(node test.js) and report its whole output:
+---------------- BEGIN test.js ----------------
+const fs = require("fs");
+const js = fs.readFileSync("doc.js", "latin1"), fields = {}, log = [];
+for (const f of JSON.parse(fs.readFileSync("fields.json", "utf8"))) fields[f.name] = { ...f, get valueAsString() { return String(this.value); } };
+const d = { getField: n => fields[n] || null };
+const run = () => new Function("color", "console", "display", "app", js + "; return lcRules(this);").call(d,
+  { red: "red", black: "black", white: "white", transparent: "none" }, { println: m => log.push("CONSOLE " + m) }, { visible: 0, hidden: 1 }, undefined);
+const st = n => fields[n] ? fields[n].strokeColor + (fields[n].required ? " required" : "") : "MISSING FIELD";
+run(); log.push("start: applicant_name " + st("applicant_name"));
+const steps = [["applicant_name", "ACME"], ["applicant_address_1", "10 ANSON ROAD"], ["contact_name", "TAN"], ["contact_tel", "+65 6123 4567"],
+  ["beneficiary_name", "SSP"], ["beneficiary_address_1", "PUDONG"], ["currency", "USD"], ["amount", "125,000.00"], ["price_basis", "CIF"], ["partial_shipment", "allowed"]];
+for (const [k, v] of steps) { if (fields[k]) fields[k].value = v; const m = run(); log.push(k + " = " + v + " -> applicant_name " + st("applicant_name") + ", still missing " + m.length); }
+fields.applicant_name.value = ""; const m = run();
+log.push("cleared applicant_name -> " + st("applicant_name") + ", still missing " + m.length);
+console.log(log.join("\n"));
+console.log(st("applicant_name") === "red required" && m.includes("Applicant name") ? "PASS" : "FAIL");
+---------------- END test.js ----------------
+The working form prints (the counts may differ by one or two if your form starts with other answers):
+  start: applicant_name red required
+  applicant_name = ACME -> applicant_name black, still missing 15
+  ... (each step: applicant_name black, the count going down by one)
+  partial_shipment = allowed -> applicant_name black, still missing 6
+  cleared applicant_name -> red required, still missing 7
+  PASS
+and no "CONSOLE" lines.
+
+== CHECKLIST (on the saved file; mark EVERY item PASS or FAIL; fix any FAIL and re-run all) ==
+  1. PART C prints PASS and no CONSOLE lines.
+  2. Exactly one document script "lcRules", unchanged except for what Part A proved wrong.
+  3. Items A3, A4, A5 now have no mismatches.
+  4. Everything else unchanged: pages, wording, buttons, QR code page.
+Reply with: the Part A report (with the test output BEFORE the fix), what you changed, the test output AFTER the fix,
+the PASS / FAIL list 1 to 4, and LAST the PDF file.
