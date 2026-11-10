@@ -118,16 +118,26 @@ input:invalid, select:invalid { box-shadow: none; }
 .sample-files div { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; background: var(--bg); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 12px; white-space: nowrap; box-shadow: 0 4px 12px #0002; }
 .sample-files a { display: block; padding: 3px 0; color: var(--ink); }
 
-/* View code (code-view.ts) */
-.code-dialog { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(760px, 56vw); height: 100vh; max-height: none; padding: 0; border: 0; border-left: 1px solid #ccc; box-shadow: -8px 0 24px rgba(0, 0, 0, .12); display: none; flex-direction: column; z-index: 10; }
-.code-dialog[open] { display: flex; }
-.code .chg { background: #fff3b0; }
-@media (max-width: 900px) { .code-dialog { width: 100vw; } }
-.code-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 16px 20px 8px; }
-.code-head h2 { margin: 0 0 4px; font-size: 18px; }
+/* Code column (code-view.ts): form builder | code | PDF, like Overleaf */
+.main.with-code { grid-template-columns: minmax(300px, 420px) minmax(0, 1fr) minmax(0, 1fr); }
+.main.with-code.no-panel { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.main.no-panel #panel { display: none; }
+.code-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-right: 1px solid var(--rule); background: #fff; }
+.code-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding: 12px 14px 6px; }
+.code-head h2 { margin: 0 0 2px; font-size: 16px; }
 .code-head p { margin: 0; }
-.code-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.code-tabs { display: flex; gap: 2px; flex-wrap: wrap; padding: 0 20px; border-bottom: 1px solid #ddd; }
-.code-tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 8px 10px; font-size: 13px; }
+.code-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.code-tabs { display: flex; gap: 2px; overflow-x: auto; padding: 0 14px; border-bottom: 1px solid #ddd; }
+.code-tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 7px 9px; font-size: 12.5px; white-space: nowrap; }
 .code-tabs button[aria-selected="true"] { border-bottom-color: currentColor; font-weight: 600; }
-.code { flex: 1; margin: 0; overflow: auto; padding: 16px 20px; background: #f7f7f7; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre; tab-size: 4; }
+.code-status:empty { display: none; }
+.code-status { margin: 0; padding: 6px 14px; font-size: 13px; }
+.code-status.bad { background: #fdecea; color: #a00; }
+.code-body { flex: 1; min-height: 0; display: flex; }
+.editor { flex: 1; display: flex; min-width: 0; font: 12.5px/1.55 ui-monospace, Menlo, Consolas, monospace; }
+.gutter { margin: 0; padding: 12px 8px; min-width: 42px; text-align: right; color: #999; background: #f3f3f3; overflow: hidden; font: inherit; user-select: none; }
+.code-input { flex: 1; min-width: 0; margin: 0; border: 0; border-radius: 0; resize: none; padding: 12px; font: inherit; white-space: pre; overflow: auto; tab-size: 4; background: #fff; }
+.code-input:focus { outline: none; box-shadow: inset 0 0 0 2px #1a1a1a22; }
+.code { flex: 1; margin: 0; overflow: auto; padding: 12px 14px; background: #f7f7f7; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre; tab-size: 4; }
+.code .chg { background: #fff3b0; }
+@media (max-width: 900px) { .main.with-code, .main.with-code.no-panel { grid-template-columns: 1fr; } }

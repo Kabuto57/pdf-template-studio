@@ -8,7 +8,7 @@ import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
 import { LC } from "./lc";
 import { buildLcPdf } from "./lc-pdf";
-import { liveCode, showCode } from "./code-view";
+import { liveCode, toggleCode } from "./code-view";
 
 /** The LC's "bank's original look" is drawn in the bank's own layout; every other form in the new layout (as the
  *  website's LC): Demo Bank header, numbered sections, Check form / Reset form, red mandatory boxes and the QR code page. */
@@ -777,7 +777,17 @@ document
   .querySelectorAll<HTMLButtonElement>("[data-view]")
   .forEach(b => (b.onclick = () => go(b.dataset.view as View)));
 const codeForm = () => (t.title === LC.template.title && !t.design ? { ...t, design: "new" as const } : { issuer: ISSUER, ...t });
-$("#codeBtn").onclick = () => showCode(codeForm(), view === "fill" ? values : {});
+/** The code editor's form, read back: it replaces the form (the LC stays in the new layout) and redraws the builder. */
+const applyCode = (template: Template, v: Values) => {
+  t = template.title === LC.template.title ? { ...template, design: "new" } : template;
+  values = v;
+  if (view !== "extract") (view === "design" ? renderDesign : renderFill)();
+  refresh();
+};
+$("#codeBtn").onclick = () => {
+  const open = toggleCode(codeForm(), view === "fill" ? values : {}, applyCode);
+  $("#codeBtn").textContent = open ? "Hide code" : "View code";
+};
 $("#blankBtn").onclick = async () => download((await pdfOf(t)) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
   const gaps = missing(),
