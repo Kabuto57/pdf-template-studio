@@ -8,6 +8,13 @@ import type { Field, Template, Values } from "./pdf";
 import { COUNTRIES, CURRENCIES } from "./lists";
 
 if (typeof window !== "undefined") GlobalWorkerOptions.workerSrc = workerUrl; // tests (Node) use the legacy build's own worker
+/** Every pdf.js document is opened with these. The standard fonts (copied to public/ by npm run dev / build) let pdf.js
+ *  draw text in fonts a PDF names but doesn't embed, above all ZapfDingbats: the QR code's squares. Without them the
+ *  code is blank. */
+export const PDFJS = {
+  isEvalSupported: false,
+  ...(typeof window !== "undefined" ? { standardFontDataUrl: `${import.meta.env.BASE_URL}standard_fonts/` } : {}),
+};
 
 export interface Part {
   x: number;
@@ -30,7 +37,7 @@ export interface Line {
 }
 
 export async function readText(bytes: Uint8Array): Promise<Line[]> {
-  const doc = await getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+  const doc = await getDocument({ data: bytes.slice(), ...PDFJS }).promise;
   const out: Line[] = [];
   for (let p = 1; p <= doc.numPages; p++) {
     const items = (await (await doc.getPage(p)).getTextContent()).items.filter(
@@ -210,7 +217,7 @@ export interface Xfa {
 
 /** Reads an XFA form's fields (with any answers), or undefined if the PDF is not XFA. Handles owner-password encryption. */
 export async function readXfa(bytes: Uint8Array): Promise<Xfa | undefined> {
-  const doc = await getDocument({ data: bytes.slice(), enableXfa: true, isEvalSupported: false }).promise;
+  const doc = await getDocument({ data: bytes.slice(), enableXfa: true, ...PDFJS }).promise;
   try {
     return doc.isPureXfa && doc.allXfaHtml ? xfaFields(doc.allXfaHtml as unknown as XNode) : undefined;
   } finally {
@@ -405,7 +412,7 @@ export function xfaTemplate(x: Xfa, code: string): { template: Template; values:
 /** Draws each page onto a canvas. The preview uses this rather than a PDF in a frame: the browser's
  *  PDF viewer counts every rebuilt preview as a file download, which security software then checks. */
 export async function renderPages(bytes: Uint8Array, width: number): Promise<HTMLCanvasElement[]> {
-  const doc = await getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+  const doc = await getDocument({ data: bytes.slice(), ...PDFJS }).promise;
   const out: HTMLCanvasElement[] = [];
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);

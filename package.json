@@ -10,7 +10,9 @@
     "test": "vitest run",
     "pdfs": "vitest run scripts/lc-pdfs",
     "make-script": "rolldown scripts/make-lc-pdf.ts --format esm --platform node --minify --file public/make-lc-pdf.txt",
-    "spec": "vitest run scripts/lc-spec"
+    "spec": "vitest run scripts/lc-spec",
+    "prebuild": "node -e \"require('fs').cpSync('node_modules/pdfjs-dist/standard_fonts','public/standard_fonts',{recursive:true})\"",
+    "predev": "node -e \"require('fs').cpSync('node_modules/pdfjs-dist/standard_fonts','public/standard_fonts',{recursive:true})\""
   },
   "dependencies": {
     "ajv": "^8.20.0",

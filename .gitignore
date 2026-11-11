@@ -3,3 +3,4 @@ dist
 HANDOFF.md
 .venv
 __pycache__
+public/standard_fonts/

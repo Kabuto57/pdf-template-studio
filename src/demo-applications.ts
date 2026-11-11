@@ -1,7 +1,7 @@
 // SAMPLE FILLED APPLICATIONS
 // The "Sample filled PDFs" in the Template Studio (written to public/samples/ by scripts/lc-pdfs.test.ts). Each one is a real LC application PDF, made by
 // buildPdf from different answers, and each shows a different situation ops meets every day.
-import { PDFDocument, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { LC, LC_SAMPLE } from "./lc";
 import { buildPdf, subId, type Template, type Values } from "./pdf";
 import { payloadScript, qrScript } from "./form/acrobat-script";
@@ -97,10 +97,10 @@ export async function samplePdf(s: Sample) {
   const doc = await PDFDocument.load(await buildPdf(t, s.answers, "javascript"));
   const text = qrPayload(t, s.answers);
   const m = new Function(`${qrScript}; return lcQrMatrix;`)()(text) as boolean[][];
-  const form = doc.getForm(), last = doc.getPages()[doc.getPageCount() - 1];
-  m.forEach((row, y) => { // each row where Acrobat's lcDrawQr writes it: the comb field "__qr_<y>", one square per cell
+  const form = doc.getForm(), last = doc.getPages()[doc.getPageCount() - 1], zapf = await doc.embedFont(StandardFonts.ZapfDingbats);
+  m.forEach((row, y) => { // as Acrobat draws lcDrawQr's rows: in the comb field "__qr_<y>", a ZapfDingbats square ("n") per dark cell
     const r = form.getTextField(`__qr_${y}`).acroField.getWidgets()[0].getRectangle(), size = r.width / row.length;
-    row.forEach((dark, x) => dark && last.drawRectangle({ x: r.x + x * size, y: r.y, width: size, height: r.height, color: rgb(0, 0, 0) }));
+    row.forEach((dark, x) => dark && last.drawText("\u25a0", { x: r.x + x * size - 0.12, y: r.y, size: 3.515, font: zapf }));
   });
   form.flatten();
   return doc.save();

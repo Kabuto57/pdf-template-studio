@@ -6,7 +6,8 @@ import { qrScript } from "../src/form/acrobat-script";
 import { SAMPLES, qrPayload, samplePdf } from "../src/demo-applications";
 import { LC, LC_SAMPLE } from "../src/lc";
 import { extractPdf } from "../src/pdf";
-import { matchFields, matchPrinted, parsePayload } from "../src/qr-read";
+import { matchFields, matchPrinted, parsePayload, qrFromText } from "../src/qr-read";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { readText } from "../src/text";
 
 const t = LC.template;
@@ -43,6 +44,10 @@ describe("QR code of the answers", () => {
     const words = (await readText(bytes)).map(l => l.segs.map(g => g.text).join(" ")).join(" ");
     const p = parsePayload(qrPayload(t, s.answers))!;
     expect(matchPrinted(t, p, words)).toEqual([]);
+    // The code itself, rebuilt from where its squares are printed (ZapfDingbats text, as Acrobat draws it).
+    const doc = await getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+    const items = (await (await doc.getPage(doc.numPages)).getTextContent()).items as { str: string; transform: number[] }[];
+    expect(parsePayload(qrFromText(items)!)?.data).toEqual(p.data);
     const wrong = { ...p, data: { ...p.data, beneficiary_name: "SOMEONE ELSE LTD" } };
     expect(matchPrinted(t, wrong, words).map(m => m.id)).toEqual(["beneficiary_name"]);
   }, 30000);
