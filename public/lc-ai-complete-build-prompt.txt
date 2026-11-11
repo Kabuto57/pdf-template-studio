@@ -1,5 +1,5 @@
-MASTER PROMPT (FINAL v4, FROM SCRATCH): BUILD THE "IRREVOCABLE DOCUMENTARY CREDIT APPLICATION" AS ONE
-FINISHED, SELF-CHECKING PDF WITH A QR CODE PAGE, AND AVOID EVERY PROBLEM WE HAVE ALREADY HIT
+MASTER PROMPT (FINAL v5, FROM SCRATCH): BUILD THE "IRREVOCABLE DOCUMENTARY CREDIT APPLICATION" AS ONE
+FINISHED, SELF-CHECKING PDF WITH A QR CODE PAGE, AND AVOID EVERY PROBLEM WE HAVE ALREADY HIT (P1 TO P25)
 
 == PART 0: WHAT I NEED ==
 I work in Trade Finance at a bank. Build the "Irrevocable Documentary Credit Application" form FROM SCRATCH as one
@@ -43,6 +43,10 @@ Earlier attempts kept breaking: each time one thing was fixed, something else br
   R4. After ANY change, run the WHOLE checklist in PART 7 again, not just the item you fixed.
   R5. Test the scripts in code against a stand-in for Acrobat (described in PART 7) before handing over, and show
       me the results. Report honestly anything that fails or that you could not test.
+  R6. Everything comes from THIS prompt. If I attach an earlier PDF, use it only to look at; never start from it
+      and never copy scripts from it (our security scanning strips the JavaScript out of attachments).
+  R7. Never say "done" or "fixed" before the WHOLE of PART 7 has run on the final saved file. A PASS needs evidence:
+      the test output, the value you read from the file, or the rendered page image.
 
 == PART 2: PROBLEMS WE ALREADY HIT (each one: what we saw, why, and the rule that prevents it) ==
 P1. After the design was improved, all the checking was gone: no Check form / Reset form, red boxes stopped, the
@@ -115,6 +119,41 @@ P15. After the QR code was added, ALL the buttons stopped working.
 P16. The QR rows showed the letter "n" instead of squares.
     Why: the rows' /DA named a font that is not in /AcroForm /DR, so Acrobat fell back to Helvetica.
     Rule: the rows' /DA is "/ZaDb ... Tf 0 g" on the FIELD (no /DA on the widget), and /DR /Font has /ZaDb.
+P17. The red boxes stopped updating part-way through the form (around Price basis): later boxes stayed black, and a
+     cleared mandatory box at the top did not turn red again.
+    Why: lcRules works inside one try / catch, so ONE error stops the colouring for every box after it. The error
+    came from a field of the table M that was missing or of the wrong type, a widget without its /Bl or /U action,
+    or option buttons that report "0" / "Choice2" instead of the option name (e.g. "CIF").
+    Rule: every question in M exists with exactly the type M gives (dates also "<id>__list"; tick-any "<id>__0" ...);
+    every widget carries its action (5.2); /Opt holds the option names; PART 7 item 16 must print PASS with no
+    CONSOLE lines.
+P18. After the QR fix, the QR box was STILL one grey square on the work laptop.
+    Why: an old barcode field (/PMD) or a filled grey shape was left on top of the frame and covered the rows.
+    Rule: inside the QR frame there is nothing but the 177 rows; the frame is an outline only (no fill); "__qr" is
+    hidden and off the page (T7).
+P19. A working PDF I attached arrived with no JavaScript at all, and the copy built from it did nothing.
+    Why: our security scanning strips JavaScript from attachments.
+    Rule: R6. The scripts come only from PART 5 of this prompt.
+P20. Re-saving the finished file broke it: buttons black again, the QR rows turned into one text box, scripts gone.
+    Why: PyMuPDF (and other libraries) regenerate fields, widgets and appearances when they save.
+    Rule: PART 4B: pikepdf makes the final save; never open and re-save the finished file with anything else.
+P21. Boxes could not be typed in, in Acrobat (they worked in Edge / Chrome).
+    Why: a field's /DA named a font that is not in /AcroForm /DR; Acrobat then ignores clicks on that field.
+    Rule: /DR /Font holds /Helv and /ZaDb, and every /DA in the file names one of those two.
+P22. Acrobat refused or cut the long document script.
+    Why: Acrobat refuses PDF strings over 32,767 bytes, and lcRules is longer than that with the QR code part.
+    Rule: store the document script's /JS as a STREAM, not a string. No string in the file is over 32,767 bytes.
+P23. Drafts showed a fixed "Drafts for 100% invoice value at": the customer could not change the percentage.
+    Why: a value the customer gives was drawn as page text.
+    Rule: every value the customer gives is a field. Drafts is "13.1 Drafts for the percentage of invoice value
+    below, at" with the field drafts_percent ("13.2 Percentage of invoice value (%)", 3 digits) under it (SPEC).
+P24. After a line was added, labels overlapped other text or ran off the page.
+    Why: one thing was moved without moving what comes after it.
+    Rule: when something moves, everything under it in the section (and the sections under that) moves too.
+    Nothing overlaps, nothing leaves the page; PART 7 item 17 checks every page as an image.
+P25. Attempts were reported as finished, but in Acrobat they failed.
+    Why: only the item just fixed was checked, or checks were claimed without being run.
+    Rule: R4, R5 and R7. The reply lists every PART 7 item with PASS / FAIL and how it was tested.
 
 == PART 3: THE DESIGN (Step A) ==
 ORDER (most important): sections and questions appear EXACTLY in the order of the SPEC, top to bottom, sections
@@ -729,7 +768,38 @@ pageNum, numPages, app.alert, setFocus, color):
      OpenCV's QRCodeDetector), draw the matrix as an image and decode it: the text must come back unchanged.
  15. Scanning the QR code (on screen or printed) with a phone shows the JSON.
 
-Reply with: the PASS / FAIL list (D1 to D3, 1 to 15, 6a, 6b and 14b) with how you tested each, anything that fails or could
+ 16. The red boxes keep updating to the end of the form (P17). Write every field of the final file to fields.json
+     as {"name": ..., "type": "text"|"combobox"|"radiobutton"|"checkbox", "value": ...} (option buttons: the chosen
+     option's name, or "Off"; tick box: its on value or "Off"; date "__list" fields: "display": 1, all others
+     "display": 0), write the document script to doc.js, run this with Node.js (node test.js) and show the output:
+---------------- BEGIN test.js ----------------
+const fs = require("fs");
+const js = fs.readFileSync("doc.js", "latin1"), fields = {}, log = [];
+for (const f of JSON.parse(fs.readFileSync("fields.json", "utf8"))) fields[f.name] = { ...f, get valueAsString() { return String(this.value); } };
+const d = { getField: n => fields[n] || null };
+const run = () => new Function("color", "console", "display", "app", js + "; return lcRules(this);").call(d,
+  { red: "red", black: "black", white: "white", transparent: "none" }, { println: m => log.push("CONSOLE " + m) }, { visible: 0, hidden: 1 }, undefined);
+const st = n => fields[n] ? fields[n].strokeColor + (fields[n].required ? " required" : "") : "MISSING FIELD";
+run(); log.push("start: applicant_name " + st("applicant_name"));
+const steps = [["applicant_name", "ACME"], ["applicant_address_1", "10 ANSON ROAD"], ["contact_name", "TAN"], ["contact_tel", "+65 6123 4567"],
+  ["beneficiary_name", "SSP"], ["beneficiary_address_1", "PUDONG"], ["currency", "USD"], ["amount", "125,000.00"], ["price_basis", "CIF"], ["partial_shipment", "allowed"]];
+for (const [k, v] of steps) { if (fields[k]) fields[k].value = v; const m = run(); log.push(k + " = " + v + " -> applicant_name " + st("applicant_name") + ", still missing " + m.length); }
+fields.applicant_name.value = ""; const m = run();
+log.push("cleared applicant_name -> " + st("applicant_name") + ", still missing " + m.length);
+console.log(log.join("\n"));
+console.log(st("applicant_name") === "red required" && m.includes("Applicant name") ? "PASS" : "FAIL");
+---------------- END test.js ----------------
+     It must end with PASS, with no "CONSOLE" lines, the count going down by one at each step, and
+     "cleared applicant_name -> red required".
+ 17. Render every page to an image (PyMuPDF, read-only) and look at each one: nothing overlaps, nothing runs off
+     the page, every label is whole, the buttons are black with white captions, the QR frame is an outline with
+     nothing grey inside it (P18, P24). Show me page 1 and page 4.
+ 18. File structure (P20 to P22): /DR /Font has /Helv and /ZaDb and every /DA in the file names one of them; the
+     document script's /JS is a stream; no string object is over 32,767 bytes; the last save was by pikepdf.
+ 19. Inside the QR frame on the last page there is no widget other than "__qr_0" ... "__qr_176", and no /PMD or
+     /DataPrep anywhere in the file (P14, P18).
+
+Reply with: the PASS / FAIL list (D1 to D3, 1 to 19, 6a, 6b and 14b) with how you tested each, anything that fails or could
 not be tested, and LAST the PDF file LC-Application-with-checks.pdf.
 
 == SPEC: every question, in form order (one JSON object per line) ==
