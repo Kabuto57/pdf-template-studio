@@ -24,7 +24,15 @@ export interface Field {
   activeIf?: Rule[];     // only answerable when one of these holds (default: the requiredIf rules); greyed and locked otherwise
   max?: number;          // the most characters allowed, as on the bank's form
   format?: Format;       // which keys the box accepts, and what a whole answer must look like
+  at?: Spot;             // placed by hand in the studio's layout editor (otherwise arranged automatically)
 }
+
+/** Where a section sits on the page, in PDF points (the studio's layout editor). y is its TOP edge, counted from
+ *  the page's bottom; h 0 = as tall as its questions need. */
+export interface Frame { page: number; x: number; y: number; w: number; h: number }
+/** Where a question sits inside its section: x from the section's left edge, y down from its top edge. h: paragraph
+ *  boxes only (the whole question's height). */
+export interface Spot { x: number; y: number; w: number; h?: number }
 
 /**
  * A condition on another answer: "when FIELD is one of VALUES".
@@ -38,6 +46,8 @@ export interface Section {
   note?: string;       // a paragraph under the heading, e.g. the applicant's declaration
   signoff?: boolean;   // the PDF adds signature, date and company-stamp lines after the questions
   bankOnly?: boolean;  // filled in by the bank: drawn as a shaded "for bank use only" panel
+  frame?: Frame;       // placed by hand on the page (otherwise the sections flow down the pages in order)
+  cols?: number;       // questions in an even grid of this many columns, labels lined up (otherwise each takes the width it needs)
 }
 
 /** A whole form. */
@@ -49,6 +59,7 @@ export interface Template {
   design?: "new";        // the LC only: draw it in the new design instead of the bank's own layout
   issuer?: string;       // who issues the form, shown at the top of every page, e.g. "Demo Bank · Trade Services"
   formCode?: string;     // the form's reference and version, shown in the header and footer, e.g. "Form LC-01 · v1.0"
+  pages?: number;        // at least this many pages (the layout editor's empty pages to draw on)
 }
 
 /** An answer: text, the ticked options of a "tick any" question, or a tick box's true / false. */

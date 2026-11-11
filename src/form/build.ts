@@ -19,10 +19,19 @@ import { ACCENT, GREY, H, INK, M, RED, RULE, TINT, W, WHITE, finishForm, tip, wr
 import { addRedFrames, type Blocks } from "./red-frames";
 import { activeRules, isRequired } from "./rules";
 import { stamp } from "./stored-template";
-import { hasOptions, safe, subId, type Field, type Section, type Template, type Value, type Values } from "./types";
+import { hasOptions, safe, subId, type Field, type Frame, type Section, type Template, type Value, type Values } from "./types";
 import { fillBase } from "./upload";
 
 export type Mode = "both" | "javascript" | "no-javascript";
+
+/** Where everything was drawn (PDF points, y = top edge), for the studio's layout editor. `tops`: the highest a
+ *  section may start on each page (under the header). `split`: a section that carried on over a page. */
+export interface Geometry {
+  pages: number;
+  tops: number[];
+  sections: (Frame & { si: number; split?: boolean })[];
+  fields: (Frame & { id: string; si: number })[];
+}
 
 // Sizes, kept small so the LC fits on three pages while staying readable.
 const BOTTOM = 39;   // start a new page below this height (the footer is under it)
@@ -33,20 +42,29 @@ const COLS = 12;     // the page is a grid of 12 narrow columns; each question t
 const CGAP = 4;      // gap between columns
 
 /** Makes the blank form, or (with values) a filled one. */
-export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "both"): Promise<Uint8Array> {
+/** `geo`: filled with where everything was drawn. `whole`: no section carries on over a page (when it fits one), so
+ *  every section can be pinned to one page (the studio's "Arrange by hand"). */
+export async function buildPdf(t: Template, values: Values = {}, mode: Mode = "both", geo?: Geometry, whole = false): Promise<Uint8Array> {
   if (t.base) return fillBase(t, values); // an uploaded PDF: fill its own fields instead
   // Laid out once, then again with the room left at the end of the last page shared out to the paragraph boxes
   // (e.g. additional conditions) on that page, so the form ends without a blank stretch. Kept only if the page
   // count stays the same.
   // Only the boxes already on the last page grow, so nothing earlier moves.
-  const first = await layoutPdf(t, values, mode, new Map());
-  if (!first.lastLongs.length || first.spare < 20) return first.bytes;
-  const each = Math.min(90, Math.floor((first.spare - 10) / first.lastLongs.length)); // ponytail: capped so one box doesn't dwarf the rest
-  const second = await layoutPdf(t, values, mode, new Map(first.lastLongs.map(id => [id, each])));
-  return second.pages === first.pages ? second.bytes : first.bytes;
+  const first = await layoutPdf(t, values, mode, new Map(), whole);
+  let done = first;
+  if (first.lastLongs.length && first.spare >= 20 && !t.sections.some(s => s.frame)) {
+    const each = Math.min(90, Math.floor((first.spare - 10) / first.lastLongs.length)); // ponytail: capped so one box doesn't dwarf the rest
+    const second = await layoutPdf(t, values, mode, new Map(first.lastLongs.map(id => [id, each])), whole);
+    if (second.pages === first.pages) done = second;
+  }
+  if (geo) Object.assign(geo, done.geo);
+  return done.bytes;
 }
 
-async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map<string, number>) {
+async function layoutPdf(t: Template, values: Values, mode: Mode, flowExtra: Map<string, number>, keepWhole: boolean) {
+  // A paragraph box sized by hand in the layout editor: its whole question is at.h tall (label 10 + box).
+  const longExtra = new Map(flowExtra);
+  for (const f of t.sections.flatMap(s => s.fields)) if (f.kind === "long" && f.at?.h) longExtra.set(f.id, f.at.h - 60);
 
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -80,6 +98,9 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     top -= 9;
   }
   top -= 5;
+  const firstTop = top;
+  const geo: Geometry = { pages: 0, tops: [], sections: [], fields: [] };
+  const pageNo = () => doc.getPages().indexOf(page);
 
   // Box styles. A mandatory box is outlined in red (not only starred) until it is answered.
   const plain = { borderColor: INK, borderWidth: 0.75, backgroundColor: WHITE };
@@ -94,7 +115,7 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
    * 4. Lays out one question at (x, top) in width w. Draws it only when `draw` (otherwise just measures it).
    * Returns the height it takes.
    */
-  function place(f: Field, x: number, w: number, draw: boolean, inline = false): number {
+  function place(f: Field, x: number, w: number, draw: boolean, inline = false, lw?: number): number {
     const answer = values[f.id], required = isRequired(f, values);
     // Acrobat outlines "required" boxes in red itself. Only always-mandatory boxes get the flag: the others get the
     // red frame (red-frames.ts), which follows the tick; both would draw two red lines.
@@ -157,8 +178,8 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
 
     // A one-line box whose label is short enough: the label beside it, "Name: [          ]", as on the smart form.
     // (Only when the whole line is set this way, so a line never mixes labels beside and above their boxes.)
-    const said = shown(f), labelW = inlineLabelW(f);
-    if (inline && canInline(f, w)) {
+    const said = shown(f), labelW = lw ?? inlineLabelW(f);
+    if (inline && canInline(f, w, lw)) {
       if (draw) {
         if (no) page.drawText(no, { x, y: top - 10.5, size: LABEL, font: bold, color: ACCENT });
         blocks.set(f.id, { page, label: { x: x + noW, y: top - 10.5, text: `${said}:` } });
@@ -255,9 +276,9 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   const shown = (f: Field) => safe(f.label);
   // A label beside its box ("Name: [   ]"), and whether a question can be set that way at width w.
   const inlineLabelW = (f: Field) => (number.has(f.id) ? bold.widthOfTextAtSize(number.get(f.id)!, LABEL) + 4 : 0) + font.widthOfTextAtSize(`${shown(f)}:`, LABEL) + (f.required || f.requiredIf ? 7 : 0) + 6;
-  const canInline = (f: Field, w: number) =>
+  const canInline = (f: Field, w: number, lw = inlineLabelW(f)) =>
     (f.kind === "text" || f.kind === "date" || f.kind === "select") && (f.max ?? 35) <= 70 && // a very long line keeps its full width
-    inlineLabelW(f) <= w * 0.65 && w - inlineLabelW(f) >= Math.min(boxNeed(f), 110);
+    lw <= w * 0.65 && w - lw >= Math.min(boxNeed(f), 110);
   /** How wide a question's box(es) need to be. */
   const boxNeed = (f: Field) =>
     f.kind === "long" ? Infinity :
@@ -291,7 +312,9 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   // Each section is a ruled box, like the panels on the bank's smart form: an outline, a grey heading band with a
   // rule under it, and a light line between its rows. `Area` is where a section's box goes: its left edge, its
   // width and how many grid columns its content has (12 = the full page, 6 = half).
-  type Area = { x: number; w: number; cols: number };
+  // `grid` (a section's `cols`): its questions sit in that many equal columns instead, with `lws` the label width
+  // of each column, so the boxes of a column line up from row to row.
+  type Area = { x: number; w: number; cols: number; grid?: number; lws?: number[] };
   const PAD = 6;           // inside the box, around the questions
   const BAND = 13;         // the heading band
   const SECTION_GAP = 5;   // between boxes
@@ -306,10 +329,18 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     return p.kind === "check" || under(p, seen);
   });
   const INDENT = 14;
-  const lines = (s: Section, cols: number) => {
-    const rows: Field[][] = [];
+  const lines = (fields: Field[], a: Area) => {
+    const rows: Field[][] = [], cols = a.cols;
+    if (a.grid) { // an even grid: `grid` questions a line, a paragraph box on a line of its own
+      for (const f of fields) {
+        const row = rows[rows.length - 1];
+        if (!row || row.length >= a.grid || f.kind === "long" || row[0].kind === "long") rows.push([]);
+        rows[rows.length - 1].push(f);
+      }
+      return rows;
+    }
     let used = cols, last: Field | undefined;
-    for (const f of s.fields) {
+    for (const f of fields) {
       const n = Math.min(cols, span(f));
       if (used + n > cols || triggers.has(f.id) || f.kind === "check" || last?.kind === "check" || (last && under(last) !== under(f))) { rows.push([]); used = 0; }
       rows[rows.length - 1].push(f);
@@ -320,7 +351,11 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   };
   // Columns left over at the end of a line go to its text boxes and lists (not dates or numbers, which keep their
   // own short width), shared out evenly, so most lines end on the box's right edge.
-  const layout = (row: Field[], area: Area) => {
+  const layout = (row: Field[], area: Area): { f: Field; x: number; w: number; lw?: number }[] => {
+    if (area.grid) {
+      const { x: x0, w } = inner(area), cw = (w - (area.grid - 1) * CGAP) / area.grid;
+      return row.map((f, i) => f.kind === "long" ? { f, x: x0, w } : { f, x: x0 + i * (cw + CGAP), w: cw, lw: area.lws?.[i] });
+    }
     const a = under(row[0]) ? { ...area, x: area.x + INDENT, w: area.w - INDENT } : area; // indented under its tick box
     const { x: x0, sw } = inner(a);
     const n = row.map(f => Math.min(a.cols, span(f)));
@@ -330,21 +365,37 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     return row.map((f, i) => { const w = sw(n[i]), at = x; x += w + CGAP; return { f, x: at, w }; });
   };
   // A line's labels go beside their boxes when every question on it can be set that way.
-  const inlineRow = (row: Field[], a: Area) => layout(row, a).every(c => c.f.kind === "radio" || c.f.kind === "checks" || canInline(c.f, c.w));
-  const rowHeight = (row: Field[], a: Area) => { const inl = inlineRow(row, a); return Math.max(...layout(row, a).map(c => place(c.f, c.x, c.w, false, inl))); };
+  const inlineRow = (row: Field[], a: Area) => layout(row, a).every(c => c.f.kind === "radio" || c.f.kind === "checks" || canInline(c.f, c.w, c.lw));
+  const rowHeight = (row: Field[], a: Area) => { const inl = inlineRow(row, a); return Math.max(...layout(row, a).map(c => place(c.f, c.x, c.w, false, inl, c.lw))); };
+  /** A section's area with its grid: the widest label of each column (labels go above when they'd take too much room). */
+  const areaFor = (s: Section, a: Area): Area => {
+    if (!s.cols || a.grid) return a;
+    const grid = Math.max(1, Math.min(4, Math.round(s.cols))), cw = (inner(a).w - (grid - 1) * CGAP) / grid;
+    const lws = Array.from({ length: grid }, () => 0);
+    for (const row of lines(s.fields.filter(f => !f.at), { ...a, grid }))
+      row.forEach((f, i) => { if (f.kind !== "long") lws[i] = Math.max(lws[i], inlineLabelW(f)); });
+    return { ...a, grid, lws: lws.map(n => (n <= cw * 0.5 ? n : Infinity)) }; // Infinity: that column's labels go above
+  };
+  // Questions placed by hand (Field.at): each at its own spot; the box grows to hold them.
+  const spotHeight = (f: Field, a: Area) => place(f, a.x + f.at!.x, f.at!.w, false, canInline(f, f.at!.w));
+  const placedLow = (s: Section, a: Area, head: number) =>
+    s.fields.reduce((low, f) => (f.at ? Math.max(low, f.at.y + spotHeight(f, a) + 4) : low), head);
   const SIGN = 46; // the signature, date and stamp lines
   const noteOf = (s: Section, a: Area) => (s.note ? wrap(s.note, font, 7.5, inner(a).w) : []);
-  const sectionHeight = (s: Section, a: Area) => {
-    const note = noteOf(s, a);
-    return BAND + 4 + note.length * 9 + (note.length ? 4 : 0) + lines(s, a.cols).reduce((sum, r) => sum + rowHeight(r, a) + 4, 0) + (s.signoff ? SIGN : 0) + 1;
+  const sectionHeight = (s: Section, area: Area) => {
+    const a = areaFor(s, area), note = noteOf(s, a), head = BAND + 4 + note.length * 9 + (note.length ? 4 : 0);
+    return placedLow(s, a, head) + lines(s.fields.filter(f => !f.at), a).reduce((sum, r) => sum + rowHeight(r, a) + 4, 0) + (s.signoff ? SIGN : 0) + 1;
   };
 
   /** Draws one section's box at (a.x, top). `breaks`: may continue on a new page between rows. */
-  function drawSection(s: Section, si: number, a: Area, breaks: boolean, bottom?: number) {
-    const rows = lines(s, a.cols), note = noteOf(s, a), whole = sectionHeight(s, a), { x: cx, w: cw } = inner(a);
+  function drawSection(s: Section, si: number, area: Area, breaks: boolean, bottom?: number) {
+    const a = areaFor(s, area);
+    const rows = lines(s.fields.filter(f => !f.at), a), note = noteOf(s, a), whole = sectionHeight(s, a), { x: cx, w: cw } = inner(a);
     // On a new page if not even its first row fits. The sign-off and the bank's panel are kept whole on one page.
-    if (breaks && top - ((s.signoff || s.bankOnly) ? whole : BAND + 12 + (rows[0] ? rowHeight(rows[0], a) : 0)) < BOTTOM) newPage();
+    const keep = s.signoff || s.bankOnly || (keepWhole && whole <= H - 34 - BOTTOM);
+    if (breaks && top - (keep ? whole : BAND + 12 + (rows[0] ? rowHeight(rows[0], a) : 0)) < BOTTOM) newPage();
     let boxTop = top;
+    const start = top, startPage = page;
     const outline = () => page.drawRectangle({ x: a.x, y: top, width: a.w, height: boxTop - top, borderColor: INK, borderWidth: 0.6 });
     const fill = bottom !== undefined ? Math.max(whole, top - bottom) : whole;
     if (s.bankOnly) page.drawRectangle({ x: a.x, y: top - fill, width: a.w, height: fill, color: rgb(0.95, 0.95, 0.95) }); // the bank's panel is shaded
@@ -356,12 +407,25 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     top -= BAND + 4;
     for (const line of note) { page.drawText(line, { x: cx, y: top - 7.5, size: 7.5, font, color: INK }); top -= 9; }
     if (note.length) top -= 4;
+    const placed = s.fields.filter(f => f.at);
+    if (placed.length) {
+      const low = placedLow(s, a, start - top);
+      for (const f of placed) {
+        top = start - f.at!.y;
+        const x = a.x + f.at!.x, h = place(f, x, f.at!.w, true, canInline(f, f.at!.w));
+        geo.fields.push({ id: f.id, si, page: pageNo(), x, y: top, w: f.at!.w, h });
+      }
+      top = start - low;
+    }
     rows.forEach((row, i) => {
       const h = rowHeight(row, a);
       if (breaks && top - h < BOTTOM) { top -= 1; outline(); newPage(); boxTop = top; top -= 5; } // the box carries on over the page
-      if (i > 0) page.drawLine({ start: { x: cx, y: top + 3 }, end: { x: cx + cw, y: top + 3 }, thickness: 0.4, color: RULE }); // between rows
+      if (i > 0 || placed.length) page.drawLine({ start: { x: cx, y: top + 3 }, end: { x: cx + cw, y: top + 3 }, thickness: 0.4, color: RULE }); // between rows
       const inl = inlineRow(row, a);
-      for (const c of layout(row, a)) place(c.f, c.x, c.w, true, inl);
+      for (const c of layout(row, a)) {
+        const fh = place(c.f, c.x, c.w, true, inl, c.lw);
+        geo.fields.push({ id: c.f.id, si, page: pageNo(), x: c.x, y: top, w: c.w, h: fh });
+      }
       top -= h + 4;
     });
     // Signature, date and company stamp: lines to sign on paper after printing.
@@ -379,6 +443,9 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     top -= 1;
     if (bottom !== undefined) top = Math.min(top, bottom); // as tall as the panel beside it
     outline();
+    geo.sections.push(page === startPage
+      ? { si, page: pageNo(), x: a.x, y: start, w: a.w, h: start - top }
+      : { si, page: doc.getPages().indexOf(startPage), x: a.x, y: start, w: a.w, h: start - BOTTOM, split: true });
     top -= SECTION_GAP;
   }
 
@@ -392,8 +459,28 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     bold.widthOfTextAtSize(`${s.title.toUpperCase()}`, 6) + 30 < halfW &&
     s.fields.every(f => f.kind !== "long" && (hasOptions(f.kind) ? (f.options ?? []).every(o => optionWidth(o) < inner(LEFT).w) : f.kind === "check" || span(f, true) <= COLS / 2)) &&
     sectionHeight(s, LEFT) < 300;
-  for (let si = 0; si < t.sections.length; si++) {
-    const a = t.sections[si], b = t.sections[si + 1];
+  // Sections placed by hand (the layout editor) go exactly where they were put; the rest flow on after them.
+  const placedSections = t.sections.some(s => s.frame);
+  if (placedSections) {
+    const pages = [page];
+    const n = Math.max(t.pages ?? 1, ...t.sections.map(s => (s.frame ? s.frame.page + 1 : 1)));
+    while (pages.length < n) { newPage(); pages.push(page); }
+    // Top to bottom on each page. A section that grew (more questions) pushes the ones under it down, so they never overlap.
+    const order = t.sections.map((s, si) => ({ s, si, f: s.frame! })).filter(x => x.f).sort((a, b) => a.f.page - b.f.page || b.f.y - a.f.y);
+    for (const { s, si, f } of order) {
+      const cols = Math.max(2, Math.min(COLS, Math.round(COLS * (f.w + CGAP) / (W - 2 * M + CGAP))));
+      const above = geo.sections.filter(g => g.page === f.page && g.x < f.x + f.w - 1 && f.x < g.x + g.w - 1 && g.y >= f.y);
+      const y = Math.min(f.y, ...above.map(g => g.y - g.h - SECTION_GAP));
+      page = pages[f.page];
+      top = y;
+      drawSection(s, si, { x: f.x, w: f.w, cols }, false, f.h ? y - f.h : undefined);
+    }
+    page = pages[n - 1];
+    top = Math.min(n > 1 ? H - 34 : firstTop, ...geo.sections.filter(g => g.page === n - 1).map(g => g.y - g.h - SECTION_GAP));
+  }
+  const flow = t.sections.map((_, si) => si).filter(si => !t.sections[si].frame);
+  for (let k = 0; k < flow.length; k++) {
+    const si = flow[k], a = t.sections[si], b = flow[k + 1] === si + 1 ? t.sections[si + 1] : undefined;
     // Side by side only when they're of similar height, so the shorter doesn't leave a big hole under it.
     const ha = b ? sectionHeight(a, LEFT) : 0, hb = b ? sectionHeight(b, RIGHT) : 0;
     if (!(b && halfOK(a) && halfOK(b) && Math.min(ha, hb) >= 0.45 * Math.max(ha, hb))) { drawSection(a, si, FULL, true); continue; }
@@ -407,11 +494,13 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
     drawSection(a, si, LEFT, false, bottom);
     top = start;
     drawSection(b, si + 1, RIGHT, false, bottom);
-    si++;
+    k++;
   }
 
   // 5. JavaScript version: a last page for the QR code of the answers ("Confirm & Print Form" prints it with the form).
   const formLast = page;
+  geo.pages = doc.getPageCount();
+  geo.tops = doc.getPages().map((_, i) => (i ? H - 34 : firstTop));
   let qr: { page: PDFPage; x: number; y: number; size: number; button: { x: number; y: number } } | undefined;
   if (mode === "javascript" && js) {
     page = doc.addPage([W, H]); strip(false);
@@ -471,5 +560,5 @@ async function layoutPdf(t: Template, values: Values, mode: Mode, longExtra: Map
   for (const f of form.getFields()) if (/^__qr_\d+$/.test(f.getName())) for (const w of f.acroField.getWidgets()) w.dict.delete(PDFName.of("DA"));
   finishForm(doc, font);
   const last = formLast; // the form's own last page (not the QR code page), for sharing out its spare room
-  return { bytes: await doc.save(), pages: doc.getPageCount(), spare: top - BOTTOM, lastLongs: [...longsOn].filter(([, p]) => p === last).map(([id]) => id) };
+  return { geo, bytes: await doc.save(), pages: doc.getPageCount(), spare: top - BOTTOM, lastLongs: [...longsOn].filter(([, p]) => p === last).map(([id]) => id) };
 }

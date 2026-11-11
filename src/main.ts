@@ -4,18 +4,19 @@
 import "./styles.css";
 import { download, h } from "./dom";
 import { FORMATS, KINDS, buildPdf, extractPdf, hasOptions, importPdf, isActive, isRequired, slug } from "./pdf";
-import type { Extracted, Field, Kind, Template, Value, Values } from "./pdf";
+import type { Extracted, Field, Geometry, Kind, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
 import { LC } from "./lc";
 import { buildLcPdf } from "./lc-pdf";
 import { liveCode, toggleCode } from "./code-view";
 import { panes } from "./panes";
+import { decorate, renderBar, select, setupLayout } from "./layout-edit";
 
 /** The LC's "bank's original look" is drawn in the bank's own layout; every other form in the new layout (as the
  *  website's LC): Demo Bank header, numbered sections, Check form / Reset form, red mandatory boxes and the QR code page. */
 const ISSUER = "Demo Bank · Trade Services";
-const pdfOf = (t: Template, v: Values = {}) =>
-  t.title === LC.template.title && !t.base && !t.design ? buildLcPdf(v) : buildPdf({ issuer: ISSUER, ...t }, v, "javascript");
+const pdfOf = (t: Template, v: Values = {}, geo?: Geometry, whole = false) =>
+  t.title === LC.template.title && !t.base && !t.design ? buildLcPdf(v) : buildPdf({ issuer: ISSUER, ...t }, v, "javascript", geo, whole);
 import BANK from "./bank-forms.json";
 import type { Line, Xfa } from "./text";
 
@@ -55,7 +56,8 @@ function refresh(now = false) {
   timer = window.setTimeout(
     async () => {
       liveCode(codeForm(), view === "fill" ? values : {}); // the code panel, if open, follows the edit
-      showPdf(await pdfOf(t, view === "fill" ? values : {}));
+      const geo = {} as Geometry;
+      showPdf(await pdfOf(t, view === "fill" ? values : {}, geo), geo.pages ? geo : undefined);
     },
     now ? 0 : 450,
   );
@@ -134,7 +136,7 @@ function fieldCard(list: Field[], f: Field, i: number): HTMLElement {
     });
   return h(
     "div",
-    { className: "card" },
+    { className: "card", "data-id": f.id, onfocusin: () => select(t.sections.findIndex(s => s.fields.includes(f)), f.id) },
     h(
       "div",
       { className: "row" },
@@ -171,19 +173,6 @@ function fieldCard(list: Field[], f: Field, i: number): HTMLElement {
       "div",
       { className: "row small" },
       h("label", { className: "key-wrap" }, "Key ", key),
-      h(
-        "label",
-        { className: "half" },
-        h("input", {
-          type: "checkbox",
-          checked: !!f.half,
-          onchange: (e: Event) => {
-            f.half = (e.target as HTMLInputElement).checked;
-            refresh();
-          },
-        }),
-        " Half width",
-      ),
       h(
         "label",
         { className: "half" },
@@ -299,10 +288,10 @@ function renderDesign() {
     ...t.sections.map((s, si) =>
       h(
         "section",
-        { className: "sec" },
+        { className: "sec", "data-si": String(si) },
         h(
           "div",
-          { className: "sec-head" },
+          { className: "sec-head", onfocusin: () => select(si) },
           h("span", { className: "num" }, String(si + 1)),
           h("input", {
             value: s.title,
@@ -312,6 +301,23 @@ function renderDesign() {
               refresh();
             },
           }),
+          !base &&
+            h(
+              "select",
+              {
+                className: "cols",
+                title: "Questions in even columns, lined up (Auto: each takes the width it needs)",
+                "aria-label": "Columns",
+                onchange: (e: Event) => {
+                  const v = +(e.target as HTMLSelectElement).value;
+                  if (v) s.cols = v;
+                  else delete s.cols;
+                  for (const q of s.fields) delete q.at;
+                  refresh(true);
+                },
+              },
+              ...["Auto columns", "1 column", "2 columns", "3 columns", "4 columns"].map((v, i) => h("option", { value: String(i), selected: (s.cols ?? 0) === i }, v)),
+            ),
           !base &&
             h(
               "span",
@@ -393,6 +399,7 @@ function renderDesign() {
             onclick: () => {
               t.sections.push({ title: "New section", fields: [] });
               renderDesign();
+              renderBar();
               refresh();
             },
           },
@@ -750,17 +757,19 @@ async function read(bytes: Uint8Array, name: string) {
 }
 
 // The PDF pane: drawn to fit its width ("Fit"), times the zoom; redrawn when the pane changes size.
-let zoom = 1, shown: Uint8Array | undefined;
-async function showPdf(bytes: Uint8Array) {
+let zoom = 1, shown: Uint8Array | undefined, shownGeo: Geometry | undefined;
+async function showPdf(bytes: Uint8Array, geo?: Geometry) {
   const box = $("#preview"),
     mine = ++drawn;
   shown = bytes;
+  shownGeo = geo;
   const fit = Math.max(200, box.clientWidth - 32);
   const pages = await (await text()).renderPages(bytes, Math.round(fit * zoom));
-  if (mine === drawn) box.replaceChildren(...pages); // a newer edit may have drawn already
+  // In Design, the layout editor's layer goes over the pages (layout-edit.ts).
+  if (mine === drawn) box.replaceChildren(...(view === "design" && geo && !t.base ? decorate(pages, geo) : pages)); // a newer edit may have drawn already
   $("#zoomPct").textContent = zoom === 1 ? "Fit" : `${Math.round(zoom * 100)}%`;
 }
-const setZoom = (z: number) => { zoom = Math.min(4, Math.max(0.25, Math.round(z * 100) / 100)); if (shown) void showPdf(shown); };
+const setZoom = (z: number) => { zoom = Math.min(4, Math.max(0.25, Math.round(z * 100) / 100)); if (shown) void showPdf(shown, shownGeo); };
 $("#zoomIn").onclick = () => setZoom(zoom * 1.25);
 $("#zoomOut").onclick = () => setZoom(zoom / 1.25);
 $("#zoomFit").onclick = () => setZoom(1);
@@ -768,7 +777,7 @@ $("#preview").addEventListener("wheel", e => { if (e.ctrlKey || e.metaKey) { e.p
 let resized = 0, lastWidth = 0;
 window.addEventListener("resize", () => {
   clearTimeout(resized);
-  resized = window.setTimeout(() => { const w = $("#preview").clientWidth; if (shown && w && w !== lastWidth) { lastWidth = w; void showPdf(shown); } }, 150);
+  resized = window.setTimeout(() => { const w = $("#preview").clientWidth; if (shown && w && w !== lastWidth) { lastWidth = w; void showPdf(shown, shownGeo); } }, 150);
 });
 new ResizeObserver(() => window.dispatchEvent(new Event("resize"))).observe($("#preview"));
 // The code's text size (A− / A+).
@@ -778,6 +787,29 @@ $("#codeSmaller").onclick = () => setCodeSize(codeSize - 1);
 $("#codeBigger").onclick = () => setCodeSize(codeSize + 1);
 panes($(".main"));
 
+// The layout editor over the PDF (Design step): draw, move and size sections and questions.
+const layoutBar = setupLayout({
+  form: () => t,
+  measure: async whole => { const g = {} as Geometry; await pdfOf(t, {}, g, whole); return g; },
+  changed: now => { renderDesign(); refresh(now); },
+  replace: next => { t = next; renderDesign(); refresh(true); },
+  pick: (si, id) => {
+    const el = $("#panel").querySelector<HTMLElement>(id ? `.card[data-id="${CSS.escape(id)}"]` : `.sec[data-si="${si}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.classList.remove("hl");
+    void el.offsetWidth; // restart the flash
+    el.classList.add("hl");
+  },
+  newField: kind => {
+    const f: Field = { id: unique("question"), label: "New question", kind }; // its key follows its label from now on
+    if (hasOptions(kind)) f.options = ["Yes", "No"];
+    auto.add(f);
+    return f;
+  },
+});
+$("#preview").before(layoutBar);
+
 // ---- Shell ----
 function go(v: View) {
   view = v;
@@ -785,6 +817,8 @@ function go(v: View) {
     .querySelectorAll<HTMLButtonElement>("[data-view]")
     .forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
   ({ design: renderDesign, fill: renderFill, extract: () => renderExtract() })[v]();
+  layoutBar.hidden = v !== "design" || !!t.base;
+  renderBar();
   $("#panel").scrollTop = 0;
   refresh(true);
 }

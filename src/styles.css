@@ -157,3 +157,47 @@ input:invalid, select:invalid { box-shadow: none; }
 .code-input:focus { outline: none; box-shadow: inset 0 0 0 2px #1a1a1a22; }
 .code { flex: 1; margin: 0; overflow: auto; padding: 12px 14px; background: #f7f7f7; font: 1em/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre; tab-size: 4; }
 .code .chg { background: #fff3b0; }
+
+/* Layout editor (layout-edit.ts): a bar above the PDF, and a layer over each page */
+.lx-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 10px; border-bottom: 1px solid var(--rule); background: #fff; font-size: 12px; }
+.lx-bar[hidden] { display: none; }
+.lx-bar button { padding: 4px 10px; font-size: 12px; }
+.lx-bar button.on { background: #2f6fed; border-color: #2f6fed; color: #fff; }
+.lx-bar button.dim { opacity: .4; }
+.lx-bar button.danger:hover { border-color: #c00; color: #c00; }
+.lx-bar input, .lx-bar select { font-size: 12px; padding: 3px 6px; border: 1px solid #ccc; border-radius: 4px; }
+.lx-tools { display: flex; gap: 6px; }
+.lx-ctx { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; padding-left: 10px; border-left: 1px solid var(--rule); }
+.lx-ctx label, .lx-group { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.lx-title { width: 210px; }
+.lx-num { width: 52px; }
+.lx-hint { color: var(--grey); }
+.lx-page { position: relative; flex: none; }
+.lx-page canvas { display: block; }
+.lx-ov { position: absolute; inset: 0; }
+.lx-ov.drawing { cursor: crosshair; }
+.lx-ov.drawing > :not(.lx-new):not(.lx-guide) { pointer-events: none; }
+.lx-sec, .lx-fld { position: absolute; border-radius: 1px; cursor: pointer; }
+.lx-free .lx-sec, .lx-free .lx-fld { cursor: move; }
+.lx-sec:hover { outline: 1px dashed #2f6fed; }
+.lx-sec.sel { outline: 2px solid #2f6fed; background: rgba(47, 111, 237, .04); }
+.lx-fld:hover { outline: 1px dashed #2f6fed; background: rgba(47, 111, 237, .06); }
+.lx-fld.sel { outline: 1.5px solid #2f6fed; background: rgba(47, 111, 237, .08); z-index: 2; }
+.lx-h { position: absolute; width: 9px; height: 9px; background: #fff; border: 1.5px solid #2f6fed; border-radius: 2px; display: none; z-index: 3; }
+.sel > .lx-h { display: block; }
+.lx-n, .lx-s { left: calc(50% - 5px); cursor: ns-resize; }
+.lx-e, .lx-w { top: calc(50% - 5px); cursor: ew-resize; }
+.lx-n, .lx-ne, .lx-nw { top: -5px; }
+.lx-s, .lx-se, .lx-sw { bottom: -5px; }
+.lx-e, .lx-ne, .lx-se { right: -5px; }
+.lx-w, .lx-nw, .lx-sw { left: -5px; }
+.lx-ne, .lx-sw { cursor: nesw-resize; }
+.lx-nw, .lx-se { cursor: nwse-resize; }
+.lx-guide { position: absolute; background: #e5197e; pointer-events: none; z-index: 4; }
+.lx-guide.v { top: 0; bottom: 0; width: 1px; }
+.lx-guide.h { left: 0; right: 0; height: 1px; }
+.lx-new { position: absolute; border: 1.5px dashed #2f6fed; background: rgba(47, 111, 237, .08); pointer-events: none; }
+.sec-head .cols { font-size: 11px; padding: 2px 4px; background: #222; color: #fff; border-color: #444; text-transform: none; font-weight: 400; }
+.hl { animation: hl 1.4s ease-out; }
+@keyframes hl { from { box-shadow: 0 0 0 3px #2f6fed; } to { box-shadow: 0 0 0 3px transparent; } }
+.lx-warn { color: #c00; }
