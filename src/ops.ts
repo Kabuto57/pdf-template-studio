@@ -56,7 +56,8 @@ interface Opened {
   bytes: Uint8Array;
   mail?: Mail;
   vendor?: string;
-  qr?: { payload: Payload; page: number; mismatches: Mismatch[]; printed: boolean }; // the answers' QR code, matched
+  // the answers' QR code, matched; textless: a printed copy whose pages don't carry the answers as text (nothing to match)
+  qr?: { payload: Payload; page: number; mismatches: Mismatch[]; printed: boolean; textless?: boolean };
 }
 let current: Opened | undefined,
   showEmpty = false,
@@ -65,7 +66,6 @@ let pane: { el: HTMLElement; pages: HTMLElement[] } | undefined; // the rendered
 let boxes = new Map<string, Box[]>(),
   sel = "",
   nums = new Map<string, number>(); // nums: the answer numbers pinned on the PDF // where each answer sits in the PDF; the row being shown
-let checked = new Set<string>(); // rows the ops officer has ticked as checked
 let original: Values = {};                 // the answers as read from the PDF, to record what ops corrected
 let decision: "" | "approve" | "reject" = "",
   reason = ""; // the officer's decision, before it is submitted
@@ -163,7 +163,8 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
           data,
           rows: t.sections.flatMap(s => s.fields.map(f => ({ section: s.title, id: f.id, label: f.label, value: data[f.id] ?? "", required: isRequired(f, data) || undefined }))),
         };
-        qr = { ...found, printed, mismatches: q.matchPrinted(t, found.payload, words) };
+        const { mismatches, readable } = q.matchPrinted(t, found.payload, words);
+        qr = { ...found, printed, mismatches, textless: !readable };
       } else qr = { ...found, printed, mismatches: q.matchFields(t, found.payload, result!.data) };
     }
     if (!result?.rows.length) {
@@ -177,7 +178,6 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
       );
     }
     current = { result, name, bytes, mail, vendor, qr };
-    checked = new Set();
     original = structuredClone(result.data) as Values;
     // Corrections made before (kept with the email when it was submitted): apply them again.
     for (const c of mail?.corrections ?? []) {
@@ -414,8 +414,10 @@ function render() {
       ? h(
           "div",
           { className: "banner ok", role: "status" },
-          h("b", {}, "QR code matches. "),
-          `Generated ${qr.payload.saved.replace("T", " ")}. ${qr.printed ? `Its typed answers match the text printed on the pages; ticks and choices are taken from the code (${Object.keys(qr.payload.data).length} answers in all).` : `All ${Object.keys(qr.payload.data).length} of its answers match the form's fields.`}`,
+          h("b", {}, qr.textless ? "Read from the QR code. " : "QR code matches. "),
+          `Generated ${qr.payload.saved.replace("T", " ")}. ${qr.textless
+            ? `This PDF's pages don't carry the answers as text (printed or saved by a viewer other than Acrobat), so nothing could be matched: all ${Object.keys(qr.payload.data).length} answers are taken from the QR code.`
+            : qr.printed ? `Its typed answers match the text printed on the pages; ticks and choices are taken from the code (${Object.keys(qr.payload.data).length} answers in all).` : `All ${Object.keys(qr.payload.data).length} of its answers match the form's fields.`}`,
         )
       : "",
     h(
@@ -494,22 +496,6 @@ function render() {
             { className: "muted small" },
             `${rows.filter(r => show(r.value)).length} of ${rows.length} fields answered`,
           ),
-          h(
-            "span",
-            { className: "muted small" },
-            `${rows.filter(r => checked.has(r.id) && show(r.value)).length} of ${rows.filter(r => show(r.value)).length} answers checked by you`,
-          ),
-          h(
-            "button",
-            {
-              type: "button",
-              onclick: () => {
-                rows.filter(r => show(r.value) && !flags(r.id).length).forEach(r => checked.add(r.id));
-                render();
-              },
-            },
-            "Tick all with no flags",
-          ),
         ),
         ...[...sections].map(([title, rs]) => {
           const shown = rs.filter(visible);
@@ -551,22 +537,6 @@ function render() {
                           {},
                           editable() ? editor(r) : blank ? "Missing" : r.value === true ? "Yes" : val || h("span", { className: "muted" }, "—"),
                           ...why.map(w => h("div", { className: "flag" }, w)),
-                        ),
-                        h(
-                          "td",
-                          { className: "tick" },
-                          val
-                            ? h("input", {
-                                type: "checkbox",
-                                title: "Checked",
-                                "aria-label": `${r.label} checked`,
-                                checked: checked.has(r.id),
-                                onchange: (e: Event) => {
-                                  (e.target as HTMLInputElement).checked ? checked.add(r.id) : checked.delete(r.id);
-                                  render();
-                                },
-                              })
-                            : "",
                         ),
                       );
                     }),

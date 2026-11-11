@@ -55,16 +55,22 @@ export function matchFields(t: Template, p: Payload, data: Record<string, unknow
 }
 
 /** Printed PDF (no fields): every typed answer in the QR code must be in the pages' text. Choices (ticks, options,
- *  lists) can't be told from printed text, so they are taken from the QR code as they are. */
-export function matchPrinted(t: Template, p: Payload, text: string): Mismatch[] {
+ *  lists) can't be told from printed text, so they are taken from the QR code as they are.
+ *  Some viewers print or save a form without its answers as text (drawn as shapes, or as a picture): then most
+ *  answers are "missing" though nothing is wrong. So when fewer than half are found, the pages are `readable: false`
+ *  and nothing is flagged; the QR code is the record. */
+export function matchPrinted(t: Template, p: Payload, text: string): { mismatches: Mismatch[]; readable: boolean } {
   const page = squash(text).toUpperCase(), out: Mismatch[] = [];
+  let typed = 0;
   for (const f of fields(t)) {
     const v = p.data[f.id];
     if (typeof v !== "string" || !v || !(f.kind === "text" || f.kind === "long" || f.kind === "date")) continue;
+    typed++;
     const want = squash(cut(p, f, v) ?? v).toUpperCase();
     if (!page.includes(want)) out.push({ id: f.id, label: f.label, qr: v, pdf: "not found on the printed pages" });
   }
-  return out;
+  const readable = out.length <= typed / 2; // ponytail: a half-found threshold; tune if real customer PDFs sit near it
+  return { mismatches: readable ? out : [], readable };
 }
 
 /** Finds and decodes the QR code on the last page (where the form prints it); `all`: then the other pages too (a

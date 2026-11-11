@@ -70,7 +70,6 @@ th, td { text-align: left; vertical-align: top; padding: 6px 16px; border-bottom
 .missing th, .missing td { color: var(--bad); background: var(--bad-bg); }
 .missing td { font-weight: 600; }
 .flag { font-size: 12px; font-weight: 400; color: var(--bad); margin-top: 2px; }
-.sec td.tick { width: 44px; text-align: center; border-left: 1px solid var(--hair); }
 .cust th { width: 22%; }
 .cust thead th { font-size: 12px; color: var(--grey); font-weight: 600; background: var(--panel); }
 .chip { white-space: nowrap; display: inline-block; font-size: 12px; font-weight: 600; border-radius: 4px; padding: 1px 7px; border: 1px solid; }

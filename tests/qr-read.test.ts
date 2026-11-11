@@ -43,12 +43,15 @@ describe("QR code of the answers", () => {
     expect((await extractPdf(bytes).catch(() => undefined))?.rows.length ?? 0).toBe(0); // no fields left
     const words = (await readText(bytes)).map(l => l.segs.map(g => g.text).join(" ")).join(" ");
     const p = parsePayload(qrPayload(t, s.answers))!;
-    expect(matchPrinted(t, p, words)).toEqual([]);
+    expect(matchPrinted(t, p, words)).toEqual({ mismatches: [], readable: true });
     // The code itself, rebuilt from where its squares are printed (ZapfDingbats text, as Acrobat draws it).
     const doc = await getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
     const items = (await (await doc.getPage(doc.numPages)).getTextContent()).items as { str: string; transform: number[] }[];
     expect(parsePayload(qrFromText(items)!)?.data).toEqual(p.data);
     const wrong = { ...p, data: { ...p.data, beneficiary_name: "SOMEONE ELSE LTD" } };
-    expect(matchPrinted(t, wrong, words).map(m => m.id)).toEqual(["beneficiary_name"]);
+    expect(matchPrinted(t, wrong, words).mismatches.map(m => m.id)).toEqual(["beneficiary_name"]);
+    // A copy printed without its answers as text (only the form's own wording): nothing to match, nothing flagged.
+    const blank = (await readText(await samplePdf({ ...s, answers: {} }))).map(l => l.segs.map(g => g.text).join(" ")).join(" ");
+    expect(matchPrinted(t, p, blank)).toEqual({ mismatches: [], readable: false });
   }, 30000);
 });
