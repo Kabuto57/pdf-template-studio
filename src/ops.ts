@@ -18,6 +18,8 @@ import {
 import { clearInbox, deleteMail, inbox, saveMail, type Mail } from "./mailbox";
 import { date, validateLc } from "./form/validate";
 import { compare, find } from "./customers";
+import { LC } from "./lc";
+import type { Mismatch, Payload } from "./qr-read";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
 
@@ -54,6 +56,7 @@ interface Opened {
   bytes: Uint8Array;
   mail?: Mail;
   vendor?: string;
+  qr?: { payload: Payload; page: number; mismatches: Mismatch[]; printed: boolean }; // the answers' QR code, matched
 }
 let current: Opened | undefined,
   showEmpty = false,
@@ -144,17 +147,36 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
         vendor = forms[0].title;
       }
     }
+    // The QR code of the answers (the JavaScript LC prints it on its last page). A printed / "Saved as PDF" copy has
+    // lost its fields and scripts, but not the code: its answers are read from there, and must match the printed
+    // text. With the fields still there, the code must match them (else it is out of date).
+    const printed = !result?.rows.length, q = await import("./qr-read");
+    const found = await q.readQr(bytes, printed).catch(() => undefined);
+    let qr: Opened["qr"];
+    if (found) {
+      const t = result?.template ?? LC.template, data = { ...found.payload.data } as Values;
+      if (printed) {
+        const lines = await text().then(m => m.readText(bytes)).catch(() => []);
+        const words = lines.map(l => l.segs.map(g => g.text).join(" ")).join(" ");
+        result = {
+          template: t,
+          data,
+          rows: t.sections.flatMap(s => s.fields.map(f => ({ section: s.title, id: f.id, label: f.label, value: data[f.id] ?? "", required: isRequired(f, data) || undefined }))),
+        };
+        qr = { ...found, printed, mismatches: q.matchPrinted(t, found.payload, words) };
+      } else qr = { ...found, printed, mismatches: q.matchFields(t, found.payload, result!.data) };
+    }
     if (!result?.rows.length) {
       const lines = await text()
         .then(m => m.readText(bytes))
         .catch(() => []);
       throw new Error(
         lines.length
-          ? 'its form fields were removed. This happens when a form is printed or "Saved as PDF" (for example from Chrome or Edge). Ask the customer to save the form with Save in Acrobat or Preview, not Print, and send that file.'
+          ? 'its form fields were removed and it has no readable QR code. This happens when a form is printed or "Saved as PDF" (for example from Chrome or Edge) before "Generate QR Code" was pressed. Ask the customer to press Generate QR Code and print again, or to save the form with Save in Acrobat and send that file.'
           : "this PDF has no form fields and no text. It looks like a scan, which would need OCR.",
       );
     }
-    current = { result, name, bytes, mail, vendor };
+    current = { result, name, bytes, mail, vendor, qr };
     checked = new Set();
     original = structuredClone(result.data) as Values;
     // Corrections made before (kept with the email when it was submitted): apply them again.
@@ -263,10 +285,15 @@ function editor(r: Row): HTMLElement {
 
 // ---- The application ----
 function render() {
-  const { result, name, mail, vendor } = current!,
+  const { result, name, mail, vendor, qr } = current!,
     { rows, data, template } = result;
   const missing = rows.filter(r => r.required && !show(r.value));
   const issues = problems(template, data);
+  // The QR code against the fields or the printed pages.
+  for (const m of qr?.mismatches ?? [])
+    issues.push({ id: m.id, msg: qr!.printed ? `the QR code says "${m.qr}", but it is not on the printed pages` : `the QR code says "${m.qr || "(blank)"}", the form says "${m.pdf || "(blank)"}": the code is out of date` });
+  if (qr && !qr.payload.complete) issues.push({ id: "QR code", msg: "the form was not complete when the code was generated" });
+  if (qr?.printed) for (const id of qr.payload.truncated ?? []) issues.push({ id, msg: "shortened in the QR code to fit; ask the customer for the full text" });
   const label = (id: string) => rows.find(r => r.id === id)?.label ?? id;
   // Applicant details against the bank's customer record.
   const cust = "applicant_name" in data && v0(data.applicant_name) ? find(data.applicant_name) : undefined;
@@ -337,6 +364,7 @@ function render() {
           { className: "src" },
           mail ? `From ${mail.from} · Received ${when(mail.sent)} · Attachment: ${name}` : `Uploaded file · ${name}`,
           vendor ? ` · read from the current smart form (${vendor})` : "",
+          qr?.printed ? ` · fields removed (printed copy): answers read from the QR code on page ${qr.page}` : "",
         ),
       ),
       h(
@@ -380,8 +408,16 @@ function render() {
           "div",
           { className: "banner ok", role: "status" },
           h("b", {}, "Complete. "),
-          `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. Read directly from the PDF's fields: no OCR, nothing retyped.`,
+          `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. ${qr?.printed ? "Read from the form's QR code: no OCR, nothing retyped." : "Read directly from the PDF's fields: no OCR, nothing retyped."}`,
         ),
+    qr && !qr.mismatches.length
+      ? h(
+          "div",
+          { className: "banner ok", role: "status" },
+          h("b", {}, "QR code matches. "),
+          `Generated ${qr.payload.saved.replace("T", " ")}. ${qr.printed ? `Its typed answers match the text printed on the pages; ticks and choices are taken from the code (${Object.keys(qr.payload.data).length} answers in all).` : `All ${Object.keys(qr.payload.data).length} of its answers match the form's fields.`}`,
+        )
+      : "",
     h(
       "div",
       { className: showPdf ? "split" : "" },

@@ -1,9 +1,10 @@
 // SAMPLE FILLED APPLICATIONS
 // The "Sample filled PDFs" in the Template Studio (written to public/samples/ by scripts/lc-pdfs.test.ts). Each one is a real LC application PDF, made by
 // buildPdf from different answers, and each shows a different situation ops meets every day.
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
 import { LC, LC_SAMPLE } from "./lc";
-import { buildPdf, type Values } from "./pdf";
+import { buildPdf, subId, type Template, type Values } from "./pdf";
+import { payloadScript, qrScript } from "./form/acrobat-script";
 
 interface Sample { from: string; subject: string; body: string; file: string; shows: string; answers: Values; printed?: boolean }
 
@@ -68,7 +69,7 @@ export const SAMPLES: Sample[] = [
   },
   {
     from: "kokhua@limbrothers.example", subject: "RE: LC application (printed copy)", file: "LC-LimBrothers-printed.pdf",
-    body: "Sorry, resending. I printed it to PDF.", shows: "A printed / 'Saved as PDF' copy: the fields are gone, and the workbench says why",
+    body: "Sorry, resending. I printed it to PDF.", shows: "A printed / 'Saved as PDF' copy: the fields are gone, so the workbench reads the answers from its QR code and matches them to the printed text",
     answers: { ...LC_SAMPLE, ...LIM }, printed: true,
   },
   {
@@ -89,10 +90,32 @@ export const SAMPLES: Sample[] = [
 
 /** One sample's filled PDF. */
 export async function samplePdf(s: Sample) {
-  const bytes = await buildPdf(LC.template, s.answers);
-  if (!s.printed) return bytes;
-  const doc = await PDFDocument.load(bytes); // what "Print to PDF" does: the page looks the same, but the fields are gone
-  doc.getForm().flatten();
+  if (!s.printed) return buildPdf(LC.template, s.answers);
+  // The JavaScript version, after "Generate QR Code", then printed: the page looks the same, but the fields and
+  // scripts are gone; the QR code stays as a picture on the last page.
+  const t = { issuer: "Demo Bank · Trade Services", ...LC.template };
+  const doc = await PDFDocument.load(await buildPdf(t, s.answers, "javascript"));
+  const text = qrPayload(t, s.answers);
+  const m = new Function(`${qrScript}; return lcQrMatrix;`)()(text) as boolean[][];
+  const form = doc.getForm(), last = doc.getPages()[doc.getPageCount() - 1];
+  m.forEach((row, y) => { // each row where Acrobat's lcDrawQr writes it: the comb field "__qr_<y>", one square per cell
+    const r = form.getTextField(`__qr_${y}`).acroField.getWidgets()[0].getRectangle(), size = r.width / row.length;
+    row.forEach((dark, x) => dark && last.drawRectangle({ x: r.x + x * size, y: r.y, width: size, height: r.height, color: rgb(0, 0, 0) }));
+  });
+  form.flatten();
   return doc.save();
+}
+
+/** The QR code's text exactly as the form's own lcPayload makes it in Acrobat (run here on stand-in fields). */
+export function qrPayload(t: Template, v: Values) {
+  const fields: { name: string; type: string; value: string }[] = [];
+  for (const f of t.sections.flatMap(s => s.fields)) {
+    const a = v[f.id];
+    if (f.kind === "checks") (f.options ?? []).forEach((o, i) => fields.push({ name: subId(f.id, i), type: "checkbox", value: Array.isArray(a) && a.includes(o) ? "Yes" : "Off" }));
+    else if (f.kind === "check") fields.push({ name: f.id, type: "checkbox", value: a === true ? "Yes" : "Off" });
+    else fields.push({ name: f.id, type: f.kind === "radio" ? "radiobutton" : "text", value: typeof a === "string" ? a || (f.kind === "radio" ? "Off" : "") : "" });
+  }
+  const d = { numFields: fields.length, getNthFieldName: (i: number) => fields[i].name, getField: (n: string) => { const f = fields.find(x => x.name === n)!; return { ...f, valueAsString: f.value }; } };
+  return new Function("d", `${payloadScript(t)}; return lcPayload(d);`)(d) as string;
 }
 
