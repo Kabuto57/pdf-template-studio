@@ -10,10 +10,10 @@ import { COUNTRIES, CURRENCIES } from "./lists";
 if (typeof window !== "undefined") GlobalWorkerOptions.workerSrc = workerUrl; // tests (Node) use the legacy build's own worker
 /** Every pdf.js document is opened with these. The standard fonts (copied to public/ by npm run dev / build) let pdf.js
  *  draw text in fonts a PDF names but doesn't embed, above all ZapfDingbats: the QR code's squares. Without them the
- *  code is blank. */
+ *  code is blank. The folder sits at the site root, next to src/ (dev) and assets/ (built). */
 export const PDFJS = {
   isEvalSupported: false,
-  ...(typeof window !== "undefined" ? { standardFontDataUrl: `${import.meta.env.BASE_URL}standard_fonts/` } : {}),
+  ...(typeof window !== "undefined" ? { standardFontDataUrl: new URL(/* @vite-ignore */ "../standard_fonts/", import.meta.url).href } : {}),
 };
 
 export interface Part {
