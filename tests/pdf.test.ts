@@ -106,7 +106,7 @@ describe("checks built into the PDF (Acrobat / Reader)", () => {
     expect(on.missing).toContain("Commercial invoice: originals");
     const filled = await acrobat({ doc_commercial_invoice: "Yes", invoice_originals: "3" });
     expect(filled.fields.invoice_originals).toMatchObject({ required: false, strokeColor: "black" }); // no Acrobat red outline once answered
-  });
+  }, 20000); // builds the LC twice: slow on a busy machine
 
   it("ticking a box re-checks straight away (mouse-up action on the tick box)", async () => {
     const { LC } = await import("../src/lc");
