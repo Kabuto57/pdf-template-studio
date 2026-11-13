@@ -129,7 +129,7 @@ export function liveCode(t: Template, values: Values) {
   col.values = values;
   col.texts = tabsFor(t, values).map(([, text]) => text);
   col.title.textContent = t.base ? "This form is an uploaded PDF: the studio fills its own fields, so this code doesn't build it." :
-    "Edit the Python or the form builder: the other follows, and the PDF is rebuilt.";
+    "Edit the Python or the form builder; the other and the PDF follow.";
   render(col.tab, before);
 }
 

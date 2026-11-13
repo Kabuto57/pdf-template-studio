@@ -767,7 +767,7 @@ async function showPdf(bytes: Uint8Array, geo?: Geometry) {
   const pages = await (await text()).renderPages(bytes, Math.round(fit * zoom));
   // In Design, the layout editor's layer goes over the pages (layout-edit.ts).
   if (mine === drawn) box.replaceChildren(...(view === "design" && geo && !t.base ? decorate(pages, geo) : pages)); // a newer edit may have drawn already
-  $("#zoomPct").textContent = zoom === 1 ? "Fit" : `${Math.round(zoom * 100)}%`;
+  $("#zoomPct").textContent = `${Math.round(zoom * 100)}%`;
 }
 const setZoom = (z: number) => { zoom = Math.min(4, Math.max(0.25, Math.round(z * 100) / 100)); if (shown) void showPdf(shown, shownGeo); };
 $("#zoomIn").onclick = () => setZoom(zoom * 1.25);

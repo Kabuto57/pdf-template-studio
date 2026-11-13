@@ -516,7 +516,7 @@ export function renderBar() {
     if (last > 0 && !t.sections.some(s => s.frame?.page === last) && !geo?.sections.some(g => g.page === last))
       parts.push(btn("− Page", "Remove the empty last page", () => { remember(); t.pages = last; host.changed(true); }));
   }
-  parts.push(btn("↶", "Undo (Ctrl+Z)", undo, history.length ? "" : "dim"));
+  parts.push(h("span", { className: "sep" }), btn("↶ Undo", "Undo (Ctrl+Z)", undo, history.length ? "" : "dim"));
   const ctx = h("div", { className: "lx-ctx" });
 
   if (drawing) ctx.append(h("span", { className: message ? "lx-hint lx-warn" : "lx-hint" }, message || "Drag on a page to draw the new section's box. Esc cancels."));
@@ -527,7 +527,7 @@ export function renderBar() {
     const kind = h("select", { "aria-label": "Answer type" }, ...Object.entries(KINDS).map(([k, v]) => h("option", { value: k }, v))) as HTMLSelectElement;
     const go = () => createSection(title.value.trim(), Math.max(1, Math.min(40, +n.value || 1)), Math.max(1, Math.min(4, +cols.value || 1)), kind.value as Kind);
     ctx.append(
-      h("strong", {}, "New section"), title,
+      h("span", { className: "lx-chip" }, "New section"), title,
       h("label", {}, "Questions ", n), h("label", {}, "Columns ", cols), kind,
       btn("Create", "Add the section with its questions", go, "primary"),
       btn("Cancel", "", () => { pending = undefined; host.changed(true); renderBar(); }),
@@ -537,7 +537,7 @@ export function renderBar() {
     const s = t.sections[sel.si], f = sel.id ? fieldOf(sel) : undefined;
     if (f) {
       ctx.append(
-        h("strong", {}, `${sel.si + 1}.${s.fields.indexOf(f) + 1}`),
+        h("span", { className: "lx-chip" }, `Question ${sel.si + 1}.${s.fields.indexOf(f) + 1}`),
         h("input", { value: f.label, className: "lx-title", "aria-label": "Question", oninput: (e: Event) => { f.label = (e.target as HTMLInputElement).value; host.changed(); } }),
         h("select", { "aria-label": "Answer type", onchange: (e: Event) => { remember(); f.kind = (e.target as HTMLSelectElement).value as Kind; if ((f.kind === "radio" || f.kind === "checks" || f.kind === "select") && !f.options?.length) f.options = ["Yes", "No"]; host.changed(true); } },
           ...Object.entries(KINDS).map(([k, v]) => h("option", { value: k, selected: k === f.kind }, v))),
@@ -548,13 +548,13 @@ export function renderBar() {
       const add = num(1, 1, 40, "Questions to add") as HTMLInputElement;
       const kind = h("select", { "aria-label": "Answer type" }, ...Object.entries(KINDS).map(([k, v]) => h("option", { value: k }, v))) as HTMLSelectElement;
       ctx.append(
-        h("strong", {}, String(sel.si + 1)),
+        h("span", { className: "lx-chip" }, `Section ${sel.si + 1}`),
         h("input", { value: s.title, className: "lx-title", "aria-label": "Section title", oninput: (e: Event) => { s.title = (e.target as HTMLInputElement).value; host.changed(); } }),
         h("label", {}, "Columns ", h("select", {
           "aria-label": "Columns",
           onchange: (e: Event) => { remember(); const v = +(e.target as HTMLSelectElement).value; if (v) s.cols = v; else delete s.cols; for (const q of s.fields) delete q.at; host.changed(true); },
         }, ...["Auto", "1", "2", "3", "4"].map((v, i) => h("option", { value: String(i), selected: (s.cols ?? 0) === i }, v)))),
-        h("span", { className: "lx-group" }, "Add ", add, kind, btn("+ Questions", "Add questions to this section", () => {
+        h("span", { className: "lx-group" }, add, kind, btn("+ Add", "Add this many questions of this type to the section", () => {
           remember();
           addQuestions(s, Math.max(1, Math.min(40, +add.value || 1)), kind.value as Kind);
           host.changed(true);
