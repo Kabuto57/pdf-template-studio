@@ -1034,3 +1034,14 @@ if __name__ == "__main__":
     values = {**form.pop("defaults", {}), **values}   # a form file may carry its starting answers
     open(out, "wb").write(build(form, values, mode))
     print("written", out)
+    # Self-check: are the checks inside the file? (If yes but Acrobat shows none, Acrobat's JavaScript is switched off.)
+    check = pikepdf.open(out)
+    js = check.Root.get("/Names", {}).get("/JavaScript")
+    names = [str(n) for n in js.Names[::2]] if js is not None else []
+    actions = sum(1 for page in check.pages for a in page.get("/Annots", []) if "/AA" in a or "/A" in a)
+    print(f"checks inside the PDF: document scripts {names or 'NONE'}, {actions} fields/buttons with actions")
+    if mode != "no-javascript" and "lcRules" not in names:
+        print("WARNING: no 'lcRules' script: this PDF will not check answers. Build again with this file, unchanged.")
+    elif mode != "no-javascript":
+        print("OK. In Acrobat: click 'Enable All Features'. If no box turns red, Acrobat's JavaScript is switched off "
+              "(Edit > Preferences > JavaScript); use the --mode no-javascript version or ask IT to enable it.")
