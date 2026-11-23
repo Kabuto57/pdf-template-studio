@@ -6,7 +6,8 @@ import { qrScript } from "../src/form/acrobat-script";
 import { SAMPLES, qrPayload, samplePdf } from "../src/demo-applications";
 import { LC, LC_SAMPLE } from "../src/lc";
 import { extractPdf } from "../src/pdf";
-import { matchFields, matchPrinted, parsePayload, qrFromText } from "../src/qr-read";
+import { codesIn, joinCodes, matchFields, matchPrinted, parsePayload, qrFromText } from "../src/qr-read";
+import { readFileSync } from "node:fs";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { readText } from "../src/text";
 
@@ -53,5 +54,34 @@ describe("QR code of the answers", () => {
     // A copy printed without its answers as text (only the form's own wording): nothing to match, nothing flagged.
     const blank = (await readText(await samplePdf({ ...s, answers: {} }))).map(l => l.segs.map(g => g.text).join(" ")).join(" ");
     expect(matchPrinted(t, p, blank)).toEqual({ mismatches: [], readable: false });
+  }, 30000);
+});
+
+// lc-form's LC prints one or two codes. Fixtures: a scanned QR page from lc-form's benchmark (two plain codes), and the
+// two structured-append codes its own lcQrMatrix draws ("QR code 1 of 2" / "2 of 2"), which jsQR can't read.
+describe("lc-form's one or two QR codes (zxing)", () => {
+  const blob = (f: string) => new Blob([readFileSync(new URL(`./fixtures/${f}`, import.meta.url))]);
+
+  it("reads both codes on a scanned QR page and joins them into one application", async () => {
+    const codes = await codesIn(blob("lc-form-two-codes-scan.jpg"));
+    expect(codes).toHaveLength(2);
+    const p = joinCodes(codes)!;
+    expect(p.form).toBe("LC-01");
+    expect(Object.keys(p.data)).toHaveLength(65);
+    expect(joinCodes([codes[1], codes[0]])).toEqual(p); // scanned in either order
+    expect(joinCodes([codes[0]])).toBeUndefined(); // half an application
+  }, 30000);
+
+  it("reads the form's own structured-append pair, in order by its sequence number", async () => {
+    const codes = await codesIn(blob("lc-form-structured-append.png"));
+    expect(codes.map(c => [c.index, c.size]).sort()).toEqual([[0, 2], [1, 2]]);
+    const want = JSON.parse(readFileSync(new URL("./fixtures/lc-form-structured-append.txt", import.meta.url), "utf8"));
+    expect(joinCodes([...codes].reverse())).toEqual(want); // the non-ASCII answer survives the split
+  }, 30000);
+
+  it("ignores the same code scanned twice, and refuses three", async () => {
+    const [a, b] = await codesIn(blob("lc-form-two-codes-scan.jpg"));
+    expect(joinCodes([a, b, a])?.form).toBe("LC-01");
+    expect(joinCodes([a, b, { ...a, bytes: new Uint8Array([123, 125]) }])).toBeUndefined();
   }, 30000);
 });

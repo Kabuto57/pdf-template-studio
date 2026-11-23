@@ -6,7 +6,7 @@ const page = (f: string) => fileURLToPath(new URL(f, import.meta.url));
 
 // Nothing loads or is sent anywhere except the site itself; the preview is drawn on canvases.
 const CSP = [
-  "default-src 'none'", "script-src 'self'", "style-src 'self'", "img-src 'self' blob: data:",
+  "default-src 'none'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self'", "img-src 'self' blob: data:",
   "font-src 'self' data: blob:", "connect-src 'self'", "base-uri 'none'", "form-action 'none'",
 ].join("; ");
 const csp = (): Plugin => ({

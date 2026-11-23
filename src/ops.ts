@@ -57,7 +57,7 @@ interface Opened {
   mail?: Mail;
   vendor?: string;
   // the answers' QR code, matched; textless: a printed copy whose pages don't carry the answers as text (nothing to match)
-  qr?: { payload: Payload; page: number; mismatches: Mismatch[]; printed: boolean; textless?: boolean };
+  qr?: { payload: Payload; page: number; codes: number; mismatches: Mismatch[]; printed: boolean; textless?: boolean };
 }
 let current: Opened | undefined,
   showEmpty = false,
@@ -364,7 +364,7 @@ function render() {
           { className: "src" },
           mail ? `From ${mail.from} · Received ${when(mail.sent)} · Attachment: ${name}` : `Uploaded file · ${name}`,
           vendor ? ` · read from the current smart form (${vendor})` : "",
-          qr?.printed ? ` · fields removed (printed copy): answers read from the QR code on page ${qr.page}` : "",
+          qr?.printed ? ` · fields removed (printed copy): answers read from the QR code${qr.codes > 1 ? `s (${qr.codes} codes joined)` : ""} on page ${qr.page}` : "",
         ),
       ),
       h(
@@ -801,20 +801,34 @@ function ask(title: string, text: string | Node, ok: string, cls = "primary", bo
 
 const v0 = (x: unknown) => typeof x === "string" && x.trim() !== "";
 
-// ---- Upload: one or many PDFs; each goes into the mailbox, and the first one opens ----
+// ---- Upload: one or many PDFs or scanned images; each goes into the mailbox, and the first one opens ----
+const isImage = (f: File) => /^image\/(png|jpeg|bmp|webp|gif)$/.test(f.type) || /\.(png|jpe?g|bmp|webp|gif)$/i.test(f.name);
+/** A scanned image (e.g. the QR page photographed or scanned to JPG) as a one-page PDF, so it opens like any other
+ *  upload. Half a point a pixel: the reader renders pages at 2x, so it sees the scan's own pixels. */
+async function imagePdf(f: File) {
+  const bmp = await createImageBitmap(f), canvas = document.createElement("canvas");
+  canvas.width = bmp.width;
+  canvas.height = bmp.height;
+  canvas.getContext("2d")!.drawImage(bmp, 0, 0);
+  const png = await new Promise<Blob>((ok, no) => canvas.toBlob(b => (b ? ok(b) : no(new Error("could not read the image"))), "image/png"));
+  const doc = await PDFDocument.create(), img = await doc.embedPng(await png.arrayBuffer());
+  doc.addPage([bmp.width / 2, bmp.height / 2]).drawImage(img, { x: 0, y: 0, width: bmp.width / 2, height: bmp.height / 2 });
+  return doc.save();
+}
 const take = async (files: FileList | File[] | undefined) => {
-  const pdfs = [...(files ?? [])].filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+  const pdfs = [...(files ?? [])].filter(f => /\.pdf$/i.test(f.name) || f.type === "application/pdf" || isImage(f));
   if (!pdfs.length) return;
   let first: Mail | undefined;
   for (const [i, f] of pdfs.entries()) {
+    const name = isImage(f) ? f.name.replace(/\.\w+$/, ".pdf") : f.name;
     const mail: Mail = {
-      id: crypto.randomUUID(), from: "Uploaded file", to: "", subject: f.name.replace(/\.pdf$/i, ""), body: "",
-      sent: Date.now() + i, file: { name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }, status: "new",
+      id: crypto.randomUUID(), from: "Uploaded file", to: "", subject: f.name.replace(/\.\w+$/i, ""), body: "",
+      sent: Date.now() + i, file: { name, bytes: isImage(f) ? await imagePdf(f) : new Uint8Array(await f.arrayBuffer()) }, status: "new",
     };
     await saveMail(mail);
     first ??= mail;
   }
-  if (pdfs.length > 1) toast(`${pdfs.length} PDFs added to the mailbox.`);
+  if (pdfs.length > 1) toast(`${pdfs.length} files added to the mailbox.`);
   open(first!.file.bytes, first!.file.name, first);
 };
 $<HTMLInputElement>("#pdfIn").onchange = e => {

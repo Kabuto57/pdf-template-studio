@@ -4,8 +4,13 @@
 // page. Here it is found and decoded (jsQR), and its JSON is matched against what else the PDF holds:
 //   - fields still there: every answer in the QR code must equal the field's answer (a stale code is flagged);
 //   - fields gone (printed): every typed answer in the QR code must appear in the printed text of the pages.
+//   - lc-form's LC splits long answers into TWO codes ("QR code 1 of 2", "2 of 2", QR structured append). jsQR can't
+//     read structured append and misses version-40 codes on 200 dpi scans, so pictures are read with zxing-wasm (the
+//     same ZXing engine as lc-form's read_qr.py), and one or two codes are joined (joinCodes).
 import jsQR from "jsqr";
 import { PDFDocument, PDFTextField } from "pdf-lib";
+import { prepareZXingModule, readBarcodes } from "zxing-wasm/reader";
+import wasmUrl from "zxing-wasm/reader/zxing_reader.wasm?url";
 import { getDocument } from "pdfjs-dist";
 import { PDFJS } from "./text"; // also sets up pdf.js's worker
 import { type Field, type Template, type Value } from "./pdf";
@@ -73,36 +78,60 @@ export function matchPrinted(t: Template, p: Payload, text: string): { mismatche
   return { mismatches: readable ? out : [], readable };
 }
 
-/** Finds and decodes the QR code on the last page (where the form prints it); `all`: then the other pages too (a
- *  printed copy may have its pages in another order or the code page scanned separately). */
-export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload: Payload; page: number } | undefined> {
+/** One QR code read from a picture: its raw bytes, and its place in a structured-append set (-1 when not in one). */
+export interface Code { bytes: Uint8Array; index: number; size: number }
+
+/** The application from one code, or from two in either order (code 1 of 2 starts the JSON). Bytes are joined before
+ *  decoding, so a character split between the two codes survives. undefined: no code, too many, or they don't join. */
+export function joinCodes(codes: Code[]): Payload | undefined {
+  const seen = new Map(codes.map(c => [c.bytes.join(","), c])), list = [...seen.values()]; // the same code twice counts once
+  if (!list.length || list.length > 2) return undefined;
+  const orders = list.length === 1 ? [list] : list.every(c => c.index >= 0) ? [[...list].sort((a, b) => a.index - b.index)] : [list, [...list].reverse()];
+  for (const order of orders) {
+    const all = new Uint8Array(order.reduce((n, c) => n + c.bytes.length, 0));
+    order.reduce((at, c) => (all.set(c.bytes, at), at + c.bytes.length), 0);
+    const p = parsePayload(new TextDecoder().decode(all));
+    if (p) return p;
+  }
+  return undefined;
+}
+
+// The browser loads the reader's WebAssembly from this site, not zxing-wasm's default CDN.
+if (typeof document !== "undefined") prepareZXingModule({ overrides: { locateFile: (p: string, prefix: string) => (p.endsWith(".wasm") ? wasmUrl : prefix + p) } });
+
+/** Every QR code in a picture (a page, or an uploaded scan). */
+export async function codesIn(img: ImageData | Blob): Promise<Code[]> {
+  const found = await readBarcodes(img, { formats: ["QRCode"], tryHarder: true, maxNumberOfSymbols: 4 });
+  return found.filter(r => r.isValid).map(r => ({ bytes: r.bytes, index: r.sequenceIndex, size: r.sequenceSize }));
+}
+
+/** Finds and decodes the QR code(s) on the last page (where the form prints them); `all`: then the other pages too (a
+ *  printed copy may have its pages in another order, or the two codes scanned on separate pages). */
+export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload: Payload; page: number; codes: number } | undefined> {
   // Form saved with its fields: "Generate QR Code" also keeps the code's text in the hidden field "__qr". Exact, no picture.
   const kept = await qrField(bytes).catch(() => undefined);
-  if (kept) return kept;
+  if (kept) return { ...kept, codes: 0 };
   const doc = await getDocument({ data: bytes.slice(), ...PDFJS }).promise;
   try {
+    const codes: Code[] = [];
     for (let n = doc.numPages; n >= (all ? 1 : doc.numPages); n--) {
       const page = await doc.getPage(n);
-      // 1. The code as printed text (the form draws its squares as ZapfDingbats "n"): rebuilt from where each square is.
+      // 1. One code as printed text (the studio form draws its squares as ZapfDingbats "n"): rebuilt from where each square is.
       const items = (await page.getTextContent()).items.filter(i => "str" in i) as { str: string; transform: number[] }[];
       const fromText = qrFromText(items), payload = fromText && parsePayload(fromText);
-      if (payload) return { payload, page: n };
-      // 2. A picture of the page (a scan, or a copy whose text was turned into shapes). The squares drawn as text have
-      //    thin white gaps between them, which confuse the reader at some sizes: so several sizes are tried.
-      // ponytail: a few fixed scales; add a gap-closing filter or a stronger reader (zxing) if real scans fail.
-      for (const scale of [2, 1.75, 3]) {
-        const vp = page.getViewport({ scale }), canvas = document.createElement("canvas");
-        canvas.width = Math.ceil(vp.width);
-        canvas.height = Math.ceil(vp.height);
-        const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvas, viewport: vp }).promise;
-        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
-        const read = code && parsePayload(code.data);
-        if (read) return { payload: read, page: n };
-      }
+      if (payload) return { payload, page: n, codes: 1 };
+      // 2. A picture of the page (a scan, or a copy whose text was turned into shapes), read by zxing: one or two codes.
+      // ponytail: one scale (2x ≈ 144 dpi of the PDF page; a scanned page keeps its own pixels); add more if real scans fail.
+      const vp = page.getViewport({ scale: 2 }), canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(vp.width);
+      canvas.height = Math.ceil(vp.height);
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvas, viewport: vp }).promise;
+      codes.push(...(await codesIn(ctx.getImageData(0, 0, canvas.width, canvas.height))));
+      const read = joinCodes(codes);
+      if (read) return { payload: read, page: n, codes: new Set(codes.map(c => c.bytes.join(","))).size };
     }
     return undefined;
   } finally {
@@ -116,7 +145,8 @@ async function qrField(bytes: Uint8Array) {
   const field = doc.getForm().getFieldMaybe("__qr");
   const payload = field instanceof PDFTextField ? parsePayload(field.getText() ?? "") : undefined;
   if (!payload) return undefined;
-  const row = doc.getForm().getFieldMaybe("__qr_0")?.acroField.getWidgets()[0]?.P();
+  // The studio's form names its rows "__qr_0"...; lc-form's "__qr1_0"... (and "__qr2_..." for a second code).
+  const row = (doc.getForm().getFieldMaybe("__qr_0") ?? doc.getForm().getFieldMaybe("__qr1_0"))?.acroField.getWidgets()[0]?.P();
   const page = doc.getPages().findIndex(p => p.ref === row);
   return { payload, page: page < 0 ? doc.getPageCount() : page + 1 };
 }
