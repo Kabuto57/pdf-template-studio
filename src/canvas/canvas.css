@@ -2,8 +2,8 @@
    (selection, conditions, drop places) is drawn in one proof-mark blue, so it never reads as part of the form;
    red stays the form's own colour for mandatory answers and for problems. */
 .cv {
-  --proof: #1f5fd6; --proof-wash: rgba(31, 95, 214, .07); --desk: #474c54; --line: #d9dbdf; --soft: #5f6368;
-  --brand: #c8102e; --slate: #23282f; --slate-2: #2e343c; --slate-line: #3c434d;
+  --proof: #1f5fd6; --proof-wash: rgba(31, 95, 214, .07); --desk: #e6e7ea; --line: #d9dbdf; --soft: #5f6368;
+  --brand: #c8102e; --slate: #23282f; --bar: #f3f4f6;
   flex: 1; min-height: 0; display: flex;
 }
 .cv > .cv-left { flex: 0 0 216px; }
@@ -11,9 +11,9 @@
 .cv.code-open > .cv-code, .cv.code-open > .cv-split.code-w { display: flex; }
 .cv > .cv-stage { flex: 1 1 0; }
 .cv > .cv-right { flex: 0 0 var(--panel-w, 340px); min-width: 0; }
-.cv-split { flex: 0 0 6px; cursor: col-resize; background: var(--slate); touch-action: none; position: relative; }
+.cv-split { flex: 0 0 6px; cursor: col-resize; background: var(--bar); touch-action: none; position: relative; }
 .cv-split.code-w { display: none; }
-.cv-split::after { content: ""; position: absolute; inset: 0 2px; background: var(--slate-line); }
+.cv-split::after { content: ""; position: absolute; inset: 0 2px; background: var(--line); }
 .cv-split:hover::after, .cv-split:active::after, .cv-split:focus-visible::after { background: var(--proof); }
 .cv[hidden], .main[hidden] { display: none; }
 .cv h2 { font-size: 12px; font-weight: 700; margin: 0 0 8px; color: var(--soft); }
@@ -35,13 +35,13 @@
 
 /* middle: the pages */
 .cv-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--desk); }
-.cv-bar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--slate-2); color: #d6dae0; border-bottom: 1px solid var(--slate); font-size: 12px; flex-wrap: wrap; }
-.cv-bar button { min-height: 26px; padding: 0 9px; font-size: 12px; background: transparent; color: #e8ebef; border-color: var(--slate-line); }
-.cv-bar button:hover { border-color: #8a929d; }
-.cv-bar button[aria-pressed="true"] { background: #e8ebef; color: var(--slate); border-color: #e8ebef; }
+.cv-bar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bar); color: var(--ink); border-bottom: 1px solid var(--line); font-size: 12px; flex-wrap: wrap; }
+.cv-bar button { min-height: 26px; padding: 0 9px; font-size: 12px; background: #fff; color: var(--ink); }
+.cv-bar button:hover { border-color: #888; }
+.cv-bar button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
 .cv-code-btn { font-weight: 700; }
-.cv-sep { width: 1px; height: 18px; background: var(--slate-line); margin: 0 4px; }
-.cv-meta { color: #9ea6b0 !important; }
+.cv-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.cv-meta { color: var(--soft) !important; }
 .cv-toggle input { accent-color: var(--proof); }
 .cv-pickbar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: var(--proof); color: #fff; font-size: 13px; }
 .cv-pickbar[hidden] { display: none; }
@@ -50,7 +50,7 @@
 .cv-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .cv-meta { margin-left: auto; color: var(--soft); }
 .cv-scroll { flex: 1; overflow: auto; padding: 24px; display: flex; flex-direction: column; align-items: safe center; gap: 20px; }
-.cv-page { position: relative; flex: none; width: var(--page-w, 700px); aspect-ratio: 595.28 / 841.89; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+.cv-page { position: relative; flex: none; width: var(--page-w, 700px); aspect-ratio: 595.28 / 841.89; background: #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, .2); }
 .cv-svg, .cv-ov, .cv-logic { position: absolute; inset: 0; width: 100%; height: 100%; }
 .cv-qr .cv-svg { opacity: .5; } /* filled in by Acrobat, nothing to design */
 .cv-logic { pointer-events: none; color: var(--proof); overflow: visible; }
@@ -86,7 +86,7 @@
 /* the toolbar above the selected question */
 .cv-float { position: absolute; z-index: 8; display: flex; gap: 1px; background: var(--slate); border-radius: 4px; padding: 2px; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); white-space: nowrap; }
 .cv-float button { min-height: 24px; padding: 0 8px; font-size: 11.5px; border: 0; border-radius: 3px; background: transparent; color: #fff; }
-.cv-float button:hover { background: #3c434d; }
+.cv-float button:hover { background: #444b55; }
 .cv-float button[aria-pressed="true"] { background: var(--brand); }
 .cv-float .danger:hover { background: #8b1020; }
 /* the pop-up that adds a condition */
