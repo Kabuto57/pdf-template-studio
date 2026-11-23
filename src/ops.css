@@ -129,3 +129,9 @@ button.danger.primary, .modal .danger { background: var(--bad); color: #fff; bor
 .edit-box, .data td select { width: 100%; font: inherit; padding: 4px 6px; border: 1px solid #b9c2cc; border-radius: 3px; background: #fff; }
 textarea.edit-box { min-height: 60px; }
 .edit-choices { display: flex; flex-wrap: wrap; gap: 2px 12px; font-weight: 400; }
+/* the Forms dialog (form-registry.ts) */
+.forms-list { list-style: none; margin: 12px 0; padding: 0; max-height: 50vh; overflow: auto; border-top: 1px solid var(--rule); }
+.forms-list li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
+.forms-list small { display: block; color: var(--grey); }
+.forms-btns { display: flex; gap: 6px; flex: none; }
+.modal .drop { margin: 0; }

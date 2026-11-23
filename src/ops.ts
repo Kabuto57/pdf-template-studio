@@ -18,8 +18,8 @@ import {
 import { clearInbox, deleteMail, inbox, saveMail, type Mail } from "./mailbox";
 import { date, validateLc } from "./form/validate";
 import { compare, find } from "./customers";
-import { LC } from "./lc";
 import type { Mismatch, Payload } from "./qr-read";
+import { addForm, findForm, knownForms, removeForm } from "./form-registry";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
 
@@ -57,7 +57,8 @@ interface Opened {
   mail?: Mail;
   vendor?: string;
   // the answers' QR code, matched; textless: a printed copy whose pages don't carry the answers as text (nothing to match)
-  qr?: { payload: Payload; page: number; codes: number; mismatches: Mismatch[]; printed: boolean; textless?: boolean };
+  // form: which known form the printed copy was read with; unknown: the QR code names a form the workbench doesn't know
+  qr?: { payload: Payload; page: number; codes: number; mismatches: Mismatch[]; printed: boolean; textless?: boolean; form?: string; unknown?: boolean };
 }
 let current: Opened | undefined,
   showEmpty = false,
@@ -154,8 +155,14 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
     const found = await q.readQr(bytes, printed).catch(() => undefined);
     let qr: Opened["qr"];
     if (found) {
-      const t = result?.template ?? LC.template, data = { ...found.payload.data } as Values;
-      if (printed) {
+      // A printed copy has lost the form stored in the PDF: the QR code's form code and version pick it (form-registry.ts).
+      const known = result?.template ? undefined : await findForm(found.payload.form, found.payload.version);
+      const t = result?.template ?? known?.template, data = { ...found.payload.data } as Values;
+      if (!t) {
+        // A form the workbench doesn't know: the answers as they are, flagged (render), rather than nothing.
+        result = { template: undefined, data, rows: Object.entries(data).map(([id, value]) => ({ section: "", id, label: id, value })) };
+        qr = { ...found, printed, mismatches: [], unknown: true };
+      } else if (printed) {
         const lines = await text().then(m => m.readText(bytes)).catch(() => []);
         const words = lines.map(l => l.segs.map(g => g.text).join(" ")).join(" ");
         result = {
@@ -164,7 +171,7 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
           rows: t.sections.flatMap(s => s.fields.map(f => ({ section: s.title, id: f.id, label: f.label, value: data[f.id] ?? "", required: isRequired(f, data) || undefined }))),
         };
         const { mismatches, readable } = q.matchPrinted(t, found.payload, words);
-        qr = { ...found, printed, mismatches, textless: !readable };
+        qr = { ...found, printed, mismatches, textless: !readable, form: `${known!.key} (${known!.source})` };
       } else qr = { ...found, printed, mismatches: q.matchFields(t, found.payload, result!.data) };
     }
     if (!result?.rows.length) {
@@ -292,6 +299,7 @@ function render() {
   // The QR code against the fields or the printed pages.
   for (const m of qr?.mismatches ?? [])
     issues.push({ id: m.id, msg: qr!.printed ? `the QR code says "${m.qr}", but it is not on the printed pages` : `the QR code says "${m.qr || "(blank)"}", the form says "${m.pdf || "(blank)"}": the code is out of date` });
+  if (qr?.unknown) issues.push({ id: "QR code", msg: `form ${qr.payload.form} version ${qr.payload.version} is not known here, so the answers are shown as they are, without questions or checks. Add its blank PDF under Forms.` });
   if (qr && !qr.payload.complete) issues.push({ id: "QR code", msg: "the form was not complete when the code was generated" });
   if (qr?.printed) for (const id of qr.payload.truncated ?? []) issues.push({ id, msg: "shortened in the QR code to fit; ask the customer for the full text" });
   const label = (id: string) => rows.find(r => r.id === id)?.label ?? id;
@@ -364,7 +372,7 @@ function render() {
           { className: "src" },
           mail ? `From ${mail.from} · Received ${when(mail.sent)} · Attachment: ${name}` : `Uploaded file · ${name}`,
           vendor ? ` · read from the current smart form (${vendor})` : "",
-          qr?.printed ? ` · fields removed (printed copy): answers read from the QR code${qr.codes > 1 ? `s (${qr.codes} codes joined)` : ""} on page ${qr.page}` : "",
+          qr?.printed ? ` · fields removed (printed copy): answers read from the QR code${qr.codes > 1 ? `s (${qr.codes} codes joined)` : ""} on page ${qr.page}${qr.form ? `, form ${qr.form}` : ""}` : "",
         ),
       ),
       h(
@@ -410,7 +418,7 @@ function render() {
           h("b", {}, "Complete. "),
           `All ${rows.filter(r => r.required).length} mandatory fields are filled and every value is in the right format. ${qr?.printed ? "Read from the form's QR code: no OCR, nothing retyped." : "Read directly from the PDF's fields: no OCR, nothing retyped."}`,
         ),
-    qr && !qr.mismatches.length
+    qr && !qr.mismatches.length && !qr.unknown
       ? h(
           "div",
           { className: "banner ok", role: "status" },
@@ -836,6 +844,41 @@ $<HTMLInputElement>("#pdfIn").onchange = e => {
   take(el.files ?? undefined);
   el.value = ""; // so the same file can be chosen again
 };
+
+// ---- Forms: the forms the workbench can read printed copies of (form-registry.ts) ----
+async function formsDialog() {
+  const list = h("ul", { className: "forms-list" });
+  const fill = async () => list.replaceChildren(...(await knownForms()).map(k =>
+    h("li", {},
+      h("div", {}, h("b", {}, k.key), ` ${k.template.title}`, h("small", {}, `${k.template.sections.flatMap(s => s.fields).length} questions · ${k.source}`)),
+      k.source === "this browser"
+        ? h("span", { className: "forms-btns" },
+            h("button", { type: "button", title: "The file to add to the forms/ folder on GitHub, so everyone has this form", onclick: () => saveJson(k.key, k.template) }, "Download for registry"),
+            h("button", { type: "button", className: "danger", onclick: () => (removeForm(k.key), fill()) }, "Remove"))
+        : "",
+    )));
+  const input = h("input", { type: "file", accept: "application/pdf,.pdf", multiple: true, className: "sr" }) as HTMLInputElement;
+  input.onchange = async () => {
+    for (const f of input.files ?? []) {
+      const t = (await extractPdf(new Uint8Array(await f.arrayBuffer())).catch(() => undefined))?.template;
+      if (t) toast(`Added ${addForm(t)}: ${t.title}.`);
+      else toast(`${f.name} doesn't carry its form description: use a PDF made by the studio or lc-form.`);
+    }
+    input.value = "";
+    fill();
+  };
+  await fill();
+  await ask("Forms", "A printed or scanned application is read from its QR code, which names its form and version. These are the forms this workbench can read. Old versions stay, so older applications still read correctly.", "Done", "primary", [
+    list,
+    h("label", { className: "drop" }, h("b", {}, "Add a form"), ": choose its blank PDF", input),
+  ]);
+}
+function saveJson(key: string, t: Template) {
+  const a = h("a", { href: URL.createObjectURL(new Blob([JSON.stringify({ ...t, base: undefined }, null, 2)], { type: "application/json" })), download: `${key}.json` }) as HTMLAnchorElement;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$("#forms").onclick = () => formsDialog();
 
 $("#clear").onclick = async () => {
   if (!(await ask("Empty the mailbox?", "Every email and its decision will be removed from this browser.", "Empty mailbox", "danger"))) return;

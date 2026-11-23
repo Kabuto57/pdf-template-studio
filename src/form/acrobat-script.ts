@@ -67,12 +67,17 @@ interface Model {
  *  it with the form's JSON Schema. A QR code holds about 2,300 characters: longer paragraphs are shortened and listed
  *  in "truncated" (the full text stays in the PDF's fields). Also given word for word to the company AI
  *  (public/lc-ai-confirm-print-prompt.txt); tests/pdf.test.ts checks the two match. */
+/** The form code and version the QR code carries ("Form LC-01 · v1.0 · Nov 2026" -> LC-01, 1.0). The workbench finds
+ *  the form by them (form-registry.ts). */
+export const formKey = (t: Pick<Template, "formCode" | "title">) =>
+  ({ form: /[A-Z]+-\d+/.exec(t.formCode ?? "")?.[0] ?? safe(t.title), version: /v([\d.]+)/.exec(t.formCode ?? "")?.[1] ?? "1" });
+
 export function payloadScript(t: Template) {
   const all = t.sections.flatMap(s => s.fields);
   const groups = all.filter(f => f.kind === "checks").map(f => `${JSON.stringify(f.id)}: ${JSON.stringify(f.options ?? [])}`).join(", ");
   const long = JSON.stringify(all.filter(f => f.kind === "long").map(f => f.id));
-  const form = JSON.stringify(/[A-Z]+-\d+/.exec(t.formCode ?? "")?.[0] ?? safe(t.title)), version = JSON.stringify(/v([\d.]+)/.exec(t.formCode ?? "")?.[1] ?? "1");
-  return fill(PAYLOAD_JS, { __GROUPS__: groups, __LONG__: long, __FORM__: form, __VERSION__: version });
+  const { form, version } = formKey(t);
+  return fill(PAYLOAD_JS, { __GROUPS__: groups, __LONG__: long, __FORM__: JSON.stringify(form), __VERSION__: JSON.stringify(version) });
 }
 
 /** The QR code without Acrobat's barcode feature: lcQrMatrix makes a version 40 / error correction M code, lcDrawQr writes
