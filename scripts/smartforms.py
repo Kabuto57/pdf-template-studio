@@ -37,6 +37,14 @@ def main(lc_form):
         forms.append({"file": name, "form": form, "defaults": defaults, "pdfName": getattr(module, "PDF_NAME", None)})
         parity[name] = lay_out(layout, form, defaults)
 
+    # the options no smart form uses yet (section buttons, paragraph height), on the example form
+    example = importlib.util.spec_from_file_location("example_form", os.path.join(forms_dir, "example_form.py"))
+    ex = importlib.util.module_from_spec(example)
+    example.loader.exec_module(ex)
+    ex.FORM["sections"][-1]["buttons"] = ["check-form", "generate-qr", "print-form"]
+    ex.FORM["sections"][1]["fields"][-1]["height"] = 110
+    parity["options"] = {**lay_out(layout, ex.FORM, ex.DEFAULTS), "form": ex.FORM, "defaults": ex.DEFAULTS}
+
     lists = {}
     lc = importlib.import_module("lc_form")
     for key in ("CURRENCIES", "COUNTRIES"):

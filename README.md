@@ -56,13 +56,30 @@ so they never look like part of the form.
 - **Add** (left): drag a kind of question (Text, Paragraph, Date, Pick one, Tick any, Tick box, Drop-down) onto the
   page, where a blue line shows it will go. Or click it to add it after the selected question. The same for a
   **Section**, a **Bank use section** or a **Signature section**. **Outline** jumps to a section.
+- **Code** (top left of the pages, like Overleaf): opens the form file beside the pages, coloured like a code
+  editor. Change the page and the code follows; type in the code and the page follows as soon as it reads (a line
+  it can't read is named under the editor, in red). Clicking a question's line selects it on the page, and the
+  selected question's line is marked. Drag the bar between the code and the pages, or between the pages and the
+  right-hand panel, to make either wider (the widths are remembered).
 - **Select and move**: click a question to select it; drag it to move it (also into another section). Drag a
   section by its grey heading. Alt+↑/↓ moves the selection one place, Delete removes it, Ctrl/Cmd+D duplicates,
   Ctrl/Cmd+Z undoes (Shift: redoes).
 - **Properties** (right): the wording, answer type, options (Currencies / Countries fill a drop-down), the key, the
   most characters and the answer format.
+- **Toolbar on the selected question**: Add condition, Mandatory, Duplicate, Delete.
+- **Resize with the mouse**: drag the selected question's right-edge handle to set its width (the grid's columns
+  show while dragging; it snaps to them); drag a paragraph box's bottom handle to make it taller or shorter; drag a
+  section's right-edge handle to make it half or full width.
+- **Add a condition on the page**: press *Add condition* (on the toolbar or in Properties), then click the question
+  it waits on. A small pop-up beside it asks only what that question allows (ticked or not, which options, or any
+  answer) and whether the condition makes the question mandatory or only unlocks it. Conditions are listed in
+  Properties as sentences ("Mandatory when 13.3 Drafts at is "Term""), each with × to remove it.
+- **Buttons**: drag *Button* onto a section, or tick them in the section's Properties: Check form, Reset form,
+  Generate QR Code, Print Form, in a row at the section's bottom right. They do what the form's own buttons of those
+  names do (lc-form's `buttons=[...]`).
 - **Rules**: *Mandatory*: No / Always / When… and *Locked*: until mandatory / always open / until…. A condition is
-  "question X is ticked", "is one of these options" or "has any answer"; add more and any one is enough. The
+  "question X is ticked", "is one of these options" or "has any answer"; add more and any one is enough. "Edit with
+  lists" changes them with drop-downs instead of the page. The
   selected question's conditions are drawn as blue lines to the questions they wait on (**Show all conditions**
   draws every one), and a small blue dot marks every question with a condition.
 - **Checks across answers** (nothing selected): a date after (or not before) another, a number in a range.
@@ -177,7 +194,10 @@ pdf-template-studio/
 │   ├── canvas/                the studio's Design step: the canvas, in the smart forms' layout
 │   │   ├── layout.ts          lc-form's layout.py, line by line: where every section, question and box goes
 │   │   ├── render.ts          draws a laid-out form as SVG pages
-│   │   ├── canvas.ts          the canvas: add, select, drag, properties, rules, review panel, undo
+│   │   ├── canvas.ts          the canvas: add, select, drag, resize, properties, rules, review panel, undo
+│   │   ├── code-pane.ts       the form file beside the pages (Code), coloured; edits go both ways
+│   │   ├── read-form-file.ts  reads a form file's Python back into a form (for the code pane)
+│   │   ├── conditions.ts      conditions in plain words, and the pop-up that adds one on the page
 │   │   ├── review.ts          the design review: problems lc-form would refuse, tips with fixes
 │   │   ├── edit.ts            moving, renaming and deleting questions (rules follow)
 │   │   ├── form-file.ts       the form as an lc-form form file (forms/<name>_form.py)

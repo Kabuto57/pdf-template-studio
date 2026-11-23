@@ -26,7 +26,7 @@ const rule = (r: Rule) =>
 /** Several rules ("any one is enough"): the helpers return lists, so they join with +. */
 const rules = (rs: Rule[]) => (rs.length ? rs.map(rule).join(" + ") : "[]");
 
-const ORDER = ["required", "requiredIf", "activeIf", "max", "format", "cols", "beside", "words"] as const;
+const ORDER = ["required", "requiredIf", "activeIf", "max", "format", "cols", "beside", "words", "height"] as const;
 /** The question options lc-form knows; studio-only ones (placed-by-hand spots) are left out. */
 function question(f: Field) {
   const args = [py(f.id), py(f.label)];
@@ -49,6 +49,7 @@ function section(s: Section) {
   if (s.new_page) opts.push("new_page=True");
   if (s.bankOnly) opts.push("bankOnly=True");
   if (s.signoff) opts.push("signoff=True");
+  if (s.buttons?.length) opts.push(`buttons=${py(s.buttons)}`);
   return [`        section(${[py(s.title), ...opts, "fields=["].join(", ")}`, ...s.fields.map(f => `            ${question(f)},`), "        ]),"];
 }
 

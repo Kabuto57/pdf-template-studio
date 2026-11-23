@@ -37,6 +37,14 @@ export async function writePdf(t: Template, values: Values = {}): Promise<Uint8A
   const on = (w: Widget): PDFPage => pages[w.page];
   for (const f of laid.fields) {
     if (f.name.endsWith("__list")) continue; // the date list: one date box instead
+    if (f.type === "button") { // drawn only: what the buttons do needs lc-form's Acrobat scripts
+      for (const w of f.widgets) {
+        const [x1, y1, x2, y2] = w.rect, size = f.size ?? 8;
+        on(w).drawRectangle({ x: x1, y: y1, width: x2 - x1, height: y2 - y1, color: rgb(0, 0, 0) });
+        on(w).drawText(w.caption ?? "", { x: (x1 + x2) / 2 - font.widthOfTextAtSize(w.caption ?? "", size) / 2, y: (y1 + y2) / 2 - size * 0.36, size, font, color: rgb(1, 1, 1) });
+      }
+      continue;
+    }
     const w = f.widgets[0];
     if (f.type === "text") {
       const field = form.createTextField(f.name);

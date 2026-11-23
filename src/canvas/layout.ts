@@ -6,7 +6,7 @@
 // Differences: shapes are kept as objects (not PDF drawing commands), and it also records where each section and
 // question was drawn (`sections`, `questions`), for the canvas to select and drag.
 import METRICS from "./metrics.json";
-import { activeRules, hasOptions, isRequired, type Field, type Section, type Template, type Values } from "../pdf";
+import { BUTTONS, activeRules, hasOptions, isRequired, type Field, type Section, type Template, type Values } from "../pdf";
 
 // ---- 1. Settings (layout.py section 1)
 export const W = 595.28, H = 841.89, M = 42;
@@ -15,6 +15,7 @@ export type RGB = readonly [number, number, number];
 export const RED: RGB = [0.8, 0, 0], INK: RGB = [0, 0, 0], GREY: RGB = [0.35, 0.35, 0.35], RULE: RGB = [0.75, 0.75, 0.75];
 export const WHITE: RGB = [1, 1, 1], ACCENT: RGB = [0, 0, 0], TINT: RGB = [0.88, 0.88, 0.88], BANK_SHADE: RGB = [0.95, 0.95, 0.95];
 export const LABEL = 7.5, TEXT = 8.5, BOX = 15, COLUMNS = 12, COLUMN_GAP = 4, PAD = 6, BAND = 13, SECTION_GAP = 5, INDENT = 14, SIGN_OFF = 46;
+export const BUTTON_W = 110, BUTTON_H = 18, BUTTON_ROW = BUTTON_H + 6;
 const BESIDE_GAP = 14.7;
 
 // ---- 2. Text helpers
@@ -178,7 +179,7 @@ function layOnce(form: Template, answers: Values, extra: Record<string, number>)
       if (draw) placeOptions(q, options, answer, look, always, i => [spots[i][0], spots[i][1] - 10.5, spots[i][1] - 9], x, x + w);
       return t0 - y + 12;
     }
-    const h = q.kind === "long" ? 50 + (extra[q.id] ?? 0) : BOX;
+    const h = q.kind === "long" ? (q.height || 50) + (extra[q.id] ?? 0) : BOX;
     if (draw) placeBox(q, x, y - h, w, h, answer, look, always);
     return 10 + h;
   }
@@ -309,7 +310,7 @@ function layOnce(form: Template, answers: Values, extra: Record<string, number>)
   const sectionHeight = (s: Section, area: Area) => {
     const note = noteLines(s, area);
     const rows = rowsOf(s, area.cols).reduce((a, r) => a + rowHeight(r, area) + 4, 0);
-    return BAND + 4 + note.length * 9 + (note.length ? 4 : 0) + rows + (s.signoff ? SIGN_OFF : 0) + 1;
+    return BAND + 4 + note.length * 9 + (note.length ? 4 : 0) + rows + (s.buttons?.length ? BUTTON_ROW : 0) + (s.signoff ? SIGN_OFF : 0) + 1;
   };
 
   // ---- one section
@@ -354,6 +355,22 @@ function layOnce(form: Template, answers: Values, extra: Record<string, number>)
       out.rows.push({ si: index, ids: placed.map(c => c.q.id), cols: placed.map(c => c.n), of: area.cols });
       top -= h + 4;
     });
+
+    if (s.buttons?.length) {
+      if (mayBreak && top - BUTTON_ROW < BOTTOM) {
+        top -= 1;
+        outline();
+        newPage();
+        boxTop = top;
+        top -= 5;
+      }
+      const x0 = inner.x + inner.w - s.buttons.length * (BUTTON_W + 6) + 6;
+      s.buttons.forEach((name, k) => {
+        const f = addField(`__s${index + 1}_${name.replace(/-/g, "_")}`, "button", { size: 8 });
+        addWidget(f, x0 + k * (BUTTON_W + 6), top - 2 - BUTTON_H, BUTTON_W, BUTTON_H, { caption: BUTTONS[name], border: ACCENT, bg: ACCENT, bw: 0 });
+      });
+      top -= BUTTON_ROW;
+    }
 
     if (s.signoff) {
       for (const [x, w, label] of [[inner.x, 190, "Authorised signature(s)"], [inner.x + 210, 110, "Date"]] as const) {

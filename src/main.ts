@@ -458,7 +458,7 @@ panes($(".main"));
 
 // The canvas (Design step for every form but an uploaded PDF).
 const canvas = $("#canvas");
-mountCanvas(canvas, { form: () => t, changed: save }); // the canvas redraws itself
+mountCanvas(canvas, { form: () => t, values: () => values, setValues: v => { values = v; }, changed: save }); // the canvas redraws itself
 
 // ---- Shell ----
 function go(v: View) {

@@ -29,7 +29,12 @@ export interface Field {
   cols?: number;         // how much of the row it takes, out of 12 (12 whole row, 6 half); otherwise from its label and max
   beside?: number;       // label beside a box this wide, even when the label is long
   words?: string[];      // filled in by the form: the amount in words, from these questions; read-only
+  height?: number;       // paragraph boxes: the whole box this many points tall (default 50)
 }
+
+/** What a button a section adds can do (lc-form acrobat_js.py BUTTON_JS). */
+export const BUTTONS = { "check-form": "Check form", "reset-form": "Reset form", "generate-qr": "Generate QR Code", "print-form": "Print Form" } as const;
+export type ButtonName = keyof typeof BUTTONS;
 
 /** Where a section sits on the page, in PDF points (the studio's layout editor). y is its TOP edge, counted from
  *  the page's bottom; h 0 = as tall as its questions need. */
@@ -54,6 +59,7 @@ export interface Section {
   cols?: number;       // questions in an even grid of this many columns, labels lined up (otherwise each takes the width it needs)
   width?: "full" | "half"; // smart forms: always the whole width / half the page (otherwise the layout decides)
   new_page?: boolean;  // smart forms: starts on a new page (spelt as in lc-form's form files)
+  buttons?: ButtonName[]; // smart forms: a row of buttons at its bottom right
 }
 
 /** A check across two answers (lc-form's FORM["checks"]), each skipped while its answers are blank:

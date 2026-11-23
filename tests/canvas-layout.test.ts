@@ -4,13 +4,18 @@ import { describe, expect, it } from "vitest";
 import PARITY from "./fixtures/layout-parity.json";
 import { layout } from "../src/canvas/layout";
 import { SMART_FORMS } from "../src/canvas/forms";
+import type { Template, Values } from "../src/pdf";
 
-const expected = PARITY as unknown as Record<string, { pages: number; ops: number[]; widgets: [string, number, number, number, number, number][] }>;
+type Want = { pages: number; ops: number[]; widgets: [string, number, number, number, number, number][]; form?: Template; defaults?: Values };
+const expected = PARITY as unknown as Record<string, Want>;
 
 describe("smart-form layout matches lc-form's layout.py", () => {
-  for (const f of SMART_FORMS) {
-    it(f.file, () => {
-      const laid = layout(f.form, f.defaults), want = expected[f.file];
+  // every smart form, plus the example form with the options none of them uses yet (section buttons, paragraph height)
+  const cases = [...SMART_FORMS.map(f => ({ name: f.file, form: f.form, defaults: f.defaults })),
+    { name: "options", form: expected.options.form!, defaults: expected.options.defaults! }];
+  for (const f of cases) {
+    it(f.name, () => {
+      const laid = layout(f.form, f.defaults), want = expected[f.name];
       expect(laid.pages.length).toBe(want.pages);
       expect(laid.pages.map(p => p.length)).toEqual(want.ops);
       const got = laid.fields.flatMap(x => x.widgets.map(w => [x.name, w.page, ...w.rect] as const));

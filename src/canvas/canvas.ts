@@ -4,28 +4,40 @@
 //   middle  The pages, drawn exactly as lc-form builds them (layout.ts). Click a question or a section heading to
 //           select it; drag to move it. The questions a selection depends on, and those depending on it, are
 //           joined by blue lines.
+//           The selection gets handles: drag a question's right edge to set its width (it snaps to the 12-column
+//           grid), a paragraph box's bottom edge to set its height, a section's right edge for half or full width.
+//           Its small toolbar adds a condition by clicking, on the page, the question it waits on (conditions.ts).
+//   code    "Code" opens the form file beside the pages (code-pane.ts): each follows the other.
 //   right   Properties of the selection (wording, answer type, width, mandatory and locking rules), or of the
 //           form when nothing is selected. Review: what lc-form would refuse, and tips, most with a fix.
+//           The code and the right-hand panel are resized by dragging their edge.
 // The layout keeps to the smart forms' grid: a question's width is a share of 12 columns, a section is auto, full
 // or half width, and may start a new page. That is all that can be changed, so every form stays in the house style.
 // Keys: Delete removes, Esc deselects, Alt+Up/Down moves, Ctrl/Cmd+D duplicates, Ctrl/Cmd+Z undoes (Shift: redoes).
 import { h } from "../dom";
-import { FORMATS, KINDS, hasOptions, type Check, type Field, type Kind, type Rule, type Section, type Template } from "../pdf";
+import { BUTTONS, FORMATS, KINDS, hasOptions, type ButtonName, type Check, type Field, type Kind, type Rule, type Section, type Template, type Values } from "../pdf";
+import { codePane, markLine, showCode } from "./code-pane";
+import { conditionPopup, sayRule, type Effect } from "./conditions";
+import { formFile, formFileName } from "./form-file";
+import { readFormFile } from "./read-form-file";
 import { allFields, dependents, locate, moveField, removeField, renameField, rulesOf, uniqueId } from "./edit";
 import { LISTS } from "./forms";
-import { BAND, H, W, layout, type Laid } from "./layout";
+import { BAND, COLUMN_GAP, H, M, PAD, SECTION_GAP, W, layout, type Laid } from "./layout";
 import { pagesSvg } from "./render";
 import { review, type Issue } from "./review";
 
 export interface CanvasHost {
   form(): Template;
+  /** The form's starting answers (the form file's DEFAULTS). */
+  values(): Values;
+  setValues(v: Values): void;
   /** The form changed (save it). */
   changed(): void;
 }
 
 type Sel = { si: number; id?: string } | undefined;
 type Drop = { si: number; qi: number; page: number; x: number; y: number; h: number; vertical: boolean } | undefined;
-type Dragged = { kind: "field"; id: string } | { kind: "new"; make: () => Field | Section } | { kind: "section"; si: number };
+type Dragged = { kind: "field"; id: string } | { kind: "new"; make: () => Field | Section } | { kind: "section"; si: number } | { kind: "button" };
 
 const WIDTHS: [string, number | undefined][] = [["Auto", undefined], ["1/4", 3], ["1/3", 4], ["1/2", 6], ["2/3", 8], ["3/4", 9], ["Full", 12]];
 const FORMAT_NAMES: Record<string, string> = { number: "Whole number", amount: "Amount", phone: "Phone", account: "Account no.", cif: "C.I.F. (7 digits)", ref12: "Reference (12 digits)", fx8: "FX contract (8 digits)", fx2: "FX sequence (2 digits)", swift: "SWIFT address" };
@@ -35,6 +47,10 @@ let host: CanvasHost, root: HTMLElement, laid: Laid | undefined, sel: Sel, zoom 
 const undo: string[] = [], redo: string[] = [];
 let typing = false; // an inspector box is being typed in: one undo step for the whole edit
 const autoKey = new WeakSet<Field>(); // new questions whose key follows their wording until the key is edited
+let picking: string | undefined; // adding a condition to this question: waiting for a click on the question it waits on
+const remembered = (key: string) => { try { return localStorage.getItem(`cv-${key}`); } catch { return null; } };
+const remember = (key: string, v: string) => { try { localStorage.setItem(`cv-${key}`, v); } catch { /* not remembered */ } };
+let codeOpen = remembered("code") === "1";
 
 const t = () => host.form();
 const num = (id: string) => { const at = locate(t(), id); return at ? `${at.si + 1}.${at.qi + 1}` : "?"; };
@@ -94,6 +110,13 @@ function addField(f: Field) {
 function addSection(s: Section, at = sel ? sel.si + 1 : t().sections.length) {
   edit(form => { form.sections.splice(at, 0, s); sel = { si: at }; });
 }
+/** Adds the first button the section doesn't have yet (Check form, then Reset form, ...). */
+function addButton(si = sel?.si ?? t().sections.length - 1) {
+  const s = t().sections[si];
+  const next = (Object.keys(BUTTONS) as ButtonName[]).find(b => !s?.buttons?.includes(b));
+  if (!s || !next) return;
+  edit(() => { (s.buttons ??= []).push(next); sel = { si }; });
+}
 
 // ---- mount
 export function mountCanvas(el: HTMLElement, h_: CanvasHost) {
@@ -114,18 +137,80 @@ export function render(keepPanel = false) {
   drawOutline();
   if (!keepPanel) drawPanel(issues);
   else updateReviewCount(issues);
+  if (codeOpen) { showCode(codeText()); markSelection(); }
+}
+
+const codeText = () => formFile(t(), host.values(), t().pdfName, t().file ?? formFileName(t()));
+/** The code was edited and reads: it becomes the form (changed in place: the studio holds this object). */
+function applyCode(code: string) {
+  const read = readFormFile(code);
+  snapshot();
+  const form = t() as unknown as Record<string, unknown>, keep = { file: t().file };
+  for (const k of Object.keys(form)) delete form[k];
+  Object.assign(form, read.template, keep, read.pdfName ? { pdfName: read.pdfName } : {});
+  host.setValues(read.defaults);
+  if (sel && !t().sections[sel.si]) sel = undefined;
+  if (sel?.id && !locate(t(), sel.id)) sel = { si: sel.si };
+  host.changed();
+  render();
+}
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function markSelection() {
+  if (!codeOpen) return;
+  if (sel?.id) markLine(new RegExp(`^\\s*\\w+\\(${escapeRe(JSON.stringify(sel.id))}`));
+  else if (sel) markLine(new RegExp(`^\\s*section\\(${escapeRe(JSON.stringify(t().sections[sel.si]?.title ?? ""))}`));
+  else markLine();
+}
+function toggleCode(open = !codeOpen) {
+  codeOpen = open;
+  remember("code", open ? "1" : "0");
+  root.classList.toggle("code-open", open);
+  document.getElementById("cvCodeBtn")!.setAttribute("aria-pressed", String(open));
+  if (open) { showCode(codeText()); markSelection(); }
+  sizePages();
+}
+
+/** A bar between two panes: dragging it sets the CSS width `name` on the canvas (and remembers it). */
+function splitter(name: string, min: number, max: number, grow: 1 | -1) {
+  const bar = h("div", { className: `cv-split ${name}`, role: "separator", "aria-label": "Drag to resize", tabIndex: 0 });
+  const saved = remembered(name);
+  if (saved) root.style.setProperty(`--${name}`, `${saved}px`);
+  const set = (w: number) => { w = Math.round(Math.min(max, Math.max(min, w))); root.style.setProperty(`--${name}`, `${w}px`); remember(name, String(w)); sizePages(); };
+  const pane = () => (grow > 0 ? bar.previousElementSibling : bar.nextElementSibling) as HTMLElement;
+  bar.onpointerdown = e => {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = pane().getBoundingClientRect().width;
+    bar.setPointerCapture(e.pointerId);
+    bar.onpointermove = ev => set(w0 + grow * (ev.clientX - x0));
+    bar.onpointerup = () => { bar.onpointermove = bar.onpointerup = null; };
+  };
+  bar.onkeydown = e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") set(pane().getBoundingClientRect().width + (e.key === "ArrowRight" ? 20 : -20) * grow); };
+  return bar;
 }
 
 function build() {
   const palette = h("div", { className: "cv-palette" },
     h("h2", {}, "Add"),
     h("div", { className: "cv-kinds" }, ...(Object.keys(KINDS) as Kind[]).map(k => paletteItem(KINDS[k], glyph(k), () => newField(k), f => addField(f as Field)))),
-    h("div", { className: "cv-kinds" }, ...NEW_SECTIONS.map(([name, make]) => paletteItem(name, glyph(name), make, s => addSection(s as Section)))),
+    h("div", { className: "cv-kinds" }, ...NEW_SECTIONS.map(([name, make]) => paletteItem(name, glyph(name), make, s => addSection(s as Section))), buttonItem()),
   );
+  root.classList.toggle("code-open", codeOpen);
   root.replaceChildren(
     h("aside", { className: "cv-left", "aria-label": "Add and outline" }, palette, h("h2", {}, "Outline"), h("ol", { className: "cv-outline", id: "cvOutline" })),
+    h("div", { className: "cv-code" }, codePane({
+      apply: applyCode,
+      pick: ({ id, title }) => {
+        const at = id ? locate(t(), id) : undefined, si = at?.si ?? t().sections.findIndex(s => s.title === title);
+        if (si < 0) return;
+        select(at ? { si, id } : { si });
+        scrollTo(si, at ? id : undefined);
+      },
+    })),
+    splitter("code-w", 280, 1100, 1),
     h("div", { className: "cv-stage" },
       h("div", { className: "cv-bar" },
+        h("button", { type: "button", id: "cvCodeBtn", className: "cv-code-btn", "aria-pressed": String(codeOpen), title: "Show the form file beside the pages", onclick: () => toggleCode() }, "Code"),
+        h("span", { className: "cv-sep" }),
         h("button", { type: "button", id: "cvUndo", title: "Undo (Ctrl/Cmd+Z)", onclick: () => restore(undo, redo) }, "Undo"),
         h("button", { type: "button", id: "cvRedo", title: "Redo (Shift+Ctrl/Cmd+Z)", onclick: () => restore(redo, undo) }, "Redo"),
         h("span", { className: "cv-sep" }),
@@ -137,8 +222,10 @@ function build() {
         h("label", { className: "cv-toggle" }, h("input", { type: "checkbox", onchange: (e: Event) => { showAllLogic = (e.target as HTMLInputElement).checked; drawLogic(); } }), "Show all conditions"),
         h("span", { id: "cvPages", className: "cv-meta" }),
       ),
-      h("div", { className: "cv-scroll", id: "cvScroll", onpointerdown: (e: PointerEvent) => { if ((e.target as HTMLElement).closest(".cv-hit")) return; select(undefined); } }),
+      h("div", { className: "cv-pickbar", id: "cvPickBar", hidden: true }),
+      h("div", { className: "cv-scroll", id: "cvScroll", onpointerdown: (e: PointerEvent) => { if ((e.target as HTMLElement).closest(".cv-hit, .cv-pop, .cv-float")) return; if (picking) return stopPick(); select(undefined); } }),
     ),
+    splitter("panel-w", 280, 720, -1),
     h("aside", { className: "cv-right" },
       h("div", { className: "cv-tabs", role: "tablist" },
         h("button", { type: "button", role: "tab", id: "cvTabProps", onclick: () => { tab = "props"; render(); } }, "Properties"),
@@ -147,6 +234,13 @@ function build() {
       h("div", { className: "cv-panel", id: "cvPanel", role: "tabpanel" }),
     ),
   );
+}
+
+/** The Button item: drop it on a section (or click it) to add a button row to that section. */
+function buttonItem() {
+  const b = h("button", { type: "button", className: "cv-kind", title: "Add a button (Check form, Reset form, Generate QR Code or Print Form) to a section. Drag it onto a section, or click it to add it to the selected one." }, glyph("Button"), h("span", {}, "Button"));
+  b.onpointerdown = e => startDrag(e, b, { kind: "button" }, "Button", () => addButton());
+  return b;
 }
 
 function paletteItem(name: string, icon: SVGElement, make: () => Field | Section, add: (x: Field | Section) => void) {
@@ -167,6 +261,7 @@ function glyph(kind: string): SVGElement {
     select: '<rect x="1.5" y="6" width="17" height="8"/><path d="M12.5 9l2 2 2-2"/>',
     Section: '<rect x="1.5" y="3" width="17" height="14"/><path d="M1.5 6.5h17" stroke-width="2.5"/>',
     "Bank use section": '<rect x="1.5" y="3" width="17" height="14" fill="#e6e6e6"/><path d="M1.5 6.5h17" stroke-width="2.5"/>',
+    Button: '<rect x="1.5" y="6" width="17" height="8" rx="1" fill="currentColor"/><path d="M6 10h8" stroke="#fff"/>',
     "Signature section": '<path d="M2 14c2-5 3-5 4 0s2 0 3-2 2 2 3 2M2 16.5h9"/><rect x="13" y="9" width="5.5" height="8" stroke-dasharray="1.5 1.2"/>',
   };
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -195,15 +290,26 @@ function drawPages() {
       const f = locate(t(), q.id)?.field;
       const box = hit("cv-q", q.x - 2, q.y - 1, q.w + 4, q.h + 2, { "data-id": q.id, title: `${num(q.id)} ${f?.label ?? ""}` });
       if (f && rulesOf(f).length) box.classList.add("cond");
-      box.onpointerdown = e => startDrag(e, box, { kind: "field", id: q.id }, f?.label ?? q.id, () => select({ si: q.si, id: q.id }));
+      box.onpointerdown = e => {
+        if (picking) { e.stopPropagation(); return pickTrigger(q.id); }
+        startDrag(e, box, { kind: "field", id: q.id }, f?.label ?? q.id, () => select({ si: q.si, id: q.id }));
+      };
       box.ondblclick = () => focusLabel();
       ov.append(box);
     }
+    for (const f of laid!.fields.filter(f => f.type === "button" && f.name.startsWith("__s"))) // a section's buttons
+      for (const w of f.widgets.filter(w => w.page === p)) {
+        const si = parseInt(f.name.slice(3), 10) - 1, [x1, y1, x2, y2] = w.rect;
+        const b = hit("cv-btn", x1, y1, x2 - x1, y2 - y1, { title: `${w.caption}: a button of section ${si + 1}. Click to change the section's buttons.` });
+        b.onpointerdown = e => { e.stopPropagation(); select({ si }); requestAnimationFrame(() => document.getElementById("cvButtons")?.scrollIntoView({ block: "center" })); };
+        ov.append(b);
+      }
     if (p >= laid!.lastQuestionPage + 1) page.classList.add("cv-qr");
     page.append(ov);
     return page;
   }));
   document.getElementById("cvPages")!.textContent = `${laid!.pages.length} pages, the last for the QR code`;
+  root.classList.toggle("picking", !!picking);
   sizePages();
   paintSelection();
 }
@@ -231,6 +337,7 @@ function select(s: Sel) {
   paintSelection();
   drawOutline();
   drawPanel(review(t(), laid));
+  markSelection();
 }
 
 function paintSelection() {
@@ -243,6 +350,7 @@ function paintSelection() {
   } else if (sel) document.querySelectorAll(`.cv-sec[data-si="${sel.si}"]`).forEach(el => el.classList.add("sel"));
   document.querySelectorAll<HTMLElement>("#cvOutline li").forEach((li, i) => li.classList.toggle("on", sel?.si === i));
   drawLogic();
+  drawHandles();
 }
 
 /** Blue lines from each condition's question to the question it switches on (the selection's, or all). */
@@ -274,6 +382,136 @@ function drawLogic() {
   }
 }
 
+// ---- the selection's handles and toolbar
+/** The page overlay and box (PDF points) of the selection, on the first page it is on. */
+function selectionBox() {
+  if (!laid || !sel) return undefined;
+  const box = sel.id ? laid.questions.find(q => q.id === sel!.id) : laid.sections.find(s => s.si === sel!.si);
+  const ov = box && document.querySelector<HTMLElement>(`.cv-page[data-page="${box.page}"] .cv-ov`);
+  return box && ov ? { box, ov } : undefined;
+}
+
+function drawHandles() {
+  document.querySelectorAll(".cv-handle, .cv-float").forEach(el => el.remove());
+  const at = selectionBox();
+  if (!at || picking) return;
+  const { box, ov } = at;
+  const f = sel!.id ? locate(t(), sel!.id)?.field : undefined;
+  const handle = (edge: "e" | "s", label: string) => {
+    const x = edge === "e" ? box.x + box.w : box.x + box.w / 2, y = edge === "e" ? box.y + box.h / 2 : box.y;
+    const el = hit(`cv-handle ${edge}`, x, y, 0, 0, { title: label, "aria-label": label }); // sized in CSS: the same at any zoom
+    el.onpointerdown = e => resize(e, el, edge);
+    ov.append(el);
+  };
+  if (f) {
+    handle("e", "Drag to set the width (snaps to the 12-column grid)");
+    if (f.kind === "long") handle("s", "Drag to set the box's height");
+    // the small toolbar above the question
+    const bar = h("div", { className: "cv-float" },
+      h("button", { type: "button", onclick: () => startPick(f.id), title: "Click, on the page, the question this one waits on" }, "Add condition"),
+      h("button", { type: "button", "aria-pressed": String(!!f.required), onclick: () => edit(() => { if (f.required) delete f.required; else { f.required = true; delete f.requiredIf; } }) }, "Mandatory"),
+      h("button", { type: "button", onclick: duplicate, title: "Duplicate (Ctrl/Cmd+D)" }, "Duplicate"),
+      h("button", { type: "button", className: "danger", onclick: deleteSelection, title: "Delete (Delete key)" }, "Delete"));
+    Object.assign(bar.style, { left: pct(box.x, W), bottom: pct(box.y + box.h + 3, H) });
+    bar.onpointerdown = e => e.stopPropagation();
+    ov.append(bar);
+  } else if (!t().sections[sel!.si]?.signoff) handle("e", "Drag to make the section half or full width"); // signature blocks stay full width
+}
+
+/** Dragging a handle: a question's width in grid columns, a paragraph box's height, a section's half / full width. */
+function resize(e: PointerEvent, el: HTMLElement, edge: "e" | "s") {
+  e.preventDefault();
+  e.stopPropagation();
+  const at = selectionBox()!, { box, ov } = at, page = ov.parentElement!;
+  const f = sel!.id ? locate(t(), sel!.id)!.field : undefined, s = t().sections[sel!.si];
+  const scale = () => page.getBoundingClientRect().width / W;
+  const ghost = hit("cv-ghostbox", box.x, box.y, box.w, box.h, {}), tag = h("span", { className: "cv-tag" });
+  ghost.append(tag);
+  ov.append(ghost);
+  const place = (x: number, y: number, w: number, hh: number, say: string) => {
+    Object.assign(ghost.style, { left: pct(x, W), top: pct(H - y - hh, H), width: pct(w, W), height: pct(hh, H) });
+    tag.textContent = say;
+  };
+
+  // the grid of the question's row: columns from the row's left edge to the section's inner right edge
+  const row = f && laid!.rows.find(r => r.ids.includes(f.id));
+  const sec = laid!.sections.find(x => x.si === sel!.si && x.page === box.page)!;
+  const rowLeft = row ? laid!.questions.find(q => q.id === row.ids[0] && q.page === box.page)?.x ?? box.x : box.x;
+  const of = row?.of ?? 12, colW = (sec.x + sec.w - PAD - rowLeft - (of - 1) * COLUMN_GAP) / of;
+  if (f && edge === "e") ov.append(...Array.from({ length: of }, (_, i) => hit("cv-col", rowLeft + i * (colW + COLUMN_GAP), sec.y, colW, sec.h, {})));
+  const halfW = (W - 2 * M - SECTION_GAP) / 2;
+
+  let result: () => void = () => {};
+  const x0 = e.clientX, y0 = e.clientY;
+  el.setPointerCapture(e.pointerId);
+  el.onpointermove = ev => {
+    const dx = (ev.clientX - x0) / scale(), dy = (ev.clientY - y0) / scale();
+    if (f && edge === "e") {
+      const n = Math.max(1, Math.min(of, Math.round((box.w + dx + COLUMN_GAP) / (colW + COLUMN_GAP))));
+      place(box.x, box.y, n * colW + (n - 1) * COLUMN_GAP, box.h, `${n} of ${of} columns`);
+      result = () => edit(() => { f.cols = n; });
+    } else if (f && edge === "s") {
+      const base = f.height || 50, hh = Math.round(Math.max(20, Math.min(600, base + dy)));
+      const tall = box.h - base + hh; // the top stays; the box (and any extra room the layout gave it) grows from it
+      place(box.x, box.y + box.h - tall, box.w, tall, `${hh} pt tall`);
+      result = () => edit(() => { if (hh === 50) delete f.height; else f.height = hh; });
+    } else {
+      const half = box.w + dx < (W - 2 * M) * 0.75;
+      place(box.x, box.y, half ? halfW : W - 2 * M, box.h, half ? "Half width" : "Full width");
+      result = () => edit(() => { s.width = half ? "half" : "full"; if (half && s.signoff) delete s.width; });
+    }
+  };
+  el.onpointerup = el.onpointercancel = ev => {
+    el.onpointermove = el.onpointerup = el.onpointercancel = null;
+    ov.querySelectorAll(".cv-ghostbox, .cv-col").forEach(x => x.remove());
+    if (ev.type === "pointerup") result();
+  };
+}
+
+// ---- adding a condition by clicking on the page
+function startPick(id: string) {
+  picking = id;
+  const f = locate(t(), id)!.field;
+  const bar = document.getElementById("cvPickBar")!;
+  bar.replaceChildren(h("span", {}, `Click the question that ${num(id)} "${f.label.length > 50 ? `${f.label.slice(0, 48)}…` : f.label}" waits on.`),
+    h("button", { type: "button", onclick: stopPick }, "Cancel"));
+  bar.hidden = false;
+  root.classList.add("picking");
+  drawHandles();
+}
+function stopPick() {
+  picking = undefined;
+  document.getElementById("cvPickBar")!.hidden = true;
+  document.querySelectorAll(".cv-pop").forEach(el => el.remove());
+  root.classList.remove("picking");
+  drawHandles();
+}
+function pickTrigger(triggerId: string) {
+  const target = picking && locate(t(), picking)?.field, trigger = locate(t(), triggerId)?.field;
+  const box = laid?.questions.find(q => q.id === triggerId);
+  if (!target || !trigger || !box || triggerId === target.id) return;
+  document.querySelectorAll(".cv-pop").forEach(el => el.remove());
+  const pop = conditionPopup(trigger, target, num(triggerId), (rule: Rule, effect: Effect) => {
+    const id = target.id;
+    stopPick();
+    edit(() => {
+      if (effect === "mandatory") { delete target.required; (target.requiredIf ??= []).push(rule); }
+      else (target.activeIf ??= []).push(rule);
+      sel = { si: locate(t(), id)!.si, id };
+    });
+  }, stopPick);
+  // beside the clicked question, kept inside the canvas (fixed, so no pane cuts it off); scrolling closes it
+  const r = document.querySelector(`.cv-q[data-id="${CSS.escape(triggerId)}"]`)!.getBoundingClientRect();
+  const stage = document.getElementById("cvScroll")!.getBoundingClientRect();
+  pop.onpointerdown = e => e.stopPropagation();
+  document.body.append(pop);
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  const left = r.right + 8 + pw <= stage.right ? r.right + 8 : Math.max(stage.left + 8, r.left - 8 - pw);
+  Object.assign(pop.style, { left: `${left}px`, top: `${Math.max(stage.top + 8, Math.min(r.top, innerHeight - ph - 8))}px` });
+  document.getElementById("cvScroll")!.addEventListener("scroll", () => pop.remove(), { once: true });
+  pop.querySelector<HTMLButtonElement>(".primary")?.focus();
+}
+
 // ---- dragging (questions, sections, and new things from the palette)
 function startDrag(e: PointerEvent, el: HTMLElement, what: Dragged, name: string, click: () => void) {
   if (e.button !== 0) return;
@@ -286,6 +524,14 @@ function startDrag(e: PointerEvent, el: HTMLElement, what: Dragged, name: string
     if (!ghost && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return;
     ghost ??= document.body.appendChild(h("div", { className: "cv-ghost" }, name.length > 40 ? `${name.slice(0, 38)}…` : name));
     Object.assign(ghost.style, { left: `${ev.clientX + 12}px`, top: `${ev.clientY + 10}px` });
+    if (what.kind === "button") { // onto a section: outline the section it would go to
+      const at = pointAt(ev), s = at && laid!.sections.find(x => x.page === at.page && at.x >= x.x && at.x <= x.x + x.w && at.y >= x.y && at.y <= x.y + x.h);
+      document.querySelectorAll(".cv-sec.target").forEach(x => x.classList.remove("target"));
+      if (s) document.querySelectorAll(`.cv-sec[data-si="${s.si}"]`).forEach(x => x.classList.add("target"));
+      drop = s ? { si: s.si, qi: 0, page: s.page, x: 0, y: 0, h: 0, vertical: false } : undefined;
+      autoScroll(ev);
+      return;
+    }
     const section = what.kind === "section" || (what.kind === "new" && isSectionMaker(what.make));
     drop = section ? sectionDropAt(ev) : fieldDropAt(ev);
     showDrop(drop);
@@ -295,6 +541,7 @@ function startDrag(e: PointerEvent, el: HTMLElement, what: Dragged, name: string
     el.onpointermove = el.onpointerup = el.onpointercancel = null;
     ghost?.remove();
     showDrop(undefined);
+    document.querySelectorAll(".cv-sec.target").forEach(x => x.classList.remove("target"));
     if (!ghost) return click();
     if (ev.type === "pointercancel" || drop === undefined) return;
     finishDrop(what, drop);
@@ -357,6 +604,7 @@ function showDrop(drop: Drop | number | undefined) {
 }
 
 function finishDrop(what: Dragged, drop: Drop | number) {
+  if (what.kind === "button") { if (typeof drop === "object") addButton(drop.si); return; }
   if (what.kind === "section" && typeof drop === "number") {
     if (drop === what.si || drop === what.si + 1) return;
     edit(f => { const [s] = f.sections.splice(what.si, 1); const to = drop > what.si ? drop - 1 : drop; f.sections.splice(to, 0, s); sel = { si: to }; });
@@ -491,6 +739,12 @@ function sectionPanel(s: Section, si: number): Node[] {
         "Auto: two short sections of similar height sit side by side. Half: always half the page (two halves in a row pair up)."),
       tickBox("Start on a new page", !!s.new_page, v => edit(() => { if (v) s.new_page = true; else delete s.new_page; })),
     ),
+    h("section", { className: "cv-group", id: "cvButtons" }, h("h3", {}, "Buttons"),
+      h("p", { className: "cv-lead" }, "A row at the bottom right of the section, on screen only. Each does what the form's own button of that name does."),
+      ...(Object.entries(BUTTONS) as [ButtonName, string][]).map(([name, caption]) => tickBox(caption, !!s.buttons?.includes(name), on => edit(() => {
+        const next = (Object.keys(BUTTONS) as ButtonName[]).filter(b => (b === name ? on : s.buttons?.includes(b)));
+        if (next.length) s.buttons = next; else delete s.buttons;
+      })))),
     h("div", { className: "cv-actions" },
       h("button", { type: "button", onclick: () => addField(newField("text")) }, "Add a question"),
       h("button", { type: "button", disabled: si === 0, onclick: () => edit(f => { [f.sections[si - 1], f.sections[si]] = [f.sections[si], f.sections[si - 1]]; sel = { si: si - 1 }; }) }, "Move up"),
@@ -599,16 +853,34 @@ function nearestTrigger(f: Field) {
   return list.find(q => q.id !== f.id)!.id;
 }
 
+/** The conditions as sentences, each with ×; "Add a condition" picks the question on the page. The lists editor
+ *  (ruleRows) stays under "Edit with lists" for the keyboard and for fine changes. */
+function conditionList(f: Field): Node[] {
+  const items = (["requiredIf", "activeIf"] as const).flatMap(key => (f[key] ?? []).map((r, i) =>
+    h("li", {},
+      h("span", {}, h("strong", {}, key === "requiredIf" ? "Mandatory when " : "Unlocked when "), sayRule(r, locate(t(), r.field)?.field, num(r.field))),
+      h("button", { type: "button", className: "cv-x", title: "Remove this condition", "aria-label": "Remove this condition", onclick: () => edit(() => {
+        f[key]!.splice(i, 1);
+        if (!f[key]!.length && key === "requiredIf") delete f.requiredIf;
+        if (!f[key]?.length && key === "activeIf") delete f.activeIf;
+      }) }, "×"))));
+  return [
+    items.length ? h("ul", { className: "cv-conds" }, ...items) : h("p", { className: "cv-lead" }, f.required ? "Always mandatory." : "No conditions: always optional and open."),
+    h("button", { type: "button", className: "primary cv-pick", disabled: allFields(t()).length < 2, onclick: () => startPick(f.id) }, "Add a condition: click the question on the page"),
+  ];
+}
+
 function mandatoryEditor(f: Field): Node[] {
   const mode = f.required ? "always" : f.requiredIf?.length ? "when" : "no";
   return [
+    ...conditionList(f),
     segmented("Mandatory", [["No", "no"], ["Always", "always"], ["When…", "when"]], mode, v => edit(() => {
       delete f.required;
       if (v !== "when") delete f.requiredIf;
       if (v === "always") f.required = true;
       if (v === "when" && !f.requiredIf?.length && allFields(t()).length > 1) f.requiredIf = [defaultRule(nearestTrigger(f))];
     }), mode === "when" ? "Mandatory, outlined in red, only while a condition holds." : mode === "always" ? "Marked * and outlined in red until answered." : undefined),
-    ...(mode === "when" ? ruleRows(f, "requiredIf") : []),
+    ...(mode === "when" ? [h("details", { className: "cv-lists" }, h("summary", {}, "Edit with lists"), ...ruleRows(f, "requiredIf"))] : []),
   ];
 }
 
@@ -622,7 +894,7 @@ function lockEditor(f: Field): Node[] {
       if (v === "open") { if (lockedByRule) f.activeIf = []; else delete f.activeIf; }
       if (v === "when") f.activeIf = [defaultRule(nearestTrigger(f))];
     }), mode === "rule" ? "Greyed out and locked until its mandatory condition holds." : mode === "when" ? "Greyed out and locked until a condition holds; optional once open." : undefined),
-    ...(mode === "when" ? ruleRows(f, "activeIf") : []),
+    ...(mode === "when" ? [h("details", { className: "cv-lists" }, h("summary", {}, "Edit with lists"), ...ruleRows(f, "activeIf"))] : []),
   ];
 }
 
@@ -685,6 +957,7 @@ function keys(e: KeyboardEvent) {
   const typingIn = (e.target as HTMLElement).closest("input, textarea, select, [contenteditable]");
   const mod = e.metaKey || e.ctrlKey;
   if (mod && e.key.toLowerCase() === "z" && !typingIn) { e.preventDefault(); return e.shiftKey ? restore(redo, undo) : restore(undo, redo); }
+  if (e.key === "Escape" && picking) return stopPick();
   if (typingIn) return;
   if (e.key === "Escape") select(undefined);
   else if ((e.key === "Delete" || e.key === "Backspace") && sel) { e.preventDefault(); deleteSelection(); }
