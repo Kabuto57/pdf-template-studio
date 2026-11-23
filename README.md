@@ -22,43 +22,64 @@ How the LC looks like the bank's form: `scripts/xfa-layout.py` copies its page l
 
 The app has three steps along the top: **1 Design**, **2 Fill**, **3 Extract**.
 
-### Open a bank form
+### Open a smart form
 
 1. Click **Open a form…** (top right).
-2. Under **Bank trade forms**, pick one, e.g. *Banker's Guarantee Application (BG)*.
-3. The real PDF appears on the right. Scroll it to see every page.
+2. Under **Smart forms**, pick one, e.g. *Banker's Guarantee Application*. The studio opens on the LC.
+3. The form appears on the canvas, page by page, exactly as the lc-form project builds it.
 
-Thirteen trade forms are built in, rebuilt from the bank's trade smart form:
+The thirteen smart forms are the form files of the [lc-form](https://github.com/Kabuto57/lc-form) project
+(`forms/*_form.py`: the old smart form's questions, wording and rules, in the new design). They are copied in by
+`scripts/smartforms.py` (see "Keeping in step with lc-form" below):
 
-| Form | Questions |
-|---|---|
-| Irrevocable Documentary Credit (LC) | 94 |
-| Amendment to Documentary Credit (LC Amendment) | 32 |
-| Handling / Financing of Documents under Export Documentary Credit (EBLC) | 82 |
-| Application for Export Documentary Collection (OBC) | 77 |
-| Import Financing | 65 |
-| Bill of Exchange: Export Documentary Collection | 37 |
-| Bill of Exchange: Export Documentary Credit | 42 |
-| Bill of Exchange (Generic, free format) | 42 |
-| Irrevocable Standby Letter of Credit Application (SBLC) | 39 |
-| Standby Letter of Credit Amendment (SBLC Amendment) | 34 |
-| Banker's Guarantee Application (BG) | 47 |
-| Banker's Guarantee Amendment (BG Amendment) | 35 |
-| Export Financing: Pre-shipment / Sales Invoice Financing | 45 |
+| Form | Form file | Questions |
+|---|---|---|
+| Irrevocable Documentary Credit Application | `lc_form.py` | 108 |
+| Amendment to Original Documentary Credit | `lc_amendment_form.py` | 33 |
+| Handling / Financing of Documents under Export Documentary Credit | `eblc_form.py` | 84 |
+| Application for Export Documentary Collection / Financing of Bills | `obc_form.py` | 77 |
+| Import Financing | `import_financing_form.py` | 74 |
+| Export Financing: Pre-shipment / Sales Invoice Financing | `export_financing_form.py` | 55 |
+| Banker's Guarantee Application | `bg_form.py` | 52 |
+| Amendment to Banker's Guarantee | `bg_amendment_form.py` | 35 |
+| Irrevocable Standby Letter of Credit Application | `sblc_form.py` | 39 |
+| Amendment to Standby Letter of Credit | `sblc_amendment_form.py` | 34 |
+| Bill of Exchange (Generic, free format) | `bill_of_exchange_form.py` | 18 |
+| Bill of Exchange (Export Documentary Credit) | `bill_of_exchange_eblc_form.py` | 18 |
+| Bill of Exchange (Export Documentary Collection) | `bill_of_exchange_obc_form.py` | 16 |
 
-### 1. Design (optional)
+### 1. Design: the canvas
 
-Change the form before using it:
+The middle of the screen is the form itself; the studio's own marks (selection, conditions, drop places) are blue,
+so they never look like part of the form.
 
-- Rename a section or question by typing over it.
-- Change a question's type: Text, Paragraph, Date, Pick one, Tick any, Tick box, or Drop-down. For choices, type one option per line.
-- Tick **Half width** to put two questions side by side, and **Required** to make a question mandatory (red `*`).
-- Use ↑ ↓ to reorder and ✕ to delete. **+ Add question** and **+ Add section** add new ones.
-- Each question has a **Key** (e.g. `applicant_name`). That is the name its answer gets when you extract it.
+- **Add** (left): drag a kind of question (Text, Paragraph, Date, Pick one, Tick any, Tick box, Drop-down) onto the
+  page, where a blue line shows it will go. Or click it to add it after the selected question. The same for a
+  **Section**, a **Bank use section** or a **Signature section**. **Outline** jumps to a section.
+- **Select and move**: click a question to select it; drag it to move it (also into another section). Drag a
+  section by its grey heading. Alt+↑/↓ moves the selection one place, Delete removes it, Ctrl/Cmd+D duplicates,
+  Ctrl/Cmd+Z undoes (Shift: redoes).
+- **Properties** (right): the wording, answer type, options (Currencies / Countries fill a drop-down), the key, the
+  most characters and the answer format.
+- **Rules**: *Mandatory*: No / Always / When… and *Locked*: until mandatory / always open / until…. A condition is
+  "question X is ticked", "is one of these options" or "has any answer"; add more and any one is enough. The
+  selected question's conditions are drawn as blue lines to the questions they wait on (**Show all conditions**
+  draws every one), and a small blue dot marks every question with a condition.
+- **Checks across answers** (nothing selected): a date after (or not before) another, a number in a range.
+- **Layout, within the house style**: a question's width is a share of the 12-column grid (Auto, 1/4, 1/3, 1/2,
+  2/3, 3/4, Full); a section is Auto, Full or Half width and can start a new page. Auto lets the layout decide, as
+  lc-form does. Nothing can be placed off the grid, so every form keeps the same look.
+- **Review** (right): *problems* lc-form would refuse to build (two questions with one key, a condition on an
+  option that doesn't exist ...) and *tips*: a follow-up placed before the question that switches it on, a drop-down
+  with 2-3 options (pick-one reads faster), a pick-one with 8+ options, a row left half empty, a page that ends with
+  a big blank, a form with no signature block. Most have a one-click fix; **Apply all fixes** does them together.
+- **Form file** (top right): the form as an lc-form form file. Put it in lc-form's `forms/` folder and run
+  `python build.py <name>_form.py` for the full PDF with Acrobat's checks, buttons and QR code. **Download blank
+  PDF** and **Save filled PDF** give the same pages and fillable boxes without the Acrobat scripts.
 
-**Upload your PDF template…** (top of Design, or in the *Open a form…* menu) also brings in your own forms:
+**Upload a PDF template…** (in the *Open a form…* menu) also brings in your own forms:
 
-- **Adobe smart form (XFA)**, like the bank's trade bundle: pick which form in the file to rebuild.
+- **Adobe smart form (XFA)**, like the bank's trade bundle: pick which form in the file to rebuild on the canvas.
 - **Fillable PDF**: its own fields and layout are kept; you can rename the questions.
 - **Printed PDF**: a field is added over every blank line (`____`) and tick box (`[ ]`, `☐`).
 
@@ -146,20 +167,34 @@ visitor's browser, so a PDF someone opens is never uploaded anywhere.
 pdf-template-studio/
 ├── index.html                 the page: top bar (steps, Open a form, Download, Save), left panel, PDF preview
 ├── src/
-│   ├── main.ts                the app: four steps (Design / Fill / Extract / Review), buttons, file upload, preview
+│   ├── main.ts                the studio: three steps (Design on the canvas / Fill / Extract), buttons, file upload, PDF preview
 │   ├── lc.ts                  the LC application, rebuilt by hand to match the bank's form, plus its sample answers
 │   ├── review.ts              ops review: automatic checks, name screening, AI prompt, review report
 │   ├── pdf.ts                 table of contents for the form engine in src/form/ (see CODE-TOUR.md)
 │   ├── form/                  the form engine, one job per file: build, rules, dates, red frames, Acrobat checks, read
 │   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks, preview drawing
-│   ├── bank-forms.json        the 13 bank trade forms, as templates (generated, see below)
+│   ├── bank-forms.json        the 13 bank trade forms as first converted from the smart form (website, workbench)
+│   ├── canvas/                the studio's Design step: the canvas, in the smart forms' layout
+│   │   ├── layout.ts          lc-form's layout.py, line by line: where every section, question and box goes
+│   │   ├── render.ts          draws a laid-out form as SVG pages
+│   │   ├── canvas.ts          the canvas: add, select, drag, properties, rules, review panel, undo
+│   │   ├── review.ts          the design review: problems lc-form would refuse, tips with fixes
+│   │   ├── edit.ts            moving, renaming and deleting questions (rules follow)
+│   │   ├── form-file.ts       the form as an lc-form form file (forms/<name>_form.py)
+│   │   ├── write-pdf.ts       a PDF of the canvas layout (pdf-lib), for Download / Save / Fill
+│   │   ├── forms.ts           the smart forms (smartforms.json) and lc_form.py's shared lists
+│   │   └── smartforms.json, metrics.json   copied from lc-form by scripts/smartforms.py
 │   ├── lists.ts               currency codes (ISO 4217) and country names (ISO 3166) for drop-downs
 │   ├── sample.ts              the simple banker's guarantee sample, and sampleFor(): sample answers for any form
 │   └── styles.css             black-and-white look
 ├── scripts/
+│   ├── smartforms.py          copies lc-form's form files (and its Helvetica widths) into src/canvas/
 │   ├── bank-forms.test.ts     rebuilds bank-forms.json from the bank's smart form PDF
 │   └── all-in-one.test.ts     builds the all-in-one PDF holding every bank form
 ├── tests/                     automated checks (run with npm test)
+│   ├── canvas-layout.test.ts  every field of every smart form lands where lc-form's layout.py puts it
+│   ├── canvas-form-file.test.ts  exported form files load in lc-form and give back the same forms
+│   ├── canvas.test.ts         PDFs from the canvas, the design review and its fixes
 │   ├── pdf.test.ts            build -> fill -> extract gives back every answer
 │   ├── upload.test.ts         uploaded fillable / printed PDFs, text extraction
 │   ├── xfa.test.ts            reading an XFA smart form
@@ -168,6 +203,18 @@ pdf-template-studio/
 ├── vite.config.ts             build settings + Content Security Policy
 └── package.json               dependencies: pdf-lib, pdfjs-dist (dev: typescript, vite, vitest)
 ```
+
+### Keeping in step with lc-form
+
+The canvas copies lc-form's layout step (`layout.py`) into `src/canvas/layout.ts`, so a form looks the same in the
+studio as in the PDF lc-form builds. After the forms or the layout change in lc-form:
+
+```
+~/Documents/lc-form/.venv/bin/python scripts/smartforms.py ~/Documents/lc-form   # forms, letter widths, test fixture
+npm test                                                                          # canvas-layout.test.ts compares every field
+```
+
+If `canvas-layout.test.ts` fails after a `layout.py` change, copy the change into `layout.ts` (same names, same order).
 
 ### The data model: a template
 

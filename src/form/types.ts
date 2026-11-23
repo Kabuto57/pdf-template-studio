@@ -25,6 +25,10 @@ export interface Field {
   max?: number;          // the most characters allowed, as on the bank's form
   format?: Format;       // which keys the box accepts, and what a whole answer must look like
   at?: Spot;             // placed by hand in the studio's layout editor (otherwise arranged automatically)
+  // The smart forms' layout options (lc-form's form files; the studio's canvas):
+  cols?: number;         // how much of the row it takes, out of 12 (12 whole row, 6 half); otherwise from its label and max
+  beside?: number;       // label beside a box this wide, even when the label is long
+  words?: string[];      // filled in by the form: the amount in words, from these questions; read-only
 }
 
 /** Where a section sits on the page, in PDF points (the studio's layout editor). y is its TOP edge, counted from
@@ -48,7 +52,17 @@ export interface Section {
   bankOnly?: boolean;  // filled in by the bank: drawn as a shaded "for bank use only" panel
   frame?: Frame;       // placed by hand on the page (otherwise the sections flow down the pages in order)
   cols?: number;       // questions in an even grid of this many columns, labels lined up (otherwise each takes the width it needs)
+  width?: "full" | "half"; // smart forms: always the whole width / half the page (otherwise the layout decides)
+  new_page?: boolean;  // smart forms: starts on a new page (spelt as in lc-form's form files)
 }
+
+/** A check across two answers (lc-form's FORM["checks"]), each skipped while its answers are blank:
+ *  order: a is not before b (s 0) or strictly after b (s 1); range: a is from lo to hi;
+ *  lengths: account a has one of the lengths listed for currency b ("*": any other). */
+export type Check =
+  | { t: "order"; a: string; b: string; s: 0 | 1; m: string }
+  | { t: "range"; a: string; lo: number; hi: number; m: string }
+  | { t: "lengths"; a: string; b: string; by: Record<string, number[]>; m: string };
 
 /** A whole form. */
 export interface Template {
@@ -60,6 +74,9 @@ export interface Template {
   issuer?: string;       // who issues the form, shown at the top of every page, e.g. "Demo Bank · Trade Services"
   formCode?: string;     // the form's reference and version, shown in the header and footer, e.g. "Form LC-01 · v1.0"
   pages?: number;        // at least this many pages (the layout editor's empty pages to draw on)
+  checks?: Check[];      // smart forms: checks across answers
+  file?: string;         // smart forms: the form file's name in lc-form/forms (e.g. "lc_form.py"), for the export
+  pdfName?: string;      // smart forms: the PDF's file name when built (the form file's PDF_NAME)
 }
 
 /** An answer: text, the ticked options of a "tick any" question, or a tick box's true / false. */
@@ -82,6 +99,12 @@ export const FORMATS = {
   amount:  { bad: "[^0-9.,]",    ok: /^\d{1,3}(,?\d{3})*(\.\d{1,2})?$/,  say: "is not an amount" },
   phone:   { bad: "[^0-9+() -]", ok: /^\+?[\d ()-]*\d[\d ()-]*$/,        say: "is not a phone number (digits, spaces, + - ( ) only)" },
   account: { bad: "[^0-9-]",     ok: /^\d[\d-]*\d$|^\d$/,               say: "is not an account number (digits and - only)" },
+  // the smart forms' own (lc-form layout.py FORMATS)
+  cif:     { bad: "[^0-9]",       ok: /^\d{7}$/,                          say: "should be your 7-digit C.I.F. number" },
+  ref12:   { bad: "[^0-9]",       ok: /^\d{12}$/,                         say: "should be a 12-digit reference number (e.g. 553010012345)" },
+  fx8:     { bad: "[^0-9]",       ok: /^\d{8}$/,                          say: "should be an 8-digit FX contract number" },
+  fx2:     { bad: "[^0-9]",       ok: /^\d{2}$/,                          say: "should be a 2-digit FX contract sequence" },
+  swift:   { bad: "[^A-Za-z0-9]", ok: /^[A-Za-z0-9]{8}([A-Za-z0-9]{3})?$/, say: "is not a SWIFT address (8 or 11 letters and digits)" },
 };
 export type Format = keyof typeof FORMATS;
 

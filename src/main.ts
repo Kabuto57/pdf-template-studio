@@ -1,24 +1,22 @@
 // PDF TEMPLATE STUDIO (studio.html)
-// Three steps: 1. Design a form (sections and questions), 2. Fill it in on screen, 3. Extract the answers from a
-// filled PDF. The live preview on the right is the real PDF, made by buildPdf and drawn by pdf.js.
+// Three steps: 1. Design a form on the canvas (src/canvas/), 2. Fill it in on screen, 3. Extract the answers from a
+// filled PDF. Forms are drawn in the smart forms' layout (lc-form's layout.py, copied in src/canvas/layout.ts), so
+// the canvas, the PDFs and the exported form file all match. An uploaded PDF keeps its own layout instead.
 import "./styles.css";
+import "./canvas/canvas.css";
 import { download, h } from "./dom";
 import { FORMATS, KINDS, buildPdf, extractPdf, hasOptions, importPdf, isActive, isRequired, slug } from "./pdf";
-import type { Extracted, Field, Geometry, Kind, Template, Value, Values } from "./pdf";
+import type { Extracted, Field, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
-import { LC } from "./lc";
-import { buildLcPdf } from "./lc-pdf";
-import { liveCode, toggleCode } from "./code-view";
 import { panes } from "./panes";
-import { decorate, renderBar, select, setupLayout } from "./layout-edit";
-
-/** The LC's "bank's original look" is drawn in the bank's own layout; every other form in the new layout (as the
- *  website's LC): Demo Bank header, numbered sections, Check form / Reset form, red mandatory boxes and the QR code page. */
-const ISSUER = "Demo Bank · Trade Services";
-const pdfOf = (t: Template, v: Values = {}, geo?: Geometry, whole = false) =>
-  t.title === LC.template.title && !t.base && !t.design ? buildLcPdf(v) : buildPdf({ issuer: ISSUER, ...t }, v, "javascript", geo, whole);
-import BANK from "./bank-forms.json";
+import { mountCanvas, render as renderCanvas, resetCanvas } from "./canvas/canvas";
+import { SMART_FORMS } from "./canvas/forms";
+import { formFile, formFileName } from "./canvas/form-file";
+import { writePdf } from "./canvas/write-pdf";
 import type { Line, Xfa } from "./text";
+
+/** The form as a PDF: an uploaded PDF filled in its own layout, anything else written from the canvas layout. */
+const pdfOf = (t: Template, v: Values = {}) => (t.base ? buildPdf(t, v) : writePdf(t, v));
 
 const text = () => import("./text"); // pdf.js is big: load it only when a PDF without fields needs reading
 
@@ -27,13 +25,14 @@ const STORE = "pdf-template-studio";
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 const $ = <T extends HTMLElement>(s: string) => document.querySelector(s) as T;
 
-const BANK_FORMS = BANK as { code: string; template: Template; defaults: Values }[];
-const bankForm = (code: string) => BANK_FORMS.find(f => f.code === code)!;
-let t: Template = { ...clone(LC.template), design: "new" }; // the showcase: the LC in the new design
-let values: Values = clone(LC.defaults);
+const smartForm = (file: string) => SMART_FORMS.find(f => f.file === file)!;
+const SHOWCASE = smartForm("lc_form.py");
+/** A smart form as the studio holds it: the form, plus its file names for the export. */
+const opened = (f: typeof SHOWCASE): Template => ({ ...clone(f.form), file: f.file, pdfName: f.pdfName ?? undefined });
+let t: Template = opened(SHOWCASE);
+let values: Values = clone(SHOWCASE.defaults);
 let view: View = "design";
 let filled: Uint8Array | undefined; // the last "Save filled PDF", so Extract can use it straight away
-const auto = new WeakSet<Field>(); // fields whose key still follows their label
 let pristine = ""; // the form as opened, to tell whether switching forms would lose edits
 try {
   const s = localStorage.getItem(STORE);
@@ -46,365 +45,42 @@ pristine = JSON.stringify(t);
 // ---- Preview ----
 let timer = 0,
   drawn = 0;
-function refresh(now = false) {
+/** Remembers the form for next time. */
+function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify(t));
   } catch {
     /* fine: just not remembered */
   }
+}
+function refresh(now = false) {
+  save();
   clearTimeout(timer);
-  timer = window.setTimeout(
-    async () => {
-      liveCode(codeForm(), view === "fill" ? values : {}); // the code panel, if open, follows the edit
-      const geo = {} as Geometry;
-      showPdf(await pdfOf(t, view === "fill" ? values : {}, geo), geo.pages ? geo : undefined);
-    },
-    now ? 0 : 450,
-  );
+  if (onCanvas()) return renderCanvas();
+  timer = window.setTimeout(async () => showPdf(await pdfOf(t, view === "fill" ? values : {})), now ? 0 : 450);
 }
 
 // ---- 1. Design ----
-const unique = (base: string, self?: Field) => {
-  const taken = new Set(
-    t.sections
-      .flatMap(s => s.fields)
-      .filter(f => f !== self)
-      .map(f => f.id),
-  );
-  let id = base,
-    n = 2;
-  while (taken.has(id)) id = `${base}_${n++}`;
-  return id;
-};
-function move<T>(list: T[], i: number, by: number) {
-  const j = i + by;
-  if (j < 0 || j >= list.length) return;
-  [list[i], list[j]] = [list[j], list[i]];
-}
-
-function fieldCard(list: Field[], f: Field, i: number): HTMLElement {
-  if (t.base)
-    return h(
-      "div",
-      { className: "card" },
-      h("input", {
-        className: "label wide",
-        value: f.label,
-        "aria-label": "Question",
-        oninput: (e: Event) => {
-          f.label = (e.target as HTMLInputElement).value;
-          refresh();
-        },
-      }),
-      h(
-        "div",
-        { className: "row small" },
-        h("span", {}, KINDS[f.kind], f.options ? `: ${f.options.join(", ")}` : ""),
-        h("code", { className: "key-ro" }, f.id),
-      ),
-    );
-  const key = h("input", {
-    className: "key",
-    value: f.id,
-    "aria-label": "JSON key",
-    spellcheck: false,
-    oninput: (e: Event) => {
-      auto.delete(f);
-      f.id = slug((e.target as HTMLInputElement).value);
-      refresh();
-    },
-    onchange: () => {
-      f.id = unique(f.id, f);
-      key.value = f.id;
-    },
-  });
-  const opts =
-    hasOptions(f.kind) &&
-    h("textarea", {
-      className: "opts",
-      rows: Math.max(2, f.options?.length ?? 2),
-      value: (f.options ?? []).join("\n"),
-      "aria-label": "Options, one per line",
-      placeholder: "One option per line",
-      oninput: (e: Event) => {
-        f.options = (e.target as HTMLTextAreaElement).value
-          .split("\n")
-          .map(s => s.trim())
-          .filter(Boolean);
-        refresh();
-      },
-    });
-  return h(
-    "div",
-    { className: "card", "data-id": f.id, onfocusin: () => select(t.sections.findIndex(s => s.fields.includes(f)), f.id) },
-    h(
-      "div",
-      { className: "row" },
-      h("input", {
-        className: "label",
-        value: f.label,
-        "aria-label": "Question",
-        placeholder: "Question",
-        oninput: (e: Event) => {
-          f.label = (e.target as HTMLInputElement).value;
-          if (auto.has(f)) {
-            f.id = unique(slug(f.label), f);
-            key.value = f.id;
-          }
-          refresh();
-        },
-      }),
-      h(
-        "select",
-        {
-          "aria-label": "Answer type",
-          onchange: (e: Event) => {
-            f.kind = (e.target as HTMLSelectElement).value as Kind;
-            if (hasOptions(f.kind) && !f.options?.length) f.options = ["Yes", "No"];
-            renderDesign();
-            refresh();
-          },
-        },
-        ...Object.entries(KINDS).map(([k, v]) => h("option", { value: k, selected: k === f.kind }, v)),
-      ),
-    ),
-    opts,
-    h(
-      "div",
-      { className: "row small" },
-      h("label", { className: "key-wrap" }, "Key ", key),
-      h(
-        "label",
-        { className: "half" },
-        h("input", {
-          type: "checkbox",
-          checked: !!f.required,
-          onchange: (e: Event) => {
-            f.required = (e.target as HTMLInputElement).checked;
-            refresh();
-          },
-        }),
-        " Required",
-      ),
-      f.requiredIf && h("span", { className: "when" }, `Required when ${rule(f)}`),
-      h(
-        "span",
-        { className: "tools" },
-        h(
-          "button",
-          {
-            type: "button",
-            title: "Move up",
-            "aria-label": "Move up",
-            onclick: () => {
-              move(list, i, -1);
-              renderDesign();
-              refresh();
-            },
-          },
-          "↑",
-        ),
-        h(
-          "button",
-          {
-            type: "button",
-            title: "Move down",
-            "aria-label": "Move down",
-            onclick: () => {
-              move(list, i, 1);
-              renderDesign();
-              refresh();
-            },
-          },
-          "↓",
-        ),
-        h(
-          "button",
-          {
-            type: "button",
-            title: "Delete question",
-            "aria-label": "Delete question",
-            onclick: () => {
-              list.splice(i, 1);
-              renderDesign();
-              refresh();
-            },
-          },
-          "✕",
-        ),
-      ),
-    ),
-  );
-}
+/** Forms are designed on the canvas. An uploaded PDF keeps its own layout: its questions can only be renamed here. */
+const onCanvas = () => view === "design" && !t.base;
 
 function renderDesign() {
-  const panel = $("#panel");
-  const base = !!t.base;
-  panel.replaceChildren(
-    h(
-      "div",
-      { className: "upload" },
-      h("label", { className: "btn primary", for: "templateIn" }, "Upload your PDF template…"),
-      h(
-        "span",
-        {},
-        "Use a form you already have. Its fields are kept; on a printed-style form, fields are added over the blanks (____ and ☐).",
-      ),
-    ),
-    h(
-      "p",
-      { className: "lead" },
-      base
-        ? "Fields come from your PDF. Rename the questions so the answers are easy to read; the keys come from the PDF."
-        : "Or build a form here: sections, then questions. Each answer gets a key, so you can pull it back out later.",
-    ),
-    h(
-      "label",
-      { className: "lbl" },
-      "Form title",
-      h("input", {
-        value: t.title,
-        oninput: (e: Event) => {
-          t.title = (e.target as HTMLInputElement).value;
-          refresh();
-        },
-      }),
-    ),
-    base
-      ? ""
-      : h(
-          "label",
-          { className: "lbl" },
-          "Instructions under the title",
-          h("textarea", {
-            rows: 2,
-            value: t.note,
-            oninput: (e: Event) => {
-              t.note = (e.target as HTMLTextAreaElement).value;
-              refresh();
-            },
-          }),
-        ),
-    ...t.sections.map((s, si) =>
-      h(
-        "section",
-        { className: "sec", "data-si": String(si) },
-        h(
-          "div",
-          { className: "sec-head", onfocusin: () => select(si) },
-          h("span", { className: "num" }, String(si + 1)),
-          h("input", {
-            value: s.title,
-            "aria-label": "Section title",
-            oninput: (e: Event) => {
-              s.title = (e.target as HTMLInputElement).value;
-              refresh();
-            },
-          }),
-          !base &&
-            h(
-              "select",
-              {
-                className: "cols",
-                title: "Questions in even columns, lined up (Auto: each takes the width it needs)",
-                "aria-label": "Columns",
-                onchange: (e: Event) => {
-                  const v = +(e.target as HTMLSelectElement).value;
-                  if (v) s.cols = v;
-                  else delete s.cols;
-                  for (const q of s.fields) delete q.at;
-                  refresh(true);
-                },
-              },
-              ...["Auto columns", "1 column", "2 columns", "3 columns", "4 columns"].map((v, i) => h("option", { value: String(i), selected: (s.cols ?? 0) === i }, v)),
-            ),
-          !base &&
-            h(
-              "span",
-              { className: "tools" },
-              h(
-                "button",
-                {
-                  type: "button",
-                  title: "Move section up",
-                  "aria-label": "Move section up",
-                  onclick: () => {
-                    move(t.sections, si, -1);
-                    renderDesign();
-                    refresh();
-                  },
-                },
-                "↑",
-              ),
-              h(
-                "button",
-                {
-                  type: "button",
-                  title: "Move section down",
-                  "aria-label": "Move section down",
-                  onclick: () => {
-                    move(t.sections, si, 1);
-                    renderDesign();
-                    refresh();
-                  },
-                },
-                "↓",
-              ),
-              h(
-                "button",
-                {
-                  type: "button",
-                  title: "Delete section",
-                  "aria-label": "Delete section",
-                  onclick: () => {
-                    t.sections.splice(si, 1);
-                    renderDesign();
-                    refresh();
-                  },
-                },
-                "✕",
-              ),
-            ),
-        ),
-        ...s.fields.map((f, i) => fieldCard(s.fields, f, i)),
-        !base &&
-          h(
-            "button",
-            {
-              type: "button",
-              className: "add",
-              onclick: () => {
-                const f: Field = { id: unique("question"), label: "New question", kind: "text", half: true };
-                auto.add(f);
-                s.fields.push(f);
-                renderDesign();
-                refresh();
-                $("#panel")
-                  .querySelectorAll<HTMLInputElement>(".sec")
-                  [si].querySelectorAll<HTMLInputElement>(".label")
-                  [s.fields.length - 1].select();
-              },
-            },
-            "+ Add question",
+  const rename = (target: { label?: string; title?: string }, key: "label" | "title", aria: string, className = "") =>
+    h("input", { className, value: target[key] ?? "", "aria-label": aria, oninput: (e: Event) => { target[key] = (e.target as HTMLInputElement).value; refresh(); } });
+  $("#panel").replaceChildren(
+    h("p", { className: "lead" }, "Fields come from your PDF. Rename the questions so the answers are easy to read; the keys come from the PDF."),
+    h("label", { className: "lbl" }, "Form title", rename(t, "title", "Form title")),
+    ...t.sections.map(s =>
+      h("section", { className: "sec" },
+        h("div", { className: "sec-head" }, rename(s, "title", "Section title")),
+        ...s.fields.map(f =>
+          h("div", { className: "card" },
+            rename(f, "label", "Question", "label wide"),
+            h("div", { className: "row small" }, h("span", {}, KINDS[f.kind], f.options ? `: ${f.options.join(", ")}` : ""), h("code", { className: "key-ro" }, f.id)),
           ),
+        ),
       ),
     ),
-    base
-      ? ""
-      : h(
-          "button",
-          {
-            type: "button",
-            className: "add big",
-            onclick: () => {
-              t.sections.push({ title: "New section", fields: [] });
-              renderDesign();
-              renderBar();
-              refresh();
-            },
-          },
-          "+ Add section",
-        ),
   );
 }
 
@@ -757,19 +433,17 @@ async function read(bytes: Uint8Array, name: string) {
 }
 
 // The PDF pane: drawn to fit its width ("Fit"), times the zoom; redrawn when the pane changes size.
-let zoom = 1, shown: Uint8Array | undefined, shownGeo: Geometry | undefined;
-async function showPdf(bytes: Uint8Array, geo?: Geometry) {
+let zoom = 1, shown: Uint8Array | undefined;
+async function showPdf(bytes: Uint8Array) {
   const box = $("#preview"),
     mine = ++drawn;
   shown = bytes;
-  shownGeo = geo;
   const fit = Math.max(200, box.clientWidth - 32);
   const pages = await (await text()).renderPages(bytes, Math.round(fit * zoom));
-  // In Design, the layout editor's layer goes over the pages (layout-edit.ts).
-  if (mine === drawn) box.replaceChildren(...(view === "design" && geo && !t.base ? decorate(pages, geo) : pages)); // a newer edit may have drawn already
+  if (mine === drawn) box.replaceChildren(...pages); // a newer edit may have drawn already
   $("#zoomPct").textContent = `${Math.round(zoom * 100)}%`;
 }
-const setZoom = (z: number) => { zoom = Math.min(4, Math.max(0.25, Math.round(z * 100) / 100)); if (shown) void showPdf(shown, shownGeo); };
+const setZoom = (z: number) => { zoom = Math.min(4, Math.max(0.25, Math.round(z * 100) / 100)); if (shown) void showPdf(shown); };
 $("#zoomIn").onclick = () => setZoom(zoom * 1.25);
 $("#zoomOut").onclick = () => setZoom(zoom / 1.25);
 $("#zoomFit").onclick = () => setZoom(1);
@@ -777,38 +451,14 @@ $("#preview").addEventListener("wheel", e => { if (e.ctrlKey || e.metaKey) { e.p
 let resized = 0, lastWidth = 0;
 window.addEventListener("resize", () => {
   clearTimeout(resized);
-  resized = window.setTimeout(() => { const w = $("#preview").clientWidth; if (shown && w && w !== lastWidth) { lastWidth = w; void showPdf(shown, shownGeo); } }, 150);
+  resized = window.setTimeout(() => { const w = $("#preview").clientWidth; if (shown && w && w !== lastWidth) { lastWidth = w; void showPdf(shown); } }, 150);
 });
 new ResizeObserver(() => window.dispatchEvent(new Event("resize"))).observe($("#preview"));
-// The code's text size (A− / A+).
-let codeSize = 12.5;
-const setCodeSize = (n: number) => { codeSize = Math.min(22, Math.max(9, n)); document.documentElement.style.setProperty("--code-size", `${codeSize}px`); };
-$("#codeSmaller").onclick = () => setCodeSize(codeSize - 1);
-$("#codeBigger").onclick = () => setCodeSize(codeSize + 1);
 panes($(".main"));
 
-// The layout editor over the PDF (Design step): draw, move and size sections and questions.
-const layoutBar = setupLayout({
-  form: () => t,
-  measure: async whole => { const g = {} as Geometry; await pdfOf(t, {}, g, whole); return g; },
-  changed: now => { renderDesign(); refresh(now); },
-  replace: next => { t = next; renderDesign(); refresh(true); },
-  pick: (si, id) => {
-    const el = $("#panel").querySelector<HTMLElement>(id ? `.card[data-id="${CSS.escape(id)}"]` : `.sec[data-si="${si}"]`);
-    if (!el) return;
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
-    el.classList.remove("hl");
-    void el.offsetWidth; // restart the flash
-    el.classList.add("hl");
-  },
-  newField: kind => {
-    const f: Field = { id: unique("question"), label: "New question", kind }; // its key follows its label from now on
-    if (hasOptions(kind)) f.options = ["Yes", "No"];
-    auto.add(f);
-    return f;
-  },
-});
-$("#preview").before(layoutBar);
+// The canvas (Design step for every form but an uploaded PDF).
+const canvas = $("#canvas");
+mountCanvas(canvas, { form: () => t, changed: save }); // the canvas redraws itself
 
 // ---- Shell ----
 function go(v: View) {
@@ -816,35 +466,30 @@ function go(v: View) {
   document
     .querySelectorAll<HTMLButtonElement>("[data-view]")
     .forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
-  ({ design: renderDesign, fill: renderFill, extract: () => renderExtract() })[v]();
-  layoutBar.hidden = v !== "design" || !!t.base;
-  renderBar();
+  canvas.hidden = !onCanvas();
+  $(".main").hidden = onCanvas();
+  $("#codeBtn").hidden = !!t.base;
+  ({ design: () => (onCanvas() ? renderCanvas() : renderDesign()), fill: renderFill, extract: () => renderExtract() })[v]();
   $("#panel").scrollTop = 0;
   refresh(true);
 }
 
-$("#bankForms").append(
-  ...BANK_FORMS.flatMap(f => [
-    h("option", { value: `bank:${f.code}` }, f.template.title),
-    f.code === "LC" ? h("option", { value: "lc-new" }, `${f.template.title}: new design`) : "",
-  ]),
-);
-$<HTMLOptionElement>('#bankForms option[value="bank:LC"]').textContent += ": bank's original look";
+$("#smartForms").append(...SMART_FORMS.map(f => h("option", { value: `smart:${f.file}` }, f.form.title)));
 document
   .querySelectorAll<HTMLButtonElement>("[data-view]")
   .forEach(b => (b.onclick = () => go(b.dataset.view as View)));
-const codeForm = () => (t.title === LC.template.title && !t.design ? { ...t, design: "new" as const } : { issuer: ISSUER, ...t });
-/** The code editor's form, read back: it replaces the form (the LC stays in the new layout) and redraws the builder. */
-const applyCode = (template: Template, v: Values) => {
-  t = template.title === LC.template.title ? { ...template, design: "new" } : template;
-  values = v;
-  if (view !== "extract") (view === "design" ? renderDesign : renderFill)();
-  refresh();
-};
+
+// The form file: the form as lc-form's forms/<name>_form.py, shown with Copy and Download.
+const fileName = () => t.file ?? formFileName(t);
+const fileText = () => formFile(t, values, t.pdfName, fileName());
 $("#codeBtn").onclick = () => {
-  const open = toggleCode(codeForm(), view === "fill" ? values : {}, applyCode);
-  $("#codeBtn").textContent = open ? "Hide code" : "View code";
+  const dialog = $<HTMLDialogElement>("#fileDialog");
+  $("#fileName").textContent = `forms/${fileName()}`;
+  $("#fileCode").textContent = fileText();
+  dialog.showModal();
 };
+$("#fileCopy").onclick = async () => { await navigator.clipboard.writeText(fileText()); $("#fileCopy").textContent = "Copied"; setTimeout(() => ($("#fileCopy").textContent = "Copy"), 1500); };
+$("#fileSave").onclick = () => download(fileText(), fileName(), "text/x-python");
 $("#blankBtn").onclick = async () => download((await pdfOf(t)) as BlobPart, `${slug(t.title)}.pdf`, "application/pdf");
 $("#saveBtn").onclick = async () => {
   const gaps = missing(),
@@ -888,17 +533,13 @@ $("#templateSel").onchange = async e => {
   if (v && JSON.stringify(t) !== pristine && !confirmReplace()) return; // only ask when there are edits to lose
   values = {};
   if (v === "guarantee") t = clone(GUARANTEE);
-  if (v === "blank") t = { title: "Untitled form", note: "", sections: [{ title: "Details", fields: [] }] };
-  if (v === "lc-new") {
-    t = { ...clone(LC.template), design: "new" };
-    values = clone(LC.defaults);
-  } // same as the bank site's download
-  if (v.startsWith("bank:")) {
-    const f = bankForm(v.slice(5));
-    // A form reference for the header and the QR code's "form" ("Form BG-01 · v1.0 · Nov 2026").
-    t = { formCode: `Form ${f.code.toUpperCase().replace(/[^A-Z]/g, "")}-01 · v1.0 · Nov 2026`, ...clone(f.template) };
+  if (v === "blank") t = { title: "Untitled form", note: "", issuer: "Demo Bank · Trade Services", sections: [{ title: "Details", fields: [{ id: "name", label: "Name", kind: "text", half: true, max: 35, required: true }] }] };
+  if (v.startsWith("smart:")) {
+    const f = smartForm(v.slice(6));
+    t = opened(f);
     values = clone(f.defaults);
   }
+  resetCanvas();
   go("design");
   pristine = JSON.stringify(t);
 };
@@ -917,7 +558,9 @@ $<HTMLInputElement>("#templateIn").onchange = async e => {
     });
     t = r.template;
     values = r.values;
+    resetCanvas();
     go("design");
+    pristine = JSON.stringify(t);
     const n = t.sections.reduce((a, s) => a + s.fields.length, 0);
     if (r.found === "none")
       alertBox(
@@ -970,49 +613,37 @@ async function showXfa(xfa: Xfa, name: string, bytes: Uint8Array, code?: string)
   showPdf(bytes);
 }
 
-/** An XFA bundle holds many forms: let the person pick which one to rebuild here. */
+/** An XFA bundle holds many forms: let the person pick which one to rebuild on the canvas. */
 async function pickXfaForm(xfa: Xfa, name: string) {
-  const m = await text();
-  go("design");
-  $("#panel").replaceChildren(
-    h(
-      "p",
-      { className: "info", role: "status" },
-      `${name} is an Adobe smart form (XFA) with ${m.xfaForms(xfa).length} forms. Pick one to rebuild as a plain fillable PDF. Its questions, choices and drop-downs are kept; the layout is redrawn.`,
-    ),
-    h(
-      "div",
-      { className: "picks" },
-      ...m
-        .xfaForms(xfa)
-        .filter(f => f.count > 1)
-        .map(f =>
-          h(
-            "button",
-            {
-              type: "button",
-              className: "pick",
-              onclick: () => {
-                const { template, values: v } = m.xfaTemplate(xfa, f.code);
-                t = template;
-                values = v;
-                go("design");
-                infoBox(
-                  `Rebuilt ${f.title}: ${f.count} questions. Rename questions or drop the ones you don't need, then Fill.`,
-                );
-              },
-            },
-            h("strong", {}, f.title),
-            h("span", {}, `${f.count} questions${f.answered ? `, ${f.answered} answered` : ""}`),
-          ),
-        ),
-    ),
-  );
+  const m = await text(), forms = m.xfaForms(xfa).filter(f => f.count > 1);
+  const dialog = $<HTMLDialogElement>("#pickDialog");
+  $("#pickText").textContent = `${name} is an Adobe smart form (XFA) with ${forms.length} forms. Pick one to rebuild in the smart-form layout. Its questions, choices and drop-downs are kept; the layout is redrawn.`;
+  $("#pickList").replaceChildren(...forms.map(f =>
+    h("button", { type: "button", className: "pick", onclick: () => {
+      const { template, values: v } = m.xfaTemplate(xfa, f.code);
+      t = template;
+      values = v;
+      dialog.close();
+      resetCanvas();
+      go("design");
+      pristine = JSON.stringify(t);
+      notice(`Rebuilt ${f.title}: ${f.count} questions. The Review tab lists what to tidy.`);
+    } }, h("strong", {}, f.title), h("span", {}, `${f.count} questions${f.answered ? `, ${f.answered} answered` : ""}`))));
+  dialog.showModal();
 }
 
 const confirmReplace = () => window.confirm("Replace the current form? Your changes to it will be lost.");
-const alertBox = (msg: string) => $("#panel").prepend(h("p", { className: "error", role: "alert" }, msg));
-const infoBox = (msg: string) => $("#panel").prepend(h("p", { className: "info", role: "status" }, msg));
+/** A message under the header, in every step (the canvas has no panel to put it in). */
+function notice(msg: string, error = false) {
+  const el = $("#notice");
+  el.className = error ? "notice error" : "notice";
+  el.setAttribute("role", error ? "alert" : "status");
+  $("#noticeText").textContent = msg;
+  el.hidden = false;
+}
+$("#noticeClose").onclick = () => ($("#notice").hidden = true);
+const alertBox = (msg: string) => notice(msg, true);
+const infoBox = (msg: string) => notice(msg);
 
 // Drag a PDF anywhere onto Extract.
 addEventListener("dragover", e => e.preventDefault());

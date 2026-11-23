@@ -18,7 +18,7 @@
     <div class="actions">
       <select id="templateSel" aria-label="Form">
         <option value="">Open a form…</option>
-        <optgroup label="Bank trade forms" id="bankForms"></optgroup>
+        <optgroup label="Smart forms" id="smartForms"></optgroup>
         <optgroup label="Other">
           <option value="guarantee">Simple banker's guarantee (sample)</option>
           <option value="blank">Blank form</option>
@@ -27,29 +27,35 @@
       </select>
       <input type="file" id="templateIn" accept="application/pdf,.pdf" class="sr" tabindex="-1">
       <details class="sample-files"><summary>Sample filled PDFs</summary><div><a href="samples/LC-TanEngineering.pdf" download>LC-TanEngineering.pdf</a><a href="samples/LC-LimBrothers.pdf" download>LC-LimBrothers.pdf</a><a href="samples/LC-OceanicFoods.pdf" download>LC-OceanicFoods.pdf</a><a href="samples/LC-SunriseElectronics.pdf" download>LC-SunriseElectronics.pdf</a><a href="samples/LC-GlobalWidgets.pdf" download>LC-GlobalWidgets.pdf</a><a href="samples/LC-TanEngineering-2.pdf" download>LC-TanEngineering-2.pdf</a><a href="samples/LC-LimBrothers-printed.pdf" download>LC-LimBrothers-printed.pdf</a><a href="samples/LC-OceanicFoods-2.pdf" download>LC-OceanicFoods-2.pdf</a></div></details>
-      <button type="button" id="codeBtn">View code</button>
+      <button type="button" id="codeBtn" title="The form as an lc-form form file (python build.py ...)">Form file</button>
       <button type="button" id="blankBtn">Download blank PDF</button>
       <button type="button" id="saveBtn" class="primary">Save filled PDF</button>
     </div>
   </header>
+  <p id="notice" class="notice" hidden><span id="noticeText"></span><button type="button" id="noticeClose" aria-label="Close message">×</button></p>
+  <main class="cv" id="canvas" aria-label="Form canvas" hidden></main>
   <main class="main">
     <section class="pane" data-name="Form builder">
       <div class="pane-bar"><button type="button" class="pane-toggle" title="Close Form builder" aria-expanded="true">‹</button><span class="pane-name">Form builder</span></div>
       <div class="panel" id="panel"></div>
     </section>
     <div class="split" role="separator" aria-label="Drag to resize"></div>
-    <section class="pane" data-name="Code" id="codePane" hidden>
-      <div class="pane-bar"><button type="button" class="pane-toggle" title="Close Code" aria-expanded="true">‹</button><span class="pane-name">Code</span>
-        <span class="zoom"><button type="button" id="codeSmaller" title="Smaller text">A−</button><button type="button" id="codeBigger" title="Bigger text">A+</button></span></div>
-      <div class="pane-body" id="code"></div>
-    </section>
-    <div class="split" role="separator" aria-label="Drag to resize" id="codeSplit" hidden></div>
     <section class="pane" data-name="PDF">
       <div class="pane-bar"><button type="button" class="pane-toggle" title="Close PDF" aria-expanded="true">‹</button><span class="pane-name">PDF</span>
         <span class="zoom"><button type="button" id="zoomOut" title="Zoom out">−</button><span id="zoomPct">Fit</span><button type="button" id="zoomIn" title="Zoom in">+</button><button type="button" id="zoomFit" title="Fit to the pane's width">Fit width</button></span></div>
       <div id="preview" role="img" aria-label="PDF preview"></div>
     </section>
   </main>
+  <dialog id="fileDialog" class="file-dialog" aria-labelledby="fileName">
+    <header><div><h2 id="fileName">Form file</h2><p>Put it in lc-form's <code>forms</code> folder, then run <code>python build.py</code> with its name: that builds the full PDF, with the checks, buttons and QR code.</p></div>
+      <div class="file-actions"><button type="button" id="fileCopy">Copy</button><button type="button" id="fileSave" class="primary">Download</button>
+      <form method="dialog"><button aria-label="Close">×</button></form></div></header>
+    <pre id="fileCode" class="code"></pre>
+  </dialog>
+  <dialog id="pickDialog" class="file-dialog">
+    <header><p id="pickText"></p><form method="dialog"><button aria-label="Close">×</button></form></header>
+    <div id="pickList" class="picks"></div>
+  </dialog>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

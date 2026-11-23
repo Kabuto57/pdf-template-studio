@@ -3,7 +3,7 @@
 // ONEFILE=1 npx vitest run tests/onefile
 import { expect, it } from "vitest";
 import { readFileSync, writeFileSync } from "fs";
-import { oneFile } from "../src/code-view";
+import { oneFile } from "../scripts/one-file";
 import { LC } from "../src/lc";
 
 it("the published one-file LC builder matches the source", () => {
