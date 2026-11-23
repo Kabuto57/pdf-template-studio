@@ -1,13 +1,11 @@
 // THE APPLICATION'S QR CODE, READ BACK (Trade Ops workbench)
 // The JavaScript LC prints a QR code of all its answers on its last page (lcPayload, "Generate QR Code"). When a
 // customer prints the form or "Saves as PDF", the fields and scripts are gone but the QR code is still a picture on the
-// page. Here it is found and decoded (jsQR), and its JSON is matched against what else the PDF holds:
+// page. Here it is found and decoded (zxing-wasm), and its JSON is matched against what else the PDF holds:
 //   - fields still there: every answer in the QR code must equal the field's answer (a stale code is flagged);
 //   - fields gone (printed): every typed answer in the QR code must appear in the printed text of the pages.
-//   - lc-form's LC splits long answers into TWO codes ("QR code 1 of 2", "2 of 2", QR structured append). jsQR can't
-//     read structured append and misses version-40 codes on 200 dpi scans, so pictures are read with zxing-wasm (the
-//     same ZXing engine as lc-form's read_qr.py), and one or two codes are joined (joinCodes).
-import jsQR from "jsqr";
+//   - lc-form's LC splits long answers into TWO codes ("QR code 1 of 2", "2 of 2", QR structured append); one or two
+//     codes are joined (joinCodes). Every code is read with zxing-wasm, the same ZXing engine as lc-form's read_qr.py.
 import { PDFDocument, PDFTextField } from "pdf-lib";
 import { prepareZXingModule, readBarcodes } from "zxing-wasm/reader";
 import wasmUrl from "zxing-wasm/reader/zxing_reader.wasm?url";
@@ -118,7 +116,7 @@ export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload:
       const page = await doc.getPage(n);
       // 1. One code as printed text (the studio form draws its squares as ZapfDingbats "n"): rebuilt from where each square is.
       const items = (await page.getTextContent()).items.filter(i => "str" in i) as { str: string; transform: number[] }[];
-      const fromText = qrFromText(items), payload = fromText && parsePayload(fromText);
+      const fromText = await qrFromText(items), payload = fromText && parsePayload(fromText);
       if (payload) return { payload, page: n, codes: 1 };
       // 2. A picture of the page (a scan, or a copy whose text was turned into shapes), read by zxing: one or two codes.
       // ponytail: one scale (2x ≈ 144 dpi of the PDF page; a scanned page keeps its own pixels); add more if real scans fail.
@@ -153,7 +151,7 @@ async function qrField(bytes: Uint8Array) {
 
 /** The text of a QR code drawn as text: every square a ZapfDingbats "n" (or "■") in a small font, as the form's
  *  lcDrawQr writes its 177 rows. Each square's place gives its row and column; the code is redrawn clean and read. */
-export function qrFromText(items: { str: string; transform: number[] }[]): string | undefined {
+export async function qrFromText(items: { str: string; transform: number[] }[]): Promise<string | undefined> {
   const runs = items.filter(i => /^[n\u25a0 ]+$/.test(i.str) && /[n\u25a0]/.test(i.str) && Math.abs(i.transform[3]) < 6);
   if (runs.length < 50) return undefined;
   // One square's width: the smallest step between where runs start (a run is a few squares side by side).
@@ -174,5 +172,6 @@ export function qrFromText(items: { str: string; transform: number[] }[]): strin
       const at = (((cy + 4) * px + dy) * w + (cx + 4) * px) * 4;
       for (let dx = 0; dx < px; dx++) img.fill(0, at + dx * 4, at + dx * 4 + 3);
     }
-  return jsQR(img, w, w, { inversionAttempts: "dontInvert" })?.data;
+  const [code] = await readBarcodes({ data: img, width: w, height: w, colorSpace: "srgb" }, { formats: ["QRCode"], maxNumberOfSymbols: 1 });
+  return code?.isValid ? code.text : undefined;
 }

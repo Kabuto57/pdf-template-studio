@@ -1,7 +1,6 @@
-// The workbench's QR code reader: the form's own code (lcPayload + lcQrMatrix) decodes with jsQR, and its answers are
+// The workbench's QR code reader: the form's own code (lcPayload + lcQrMatrix) decodes with zxing, and its answers are
 // matched against the fields or the printed pages.
 import { describe, expect, it } from "vitest";
-import jsQR from "jsqr";
 import { qrScript } from "../src/form/acrobat-script";
 import { SAMPLES, qrPayload, samplePdf } from "../src/demo-applications";
 import { LC, LC_SAMPLE } from "../src/lc";
@@ -22,12 +21,12 @@ function picture(text: string, px = 4) {
 }
 
 describe("QR code of the answers", () => {
-  it("the form's own code decodes back to its answers", () => {
+  it("the form's own code decodes back to its answers", async () => {
     const text = qrPayload(t, LC_SAMPLE), { data, w } = picture(text);
     expect(text.length).toBe(2300);
-    const code = jsQR(data, w, w)!;
-    expect(code.data).toBe(text);
-    const p = parsePayload(code.data)!;
+    const [code] = await codesIn({ data, width: w, height: w, colorSpace: "srgb" } as ImageData);
+    expect(new TextDecoder().decode(code.bytes)).toBe(text);
+    const p = parsePayload(new TextDecoder().decode(code.bytes))!;
     expect(p.form).toBe("LC-01");
     expect(p.data.applicant_name).toBe(LC_SAMPLE.applicant_name);
     expect(matchFields(t, p, LC_SAMPLE)).toEqual([]);
@@ -48,7 +47,7 @@ describe("QR code of the answers", () => {
     // The code itself, rebuilt from where its squares are printed (ZapfDingbats text, as Acrobat draws it).
     const doc = await getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
     const items = (await (await doc.getPage(doc.numPages)).getTextContent()).items as { str: string; transform: number[] }[];
-    expect(parsePayload(qrFromText(items)!)?.data).toEqual(p.data);
+    expect(parsePayload((await qrFromText(items))!)?.data).toEqual(p.data);
     const wrong = { ...p, data: { ...p.data, beneficiary_name: "SOMEONE ELSE LTD" } };
     expect(matchPrinted(t, wrong, words).mismatches.map(m => m.id)).toEqual(["beneficiary_name"]);
     // A copy printed without its answers as text (only the form's own wording): nothing to match, nothing flagged.
@@ -58,7 +57,7 @@ describe("QR code of the answers", () => {
 });
 
 // lc-form's LC prints one or two codes. Fixtures: a scanned QR page from lc-form's benchmark (two plain codes), and the
-// two structured-append codes its own lcQrMatrix draws ("QR code 1 of 2" / "2 of 2"), which jsQR can't read.
+// two structured-append codes its own lcQrMatrix draws ("QR code 1 of 2" / "2 of 2").
 describe("lc-form's one or two QR codes (zxing)", () => {
   const blob = (f: string) => new Blob([readFileSync(new URL(`./fixtures/${f}`, import.meta.url))]);
 
