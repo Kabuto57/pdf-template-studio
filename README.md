@@ -326,6 +326,8 @@ fields at all fall back to reading the page text, and those results are marked "
 
 How the smart form itself works (layers, fields, scripts, mandatory logic, barcodes): [docs/how-the-bank-smart-form-is-built.md](docs/how-the-bank-smart-form-is-built.md).
 
+How the workbench reads the QR code (finding it, joining two codes, choosing the form, matching, how zxing decodes, why it isn't OCR): [docs/QR-READING.md](docs/QR-READING.md).
+
 To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vitest run scripts`.
 
 
