@@ -1,0 +1,10 @@
+LC-Poor-21-phone-photo.pdf: 2 of 2 codes found; answers match the key exactly
+LC-Poor-22-scan-75dpi.pdf: 1 of 1 codes found; answers match the key exactly
+LC-Poor-23-blurred.pdf: 1 of 1 codes found; answers match the key exactly
+LC-Poor-24-crease-and-punch.pdf: 1 of 1 codes found; answers match the key exactly
+LC-Poor-25-stain-and-pen.pdf: 1 of 1 codes found; answers match the key exactly
+LC-Poor-26-torn-corner.pdf: 0 of 1 codes found; answers NOT recovered
+LC-Poor-27-cropped-edge.pdf: 0 of 1 codes found; answers NOT recovered
+LC-Poor-28-two-codes-fax.pdf: 1 of 2 codes found; answers NOT recovered
+LC-Poor-29-faded-halftone.pdf: 1 of 1 codes found; answers match the key exactly
+LC-Poor-30-shrunk-and-skewed.pdf: 2 of 2 codes found; answers match the key exactly
