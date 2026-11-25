@@ -40,6 +40,7 @@ function page() {
         "div",
         { className: "dl" },
         h("a", { className: "btn primary", href: "apply.html" }, "Fill online"),
+        h("a", { className: "btn", href: "../fill/" }, "All forms, no Adobe"),
         h("a", { className: "btn", href: JS_PDF, download: "LC-Application.pdf" }, "Download PDF"),
       ),
       h(

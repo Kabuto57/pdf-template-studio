@@ -28,9 +28,10 @@ function widget(w: Widget, type: string, value: unknown, on: boolean, multiline?
   return s;
 }
 
-/** The pages as SVG elements (strings), widths in points; the caller scales them with CSS. */
-export function pagesSvg(laid: Laid): string[] {
-  const buttons = headerButtons(laid.pages.length);
+/** The pages as SVG elements (strings), widths in points; the caller scales them with CSS. `boxes: false` leaves out the
+ *  answer boxes and buttons (the fill page puts live ones on top). */
+export function pagesSvg(laid: Laid, boxes = true): string[] {
+  const buttons = boxes ? headerButtons(laid.pages.length) : [];
   return laid.pages.map((shapes, p) => {
     let body = "";
     for (const s of shapes) {
@@ -38,7 +39,7 @@ export function pagesSvg(laid: Laid): string[] {
       else if (s.t === "line") body += `<line x1="${n(s.x1)}" y1="${Y(s.y1)}" x2="${n(s.x2)}" y2="${Y(s.y2)}" stroke="${col(s.color)}" stroke-width="${s.w}"/>`;
       else body += `<rect x="${n(s.x)}" y="${Y(s.y + s.h)}" width="${n(s.w)}" height="${n(s.h)}" fill="${s.fill ? col(s.fill) : "none"}"${s.border ? ` stroke="${col(s.border)}" stroke-width="${s.bw}"` : ""}${s.dash ? ' stroke-dasharray="2 2"' : ""}/>`;
     }
-    for (const f of laid.fields)
+    for (const f of boxes ? laid.fields : [])
       for (const w of f.widgets) {
         if (w.page !== p) continue;
         const on = f.type === "radio" ? String(f.value) === w.state : f.value === true;

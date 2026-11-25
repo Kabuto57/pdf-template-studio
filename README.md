@@ -12,6 +12,7 @@ Everything runs in your browser: no account, no server, and your files are never
 | `index.html` | presenter | The journey and a comparison with the current vendor (XFA) form |
 | `demo-bank/` | customer | A fictional "Demo Bank" website: **Download PDF** gives the LC application; the email form "sends" the filled PDF to Trade Ops |
 | (Adobe Acrobat Reader) | customer | Fill in the PDF. Same layout and wording as the bank's form, roomier boxes; mandatory and conditional fields outlined in red; **Check form** lists what is missing; a warning on save/print |
+| `fill/` | customer | **No Adobe needed.** The same trade forms in any browser (Chrome ...): main menu with the Bank's terms tick box, all 13 forms, every check of the Acrobat PDF (red boxes, locked questions, formats, lengths, amount in words, cross-checks, **Check form**, **Reset form**), **Generate QR Code** (the same code or two codes the PDF makes) and **Print Form** (Chrome Print / Save as PDF: the form pages and the QR page, black and white) |
 | `trade-ops/` | Trade Ops | Inbox of emailed applications (or drop a PDF from real email). Every answer read exactly from the PDF's fields, checked (mandatory, conditional, dates, numbers, expiry after shipment), shown by section with the key facts on top. JSON / CSV, **Send to workflow** (simulated). **Printed or scanned forms:** drop the PDF, or a PNG/JPG scan of the QR page: the answers are read from its QR code, one code or two ("QR code 1 of 2" / "2 of 2", joined in either order), with zxing-wasm (`src/qr-read.ts`) |
 
 Demo script: open `demo-bank/`, **Download PDF**, fill it in Adobe Acrobat Reader (try ticking a document row: its boxes turn red), **Check form**, save, attach it in *Send your completed form*, **Send**, then open the Trade Ops workbench. The email is simulated inside the browser (IndexedDB), so the whole journey runs on one laptop.
@@ -223,6 +224,29 @@ pdf-template-studio/
 ├── vite.config.ts             build settings + Content Security Policy
 └── package.json               dependencies: pdf-lib, pdfjs-dist (dev: typescript, vite, vitest)
 ```
+
+### Filling the forms in the browser (`fill/`)
+
+`fill/index.html` is lc-form's `build_all.py` one-PDF without Adobe. It runs **lc-form's own Acrobat JavaScript**
+(`acrobat_js.py`, filled in per form by `pdf_writer.py`: the rules engine `lcRules`, `lcPayload`, the QR encoder
+`lcQrMatrix`, the Check form / Reset form / Generate QR Code / Print Form scripts, and each box's keystroke and
+validate scripts) against a stand-in for Acrobat's document, so the checks and messages cannot drift from the PDF:
+
+| File | What it does |
+|---|---|
+| `scripts/fill-engine.py` | Run on the lc-form `.venv`: copies those scripts word for word into `src/fill/gen/*.ts` (wrapped in a function, no `eval`, so the site's content security policy holds), the menu into `gen/menu.json`, and the PDF's field list into `tests/fixtures/fill-fields.json`. Commit the output (CI has no lc-form). |
+| `src/fill/doc.ts` | The stand-in for Acrobat's `Doc` / `Field` (`getField`, `value`, `required`, `readonly`, `display`, `fillColor` ..., `calculate`, `resetForm`, `numFields`) |
+| `src/fill/engine.ts` | When to call which script (change, keystroke, validate, buttons), and what `app.alert` and `print` do |
+| `src/fill/view.ts`, `fill.css` | The pages as `src/canvas/layout.ts` lays them out, with a live box over every PDF box; message boxes; QR page; print CSS |
+| `src/fill/menu.ts`, `fill.ts` | The main menu (terms tick box; no tick: "Please tick the box to agree to the Bank's terms and conditions before opening a form."; Main menu asks first, then clears the form) |
+
+Answers stay in the page: nothing is sent, nothing is stored. Differences from the PDF: a drop-down also offers a blank line, a date box has a
+small calendar button (the browser's date picker) instead of Acrobat's, Reset form / Main menu confirm in a page message box, and the
+"warning before saving or printing" is not repeated (Print Form still refuses until the QR code matches the answers).
+`demo-bank/apply.html` (LC only, emails the filled PDF to Trade Ops) is kept; it is not replaced by `fill/`.
+
+After lc-form changes: `~/Documents/lc-form/.venv/bin/python scripts/fill-engine.py ~/Documents/lc-form`, then `npm test`
+(`tests/fill.test.ts` regenerates the files and compares bytes; skipped without lc-form).
 
 ### Keeping in step with lc-form
 
