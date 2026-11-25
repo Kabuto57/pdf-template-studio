@@ -191,10 +191,11 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
     b.style.width = pt(150); b.style.height = pt(22);
     qrPage.append(b);
   });
+  let covered = false; // the "no valid QR code" notice is up: no code, old or new, is shown or printed
   function drawQr() {
     const codes = eng.codes();
     slots.forEach(({ label, box }, k) => {
-      const code = codes[k];
+      const code = covered ? undefined : codes[k];
       box.hidden = k > 0 && !code;
       label.textContent = code?.label ?? "";
       box.replaceChildren();
@@ -215,6 +216,8 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
   function updateNote() {
     const problem = eng.qrProblem();
     note.hidden = !problem;
+    covered = !!problem;
+    drawQr(); // hides every old code while the notice shows (a stale second code must not print or scan), shows them again when valid
     note.replaceChildren(...(problem ? [h("strong", {}, "NO VALID QR CODE"), h("p", {}, problem)] : []));
     for (const f of doc.dirty) sync(f);
     doc.dirty.clear();

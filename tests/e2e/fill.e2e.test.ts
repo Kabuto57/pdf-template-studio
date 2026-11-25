@@ -171,6 +171,41 @@ describe.skipIf(!browser)("the fill page in Chromium", () => {
     expect(await page.locator(".nocode").textContent()).toContain("answers have changed");
   }, 90000);
 
+  it("a stale two-code LC prints no decodable code at all (both old codes are hidden, not just the first)", async () => {
+    const { page } = await open();
+    await fillLc(page);
+    await page.click("button:text('Generate QR Code')");
+    expect(await dialogText(page)).toContain("two codes have been generated");
+    await ok(page);
+    expect(await page.locator(".qr:not([hidden]) svg").count()).toBe(2);
+    await page.fill('[name="applicant_name"]', "SOMEONE ELSE");
+    await page.keyboard.press("Tab");
+    await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+    await page.emulateMedia({ media: "print" });
+    expect(await page.locator(".nocode").isVisible()).toBe(true);
+    expect(await page.locator(".qr:not([hidden]) svg").count()).toBe(0);
+    await page.emulateMedia({ media: "screen" });
+    // generating again brings the codes back
+    await page.click("button:text('Generate QR Code')");
+    await ok(page);
+    expect(await page.locator(".qr:not([hidden]) svg").count()).toBe(2);
+    expect(await page.locator(".nocode").isVisible()).toBe(false);
+  }, 90000);
+
+  it("two messages queued back to back: the second is not dismissed by the first one's late close event", async () => {
+    const { page } = await open();
+    // the page's own queue (same module instance as the page uses)
+    await page.evaluate(`import("/src/fill/ui.ts").then(m => { window.__done = []; m.say("FIRST"); m.confirm("SECOND").then(v => window.__done.push(v)); })`);
+    expect(await dialogText(page)).toBe("FIRST");
+    await ok(page);
+    await page.waitForTimeout(400); // long enough for the first box's asynchronous close event to arrive
+    expect(await dialogText(page)).toBe("SECOND");
+    expect(await page.evaluate("window.__done")).toEqual([]);
+    await ok(page);
+    await page.waitForTimeout(200);
+    expect(await page.evaluate("window.__done")).toEqual([true]);
+  }, 60000);
+
   it("leaving a date box with a date that does not exist says so and keeps the old answer", async () => {
     const { page } = await open();
     const box = page.locator('[name="application_date"]');
