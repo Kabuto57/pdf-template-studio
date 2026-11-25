@@ -1,4 +1,5 @@
 // @ts-nocheck: lc-form's Acrobat JavaScript, copied word for word by scripts/fill-engine.py (do not edit; rerun it)
+let lcWarnedAt = 0;
 export const buttons = {
 "check-form": function (app, event, lcRules, lcPayload, lcDrawQr, lcDates) {
 // "CHECK FORM" BUTTON: lists what is missing or wrong (at most 15 of each) and puts the cursor on the first
@@ -44,6 +45,22 @@ try { same = JSON.stringify(JSON.parse(q.value).data) == JSON.stringify(JSON.par
 if (!/\S/.test(q.value)) app.alert("Please press Generate QR Code first, so the printed form carries the QR code.", 1);
 else if (!same) app.alert("Your answers have changed since the QR code was generated. Please press Generate QR Code again, then Print Form.", 1);
 else this.print(true, 0, this.numPages - 1, false, true);
+},
+"before-save": function (app, event, lcRules, lcPayload, lcDrawQr, lcDates) {
+// BEFORE SAVING OR PRINTING: the same list as Check form, shown only if something is missing or wrong.
+// It warns but doesn't stop the save or print.
+if (typeof lcRules != "function") app.alert("The form's checks did not start, so nothing has been checked yet. Open the form in Adobe Acrobat or Acrobat Reader and allow JavaScript (the yellow bar's Options, or Preferences > JavaScript > Enable Acrobat JavaScript), then close and reopen the form. If it still happens, the form was built from damaged files: build it again.", 1);
+else {
+var m = lcRules(this), b = m.bad || [], t = [];
+var list = function (a) { return "- " + a.slice(0, 15).join("\n- ") + (a.length > 15 ? "\n- ... and " + (a.length - 15) + " more" : ""); }
+if (m.length) t.push(m.length + " mandatory question" + (m.length > 1 ? "s are" : " is") + " still blank:\n" + list(m));
+if (b.length) t.push(b.length + " answer" + (b.length > 1 ? "s need" : " needs") + " correcting:\n" + list(b));
+// Shown once: an event that fires again within 3 seconds of the warning closing is a repeat, not a new save / print.
+if (t.length && new Date().getTime() - lcWarnedAt > 3000) {
+  app.alert((event.name == "WillPrint" ? "Before printing: " : "Before saving: ") + "this form is not ready to send. The boxes concerned are outlined in red.\n\n" + t.join("\n\n") + "\n\nPlease correct them before you send the form.", 1);
+  lcWarnedAt = new Date().getTime(); }
+
+}
 }
 };
 export const onEvent = function (event, lcRules) {

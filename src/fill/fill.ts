@@ -10,6 +10,7 @@ import { mountForm } from "./view";
 
 const app = document.getElementById("app")!;
 let accepted = false;
+let shown: ReturnType<typeof mountForm> | undefined;
 
 function menu() {
   document.title = "Trade Application Forms | Demo Bank";
@@ -31,7 +32,8 @@ async function open(file: string, title: string) {
   if ("message" in pick) { say(pick.message); return; }
   const eng = await openForm(pick.open);
   document.title = `${title} | Demo Bank`;
-  mountForm(app, eng, MENU.back as [string, string], () => { menu(); scrollTo(0, 0); });
+  shown?.destroy();
+  shown = mountForm(app, eng, MENU.back as [string, string], () => { shown?.destroy(); shown = undefined; menu(); scrollTo(0, 0); });
   scrollTo(0, 0);
 }
 

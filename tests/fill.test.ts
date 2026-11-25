@@ -10,10 +10,11 @@ import { describe, expect, it } from "vitest";
 import FIELDS from "./fixtures/fill-fields.json";
 import { SMART_FORMS } from "../src/canvas/forms";
 import { solve } from "./fill-solve";
-import { Engine, scriptsOf } from "../src/fill/engine";
+import { Engine, dateProblem, scriptsOf } from "../src/fill/engine";
 import { choose, MENU_TEXT } from "../src/fill/menu";
 import { codesIn, joinCodes, parsePayload } from "../src/qr-read";
 import { sampleFor } from "../src/sample";
+import { safe } from "../src/canvas/layout";
 
 const gen = (file: string) => readFileSync(new URL(`../src/fill/gen/${file}`, import.meta.url), "utf8");
 const buttonsText = gen("buttons.ts");
@@ -21,21 +22,40 @@ const body = (name: string) => new RegExp(`"${name}": function \\([^)]*\\) \\{\\
 const colors = { red: ["RGB", 1, 0, 0], black: ["G", 0], white: ["G", 1], transparent: ["T"] };
 const displays = { visible: 0, hidden: 1, noPrint: 2, noView: 3 };
 
-// ---- the plain mock of Acrobat: the PDF's fields as plain objects, and the scripts as TEXT, copied from the generated files
-interface Ref { name: string; type: string; value: string; options: string[]; required: boolean; readonly: boolean; display: number; lineWidth: number; strokeColor: unknown; fillColor: unknown }
-function reference(file: string, engine: Engine) {
-  const alerts: string[] = [];
-  const list: Ref[] = engine.doc.list.map(f => ({ name: f.name, type: f.type, value: f.initial, options: f.options, required: false, readonly: false, display: f.display, lineWidth: 1, strokeColor: ["G", 0], fillColor: ["G", 1] } as Ref));
+// ---- the plain mock of Acrobat: the PDF's fields built on their own from lc-form's field list (tests/fixtures/fill-fields.json) and the
+// form's starting answers, not from the page's code (doc.ts); the scripts are TEXT copied from the generated files, run for each event
+interface Ref { name: string; type: string; value: string; options: string[]; required: boolean; readonly: boolean; display: number; lineWidth: number; strokeColor: unknown; fillColor: unknown; initial: string }
+type Spec = { name: string; type: string; options?: string[] };
+const KIND = { text: "text", choice: "combobox", check: "checkbox", radio: "radiobutton", button: "button" } as Record<string, string>;
+const eventBody = (name: "onEvent" | "onCalc") => new RegExp(`export const ${name} = function \\(event, lcRules\\) \\{\\n([\\s\\S]*?)\\n\\};`).exec(buttonsText)![1];
+function reference(file: string) {
+  const form = SMART_FORMS.find(f => f.file === file)!, questions = form.form.sections.flatMap(s => s.fields);
+  const spec = (FIELDS as Record<string, { fields: Spec[]; ruleEvents: Record<string, string> }>)[file];
+  const answer = (id: string) => form.defaults[id];
+  const alerts: string[] = [], hidden = new Set(["__checks", "__qr", "__qr2_frame", ...questions.filter(q => q.kind === "date").map(q => q.id)]);
+  const startValue = (f: Spec) => {
+    const g = /^(.+)__(\d+)$/.exec(f.name), group = g && questions.find(x => x.id === g[1] && x.kind === "checks");
+    if (group) { const a = answer(group.id); return Array.isArray(a) && a.includes(group.options![+g![2]]) ? "Yes" : "Off"; }
+    if (f.type === "check") return answer(f.name) === true ? "Yes" : "Off";
+    if (f.type === "radio") return f.options!.includes(safe(String(answer(f.name)))) ? safe(String(answer(f.name))) : "Off";
+    if (f.name.endsWith("__list")) return "Pick a date";
+    const a = answer(f.name), q = questions.find(x => x.id === f.name);
+    return q && typeof a === "string" ? safe(a).slice(0, q.max || undefined) : "";
+  };
+  const specs: Spec[] = [...spec.fields, ...[1, 2].flatMap(k => Array.from({ length: 177 }, (_, y) => ({ name: `__qr${k}_${y}`, type: "text" })))];
+  const list: Ref[] = specs.map(f => {
+    const value = startValue(f);
+    return { name: f.name, type: KIND[f.type], value, initial: value, options: f.name.endsWith("__list") ? ["Pick a date"] : f.options ?? [], required: false, readonly: false, display: hidden.has(f.name) ? 1 : 0, lineWidth: 1, strokeColor: ["G", 0], fillColor: ["G", 1] };
+  });
   const byName = new Map(list.map(f => [f.name, f]));
   for (const f of list) {
     Object.assign(f, { setFocus() {} });
     Object.defineProperty(f, "valueAsString", { get: () => f.value });
-    let idx = 0;
-    Object.defineProperty(f, "currentValueIndices", { get: () => idx, set: (i: number) => { idx = i; f.value = f.options[i] ?? ""; } });
+    Object.defineProperty(f, "currentValueIndices", { get: () => f.options.indexOf(f.value), set: (i: number) => { f.value = f.options[i] ?? ""; } });
   }
   const doc = {
     calculate: true, numPages: 1, pageNum: 0, getField: (n: string) => byName.get(n) ?? null, get numFields() { return list.length; },
-    getNthFieldName: (i: number) => list[i].name, resetForm: () => list.forEach(f => (f.value = (engine.doc.getField(f.name)!.initial))), print() {},
+    getNthFieldName: (i: number) => list[i].name, resetForm: () => list.forEach(f => (f.value = f.initial)), print() {},
   };
   const app = { viewerType: "Reader", alert: (m: string, _i?: number, t?: number) => (alerts.push(m), t === 2 ? 4 : 1), beep() {} };
   const text = gen(`${file.replace(/\.py$/, "")}.ts`);
@@ -43,10 +63,15 @@ function reference(file: string, engine: Engine) {
   const lib = new Function("app", "color", "display", "console", `${script}\nreturn { lcRules: lcRules, lcPayload: lcPayload, lcDrawQr: lcDrawQr, lcDates: lcDates };`)
     .call(doc, app, colors, displays, { println() {} });
   const press = (name: string) => new Function("app", "event", "lcRules", "lcPayload", "lcDrawQr", "lcDates", body(name)).call(doc, app, {}, lib.lcRules, lib.lcPayload, lib.lcDrawQr, lib.lcDates);
-  return { doc, list, alerts, lib, press, byName };
+  /** A box changed: Acrobat runs the calculation script (any value changed), then the box's own event script when the PDF gives it one. */
+  const fire = (name: string) => {
+    new Function("event", "lcRules", eventBody("onCalc")).call(doc, { source: { name } }, lib.lcRules);
+    if (spec.ruleEvents[name]) new Function("event", "lcRules", eventBody("onEvent")).call(doc, { target: { name } }, lib.lcRules);
+  };
+  return { doc, list, alerts, lib, press, byName, fire };
 }
 const snap = (list: { name: string; value: string; required: boolean; readonly: boolean; display: number; lineWidth: number; strokeColor: unknown; fillColor: unknown }[]) =>
-  list.map(f => JSON.stringify([f.name, f.value, f.required, f.readonly, f.display, f.lineWidth, f.strokeColor, f.fillColor]));
+  list.map(f => JSON.stringify([f.name, f.value, f.required, f.readonly, f.display, f.lineWidth, f.strokeColor, f.fillColor])).sort(); // order of fields: checked on its own
 
 const rng = (seed: number) => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
 const POOL = ["", "A", "12", "1,250.50", "ABC DEF", "01/01/2030", "31/02/2026", "bad~", "0", "1234567", "USD", "+65 6123 4567", "15/06/2026", "553010012345", "100", "ABCDSGSG", "12345678"];
@@ -69,7 +94,7 @@ describe("the browser form is the PDF's scripts on a stand-in for Acrobat", () =
 
   for (const file of FILES)
     it(`${file}: random edits end the same as in the mock Acrobat`, async () => {
-      const eng = await engineOf(file), ref = reference(file, eng), next = rng(7 + file.length);
+      const eng = await engineOf(file), ref = reference(file), next = rng(7 + file.length);
       const names = eng.doc.list.filter(f => !f.name.startsWith("__") && !f.name.endsWith("__list") && f.type !== "button").map(f => f.name);
       const rules = (FIELDS as Record<string, { ruleEvents: Record<string, string> }>)[file].ruleEvents;
       expect(snap(eng.doc.list)).toEqual(snap(ref.list)); // the same look on opening
@@ -81,9 +106,11 @@ describe("the browser form is the PDF's scripts on a stand-in for Acrobat", () =
           a.type === "radiobutton" ? ["Off", ...a.options][Math.floor(next() * (a.options.length + 1))] :
           a.type === "combobox" ? ["", ...a.options][Math.floor(next() * (a.options.length + 1))] : POOL[Math.floor(next() * POOL.length)];
         a.value = v; b.value = v;
+        eng.ran.length = 0;
         eng.fire(name);
-        ref.lib.lcRules(ref.doc, name); // Acrobat's calculation, then the box's own event: the same call twice, the second finds nothing new
-        if (rules[name]) ref.lib.lcRules(ref.doc, name);
+        ref.fire(name);
+        // the page ran the calculation, then the box's own event when the PDF gives it one (the scripts overlap: only this catches a missing one)
+        expect(eng.ran, `${file} ${name}`).toEqual(rules[name] ? [`calc:${name}`, `event:${name}`] : [`calc:${name}`]);
         eng.doc.dirty.clear();
         expect(snap(eng.doc.list), `${file} step ${step} ${name}=${v}`).toEqual(snap(ref.list));
         if (step % 17 === 16) {
@@ -130,7 +157,7 @@ describe("Generate QR Code", () => {
       expect(eng.alerts.at(-1), file).toMatch(/has been generated|two codes have been generated/);
       const text = eng.doc.getField("__qr")!.value;
       // the same scripts in the mock Acrobat, given the same answers, say the same
-      const ref = reference(file, eng);
+      const ref = reference(file);
       for (const f of eng.doc.list) { const r = ref.byName.get(f.name)!; r.value = f.value; }
       ref.lib.lcRules(ref.doc);
       const pdfText = ref.lib.lcPayload(ref.doc);
@@ -198,6 +225,38 @@ describe("(d) the main menu", () => {
     expect(name.value).toBe("ACME");
     eng.reset();
     expect(name.value).toBe("");
+  });
+});
+
+describe("what the page asks and says", () => {
+  it("Reset form's question and answer are not announced as messages (the page asks it as a yes / no question)", async () => {
+    const eng = await engineOf("lc_form.py"), shown: string[] = [];
+    eng.onAlert = m => shown.push(m);
+    expect(eng.resetQuestion()).toMatch(/^Are you sure/);
+    eng.reset();
+    expect(shown).toEqual([]);
+    eng.press("check-form");
+    expect(shown).toHaveLength(1); // other messages still are
+  });
+  it("Print Form's own check says why a printout would lack a valid QR code: none yet, or answers changed since", async () => {
+    const eng = await engineOf("lc_form.py"), form = SMART_FORMS.find(f => f.file === "lc_form.py")!;
+    expect(eng.qrProblem()).toMatch(/press Generate QR Code first/);
+    solve(eng, form.form, sampleFor(form.form));
+    eng.press("generate-qr");
+    expect(eng.qrProblem()).toBeNull();
+    eng.doc.getField("applicant_name")!.value = "SOMEONE ELSE";
+    expect(eng.qrProblem()).toMatch(/answers have changed/);
+  });
+  it("the PDF's 'Before printing' warning lists what is missing, once", async () => {
+    const eng = await engineOf("lc_form.py");
+    eng.warnBeforePrint();
+    expect(eng.alerts.at(-1)).toMatch(/^Before printing: this form is not ready to send\./);
+  });
+  it("a date that does not exist gets Acrobat's date message; blank and real dates pass", () => {
+    expect(dateProblem("Date", "31/02/2026")).toBe("Invalid date/time: please ensure that the date/time exists. Field [ Date ] should match format dd/mm/yyyy");
+    expect(dateProblem("Date", "1/2/26")).toMatch(/^Invalid date/);
+    expect(dateProblem("Date", "")).toBe("");
+    expect(dateProblem("Date", "29/02/2028")).toBe("");
   });
 });
 

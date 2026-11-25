@@ -38,6 +38,8 @@ export class Engine {
   /** What app.alert answers when a script asks yes / no (Acrobat: 4 = Yes). */
   answer = 1;
   private app: App;
+  /** The scripts run for the person's changes, in order ("calc:name", "event:name"): for tests. */
+  ran: string[] = [];
 
   constructor(readonly form: SmartForm, private scripts: FormScripts) {
     this.laid = layout(form.form, form.defaults);
@@ -55,8 +57,12 @@ export class Engine {
 
   /** A box was changed by the person: Acrobat's calculation runs first (any value changed), then the box's own click / blur event. */
   fire(name: string) {
+    this.ran.push(`calc:${name}`);
     onCalc.call(this.doc, this.event({ source: { name } }), this.lib.lcRules);
-    if (this.scripts.ruleEvents[name]) onEvent.call(this.doc, this.event({ target: { name } }), this.lib.lcRules);
+    if (this.scripts.ruleEvents[name]) {
+      this.ran.push(`event:${name}`);
+      onEvent.call(this.doc, this.event({ target: { name } }), this.lib.lcRules);
+    }
   }
   /** The box's keystroke script for `change` typed into it: the text to put in, or null to refuse it. */
   keystroke(name: string, change: string): string | null {
@@ -83,16 +89,26 @@ export class Engine {
     const l = this.lib;
     buttons[script].call(this.doc, this.app, this.event(), l.lcRules, l.lcPayload, l.lcDrawQr, l.lcDates);
   }
-  /** What the Reset form button asks, then does when it is answered yes. */
-  resetQuestion() {
-    this.answer = 0;
-    const before = this.alerts.length;
-    this.press("reset-form");
-    const q = this.alerts.splice(before)[0];
-    this.answer = 1;
-    return q;
+  /** Runs a script whose own messages are not shown (the page asks, or says, in its own way); returns the messages. */
+  private quietly(f: () => void) {
+    const show = this.onAlert, before = this.alerts.length;
+    this.onAlert = undefined;
+    try { f(); } finally { this.onAlert = show; this.answer = 1; }
+    return this.alerts.splice(before);
   }
-  reset() { this.answer = 4; try { this.press("reset-form"); } finally { this.answer = 1; this.alerts.pop(); } }
+  /** What the Reset form button asks (the script's own question, answered "no" so nothing changes). */
+  resetQuestion() { return this.quietly(() => { this.answer = 0; this.press("reset-form"); })[0]; }
+  /** Reset form, once the question is answered yes. */
+  reset() { this.quietly(() => { this.answer = 4; this.press("reset-form"); }); }
+  /** What the browser's own Print does first: the PDF's "Before printing" warning (shown when something is missing or wrong). */
+  warnBeforePrint() { buttons["before-save"].call(this.doc, this.app, this.event({ name: "WillPrint" }), this.lib.lcRules, this.lib.lcPayload, this.lib.lcDrawQr, this.lib.lcDates); }
+  /** Would Print Form print now? The Print Form script decides (a QR code made from these very answers): null when it would, else its message. */
+  qrProblem(): string | null {
+    let printed = false;
+    const was = this.doc.onPrint;
+    this.doc.onPrint = () => { printed = true; };
+    try { return this.quietly(() => this.press("print-form"))[0] ?? (printed ? null : "No QR code: press Generate QR Code before printing."); } finally { this.doc.onPrint = was; }
+  }
   /** The script of a button inside the form (a section's buttons=[...]). */
   sectionButton(name: string): keyof typeof buttons | undefined { return this.scripts.sectionButtons[name]; }
   /** The QR codes now in the form: each a 177 x 177 grid (rows of "n" and " "), as lcDrawQr wrote them. */
@@ -104,6 +120,12 @@ export class Engine {
     }
     return out;
   }
+}
+
+/** What Acrobat's date format says to a date that is not a real DD/MM/YYYY ("" when it is, or blank). */
+export function dateProblem(label: string, value: string): string {
+  const m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(value), d = m && new Date(+m[3], +m[2] - 1, +m[1]);
+  return !value || (d && d.getDate() === +m![1] && d.getMonth() === +m![2] - 1) ? "" : `Invalid date/time: please ensure that the date/time exists. Field [ ${label} ] should match format dd/mm/yyyy`;
 }
 
 /** Opens a form of the smart forms by its form file name. */

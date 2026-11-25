@@ -242,11 +242,16 @@ validate scripts) against a stand-in for Acrobat's document, so the checks and m
 
 Answers stay in the page: nothing is sent, nothing is stored. Differences from the PDF: a drop-down also offers a blank line, a date box has a
 small calendar button (the browser's date picker) instead of Acrobat's, Reset form / Main menu confirm in a page message box, and the
-"warning before saving or printing" is not repeated (Print Form still refuses until the QR code matches the answers).
+PDF's "Before printing" warning runs when the browser prints (Ctrl+P, menu), and Print Form still refuses until the QR code matches the answers.
+A printout made without a valid QR code carries a boxed "NO VALID QR CODE" notice where the code goes, so it can never look complete. A date that does not
+exist is refused on leaving its box with Acrobat's date message.
 `demo-bank/apply.html` (LC only, emails the filled PDF to Trade Ops) is kept; it is not replaced by `fill/`.
 
 After lc-form changes: `~/Documents/lc-form/.venv/bin/python scripts/fill-engine.py ~/Documents/lc-form`, then `npm test`
 (`tests/fill.test.ts` regenerates the files and compares bytes; skipped without lc-form).
+`tests/e2e/fill.e2e.test.ts` drives the page in Chromium (Reset form, Main menu, maximum lengths, QR decode, print): it runs inside `npm test`
+when Playwright is found (`PLAYWRIGHT_DIR=<folder with node_modules/playwright>`, default `~/Documents/template-studio`) and is skipped otherwise, e.g. on
+GitHub's CI. Playwright is not a dependency of this repo.
 
 ### Keeping in step with lc-form
 

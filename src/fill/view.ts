@@ -5,7 +5,7 @@ import { H, type PdfField, type Widget } from "../canvas/layout";
 import { pagesSvg } from "../canvas/render";
 import { h } from "../dom";
 import type { Colour, Field } from "./doc";
-import type { Engine } from "./engine";
+import { dateProblem, type Engine } from "./engine";
 import { confirm, say, whenQuiet } from "./ui";
 
 const pt = (n: number) => `${+n.toFixed(2)}pt`;
@@ -96,14 +96,21 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
       if (out === null) { e.preventDefault(); flush(); return; }
       if (out !== data) {
         e.preventDefault();
-        el.setRangeText(out, el.selectionStart ?? 0, el.selectionEnd ?? 0, "end");
+        // setRangeText ignores the box's most characters (Acrobat's MaxLen): keep to the room left
+        const from = el.selectionStart ?? 0, to = el.selectionEnd ?? 0;
+        const room = el.maxLength >= 0 ? el.maxLength - (el.value.length - (to - from)) : Infinity;
+        const put = out.slice(0, Math.max(room, 0));
+        if (!put) return;
+        el.setRangeText(put, from, to, "end");
         el.dispatchEvent(new Event("input", { bubbles: true }));
       }
     });
     el.addEventListener("input", () => { doc.getField(f.name)!.value = el.value; doc.dirty.delete(doc.getField(f.name)!); });
     el.addEventListener("change", () => {
       const field = doc.getField(f.name)!;
-      if (!eng.validate(f.name, el.value)) { field.value = committed.get(f.name) ?? ""; flush(); return; }
+      const refused = f.format === "date" ? dateProblem((f.tooltip ?? f.name).replace(/ \(DD\/MM\/YYYY\)$/, ""), el.value) : "";
+      if (refused) say(refused); // a date that does not exist: the box goes back, as with Acrobat's date format
+      if (refused || !eng.validate(f.name, el.value)) { field.value = committed.get(f.name) ?? ""; flush(); return; }
       committed.set(f.name, el.value);
       changed(f.name);
     });
@@ -151,7 +158,7 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
     const qr = [...doc.dirty].some(f => f.name.startsWith("__qr"));
     for (const f of doc.dirty) sync(f);
     doc.dirty.clear();
-    if (qr) drawQr();
+    if (qr) { drawQr(); updateNote(); }
   }
   function changed(name: string) { eng.fire(name); flush(); }
 
@@ -199,11 +206,26 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
     });
   }
 
+  // A printout must never look complete without a valid QR code: this box covers the code's place (screen and print) whenever Print
+  // Form would refuse, with the PDF's own message. The browser's own Print (Ctrl+P, menu) gets the PDF's "Before printing" warning too.
+  const note = h("div", { className: "nocode", role: "alert" });
+  Object.assign(note.style, { left: pt(laid.qr.slots[0][0]), top: pt(H - laid.qr.slots[0][1] - laid.qr.slots[0][2]), width: pt(laid.qr.slots[0][2]), height: pt(laid.qr.slots[0][2]) });
+  note.hidden = true;
+  qrPage.append(note);
+  function updateNote() {
+    const problem = eng.qrProblem();
+    note.hidden = !problem;
+    note.replaceChildren(...(problem ? [h("strong", {}, "NO VALID QR CODE"), h("p", {}, problem)] : []));
+    for (const f of doc.dirty) sync(f);
+    doc.dirty.clear();
+  }
+  const beforePrint = () => { eng.warnBeforePrint(); updateNote(); };
+  window.addEventListener("beforeprint", beforePrint);
   doc.onPrint = () => window.print();
   doc.onPage = n => pages[Math.min(n, pages.length - 1)].scrollIntoView({ behavior: "smooth" });
   doc.onFocus = name => whenQuiet(() => { const e = bound.get(name)?.[0]?.el; e?.scrollIntoView({ block: "center" }); e?.focus(); });
   eng.onAlert = say;
   for (const f of doc.list) sync(f);
   doc.dirty.clear();
-  return { pages, bound };
+  return { pages, bound, destroy: () => window.removeEventListener("beforeprint", beforePrint) };
 }

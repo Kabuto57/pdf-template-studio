@@ -109,10 +109,12 @@ def form_module(doc_script, events, rule_events, section_buttons):
 
 
 def buttons_module(buttons, on_event, on_calc):
-    """Each button script runs with `this` = the document, and the functions of the document script as arguments."""
+    """Each button script runs with `this` = the document, and the functions of the document script as arguments (before-save too: the
+    warning the PDF gives before saving or printing, which the page runs when the browser prints)."""
     params = "app, event, lcRules, lcPayload, lcDrawQr, lcDates"
-    body = ",\n".join(f"{json.dumps(k)}: {fn(v, params)}" for k, v in buttons.items() if k != "before-save")
-    return (HEADER + f"export const buttons = {{\n{body}\n}};\n" +
+    body = ",\n".join(f"{json.dumps(k)}: {fn(v, params)}" for k, v in buttons.items())
+    # before-save ("Before printing: ...", on the browser's own print) keeps the time it last warned in lcWarnedAt, a variable of the document script
+    return (HEADER + "let lcWarnedAt = 0;\n" + f"export const buttons = {{\n{body}\n}};\n" +
             f"export const onEvent = {fn(on_event, 'event, lcRules')};\n" +
             f"export const onCalc = {fn(on_calc, 'event, lcRules')};\n")
 
