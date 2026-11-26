@@ -4,3 +4,7 @@ HANDOFF.md
 .venv
 __pycache__
 public/standard_fonts/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log

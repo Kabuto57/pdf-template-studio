@@ -59,6 +59,7 @@ interface Opened {
   // the answers' QR code, matched; textless: a printed copy whose pages don't carry the answers as text (nothing to match)
   // form: which known form the printed copy was read with; unknown: the QR code names a form the workbench doesn't know
   qrSkipped?: string; // the QR cross-check did not run (a refused or unreadable QR code), and why
+  qrNotice?: string; // the code was read, but something about the reading is worth a look (pages too large to read)
   qr?: { payload: Payload; page: number; codes: number; mismatches: Mismatch[]; printed: boolean; textless?: boolean; form?: string; unknown?: boolean };
 }
 let current: Opened | undefined,
@@ -191,7 +192,8 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
           : "this PDF has no form fields and no text. It looks like a scan, which would need OCR.",
       );
     }
-    current = { result, name, bytes, mail, vendor, qr, qrSkipped: qr ? undefined : skipped || undefined };
+    current = { result, name, bytes, mail, vendor, qr, qrSkipped: qr ? undefined : skipped || undefined,
+      qrNotice: found?.skipped ? `${found.skipped} page(s) were too large to read.` : undefined };
     original = structuredClone(result.data) as Values;
     // Corrections made before (kept with the email when it was submitted): apply them again.
     for (const c of mail?.corrections ?? []) {
@@ -307,6 +309,7 @@ function render() {
   for (const m of qr?.mismatches ?? [])
     issues.push({ id: m.id, msg: qr!.printed ? `the QR code says "${m.qr}", but it is not on the printed pages` : `the QR code says "${m.qr || "(blank)"}", the form says "${m.pdf || "(blank)"}": the code is out of date` });
   if (current!.qrSkipped) issues.push({ id: "QR code", msg: `the QR code cross-check was skipped: ${current!.qrSkipped}` });
+  if (current!.qrNotice) issues.push({ id: "QR code", msg: current!.qrNotice });
   if (qr?.unknown) issues.push({ id: "QR code", msg: `form ${qr.payload.form} version ${qr.payload.version} is not known here, so the answers are shown as they are, without questions or checks. Add its blank PDF under Forms.` });
   if (qr && !qr.payload.complete) issues.push({ id: "QR code", msg: "the form was not complete when the code was generated" });
   if (qr?.printed) for (const id of qr.payload.truncated ?? []) issues.push({ id, msg: "shortened in the QR code to fit; ask the customer for the full text" });

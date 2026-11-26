@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { PDFArray, PDFButton, PDFCheckBox, PDFDict, PDFDocument, PDFHexString, PDFName, PDFNumber, PDFRadioGroup, PDFRawStream, PDFDropdown, PDFTextField, decodePDFRawStream } from "pdf-lib";
-import { readFileSync } from "fs";
 import { generateQr, payloadScript, printForm, qrScript } from "../src/form/acrobat-script";
 import { buildPdf, extractPdf, isRequired, type Field } from "../src/pdf";
 import { GUARANTEE, SAMPLE } from "../src/sample";
@@ -162,18 +161,6 @@ describe("the JavaScript version", async () => {
     };
     expect(action("__generate_qr")).toBe(generateQr);
     expect(action("__print_form")).toBe(printForm);
-    // The from-scratch prompt carries the same: the document script (lcRules then lcPayload) and both buttons.
-    const full = readFileSync("public/lc-ai-complete-build-prompt.txt", "utf8");
-    const of = (name: string) => full.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
-    expect(`${of("lcRules")}\n${of("lcPayload")}\n${of("lcQrMatrix and lcDrawQr")}`).toBe(library(doc));
-    // ... and so does the fix for Acrobat installations that don't draw barcode fields.
-    const fix = readFileSync("public/lc-ai-qr-rows-fix-prompt.txt", "utf8");
-    const fx = (name: string) => fix.split(`---------------- BEGIN ${name} ----------------\n`)[1].split(`\n---------------- END ${name}`)[0];
-    expect([fx("lcQrMatrix and lcDrawQr"), fx("Generate QR Code")]).toEqual([qrScript, generateQr]);
-    expect([of("Generate QR Code"), of("Print Form")]).toEqual([generateQr, printForm]);
-    // ... and the drafts-percentage update carries the same lcRules.
-    const drafts = readFileSync("public/lc-ai-drafts-percent-prompt.txt", "utf8");
-    expect(drafts.split("---------------- BEGIN lcRules ----------------\n")[1].split("\n---------------- END lcRules")[0]).toBe(of("lcRules"));
     // A stand-in for Acrobat: the QR field, the answers lcPayload reports, and what happens.
     const run = (code: string, qr: { value: string }, missing: string[], answers: string) => {
       const log: string[] = [];
@@ -216,9 +203,6 @@ describe("the JavaScript version", async () => {
     const finder = (x: number, y: number) => [0, 6].every(i => m[y + i][x] && m[y][x + i]) && !m[y + 1][x + 1] && m[y + 3][x + 3];
     expect([finder(0, 0), finder(170, 0), finder(0, 170)]).toEqual([true, true, true]);
     expect(m[6].slice(8, 20).map(Number).join("")).toBe("101010101010");
-    // The script given to the company AI word for word is the one in this PDF.
-    const prompt = readFileSync("public/lc-ai-confirm-print-prompt.txt", "utf8");
-    expect(prompt.split("---------------- BEGIN lcPayload ----------------\n")[1].split("\n---------------- END lcPayload")[0]).toBe(payloadScript(LC.template));
     // Run it on the starting answers: only answered questions, keyed by field name; no "__" fields or buttons.
     const fields = form.getFields();
     const as = (f: (typeof fields)[number]) =>

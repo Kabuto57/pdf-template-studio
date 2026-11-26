@@ -65,8 +65,7 @@ interface Model {
 
 /** The QR code's text (lcPayload): every answered question as JSON, keyed by field name, so the next stage can check
  *  it with the form's JSON Schema. A QR code holds about 2,300 characters: longer paragraphs are shortened and listed
- *  in "truncated" (the full text stays in the PDF's fields). Also given word for word to the company AI
- *  (public/lc-ai-confirm-print-prompt.txt); tests/pdf.test.ts checks the two match. */
+ *  in "truncated" (the full text stays in the PDF's fields). */
 /** The form code and version the QR code carries ("Form LC-01 · v1.0 · Nov 2026" -> LC-01, 1.0). The workbench finds
  *  the form by them (form-registry.ts). */
 export const formKey = (t: Pick<Template, "formCode" | "title">) =>

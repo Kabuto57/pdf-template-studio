@@ -160,8 +160,9 @@ export async function codesIn(img: ImageData | Blob): Promise<Code[]> {
 
 export interface PageCodes { page: number; codes: Code[] }
 /** The most pages of a PDF the workbench reads. A real application is a few pages; this only stops a hostile or mistaken
- *  file from being rendered page after page. */
-export const MAX_PDF_PAGES = 200;
+ *  file from being rendered page after page. 30: the longest form is about 4 pages, plus 7 extra QR pages at 16 codes
+ *  (about 11), doubled for the blank backs of duplex printing (about 22), plus a few attachments. */
+export const MAX_PDF_PAGES = 30;
 export const tooManyPages = (n: number) => `This PDF has ${n} pages; the workbench reads PDFs of up to ${MAX_PDF_PAGES} pages.`;
 
 /** Which page to read next (1-based), or undefined to stop. `read` is what was read so far, last page first. Pages are read
@@ -222,17 +223,27 @@ export function joinPages(pages: PageCodes[]): { payload: Payload; page: number;
 
 /** Finds and decodes the QR code(s) on the last page (where the form prints them); `all`: then the other pages too (a
  *  printed copy may have its pages in another order, or its codes on separate pages). */
-export async function readQr(bytes: Uint8Array, all = false) {
+export async function readQr(bytes: Uint8Array, all = false, open: (bytes: Uint8Array) => Promise<PdfDoc> = openPdf) {
   // Form saved with its fields: "Generate QR Code" also keeps the code's text in the hidden field "__qr". Exact, no picture.
   const kept = await qrField(bytes).catch(() => undefined);
-  if (kept) return { ...kept, codes: 0 };
-  const doc = await getDocument({ data: bytes.slice(), ...PDFJS }).promise;
+  if (kept) return { ...kept, codes: 0, skipped: 0 };
+  // Anything that goes wrong outside the page loop (a file pdf.js rejects, a document that won't close) is a "render"
+  // refusal too, so the workbench never blames a missing QR code for it.
+  const doc = await open(bytes).catch(e => { throw new QrRefusal(`The PDF could not be opened: ${e instanceof Error ? e.message : String(e)}`, "render"); });
+  let result: Awaited<ReturnType<typeof readDocument>>, failed = false;
   try {
-    return await readDocument(doc, all, canvasCodes);
+    result = await readDocument(doc, all, canvasCodes);
+  } catch (e) {
+    failed = true;
+    throw e; // the reading error wins over a failure to close
   } finally {
-    await doc.destroy();
+    const closed = await doc.destroy().then(() => undefined, e => e);
+    if (closed !== undefined && !failed) throw new QrRefusal(`The PDF could not be closed: ${closed instanceof Error ? closed.message : String(closed)}`, "render");
   }
+  return result;
 }
+type PdfDoc = { numPages: number; getPage(n: number): Promise<any>; destroy(): Promise<unknown> }; // eslint-disable-line @typescript-eslint/no-explicit-any
+const openPdf = (bytes: Uint8Array): Promise<PdfDoc> => getDocument({ data: bytes.slice(), ...PDFJS }).promise;
 
 /** The page's picture (drawn at `scale`) read by zxing: up to 16 codes. */
 async function canvasCodes(page: { getViewport(o: { scale: number }): { width: number; height: number }; render(o: never): { promise: Promise<unknown> } }, scale: number) {
@@ -265,9 +276,13 @@ export async function readDocument(
     const size = page.getViewport({ scale: 1 }), scale = renderScale(size.width, size.height);
     if (scale === undefined) { skipped.push(n); return []; }
     return picture(page, scale);
+  }).catch(e => {
+    // Say that pages went unread: the missing codes may have been on them.
+    if (e instanceof QrRefusal && e.kind !== "pages" && skipped.length) throw new QrRefusal(`${e.message} ${skipped.length} page(s) were too large to read.`, e.kind);
+    throw e;
   });
   if (!found && skipped.length) throw new QrRefusal(`${skipped.length === 1 ? `Page ${skipped[0]} is` : `${skipped.length} pages are`} too large to read (more than ${MAX_PAGE_SIDE} units on a side), and no QR code was found on the others.`, "render");
-  return found;
+  return found && { ...found, skipped: skipped.length };
 }
 
 /** The code's text from the hidden field "__qr", with the page its rows are on. */

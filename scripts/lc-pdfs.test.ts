@@ -1,24 +1,16 @@
 // Writes the files the website serves or imports, so they have fixed links:
-//   the blank LC application PDFs, the filled samples, the LC's JSON Schema, and its ready-made Ajv checker.
+//   the blank LC application PDFs (the demo bank's downloads), the filled samples, the LC's JSON Schema, and its ready-made Ajv checker.
 //   npm run pdfs
 import { it } from "vitest";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import standaloneCode from "ajv/dist/standalone";
-import { buildLcPdf } from "../src/lc-pdf";
-import { buildPdf } from "../src/pdf";
 import { LC } from "../src/lc";
 import { SAMPLES, samplePdf } from "../src/demo-applications";
 import { toSchema } from "../src/form/schema";
-import { lcSpec } from "./lc-spec.test";
 
 it.skipIf(!process.env.LC_PDFS && process.env.npm_lifecycle_event !== "pdfs")("blank LC PDFs, samples, schema", async () => {
-  writeFileSync("public/LC-Application-original-look.pdf", await buildLcPdf(LC.defaults));
-  writeFileSync("public/LC-Application-new-design.pdf", await buildPdf(LC.template, LC.defaults));
   // The same form twice, built in Python with pikepdf + PyMuPDF (the company AI's libraries; pdfbuild/build_form.py):
   // checked by Acrobat's JavaScript, or with no scripts at all. tests/python-build.test.ts checks they match buildPdf.
   writeFileSync("pdfbuild/forms/LC.json", JSON.stringify({ ...LC.template, defaults: LC.defaults }, null, 1) + "\n");
@@ -28,18 +20,6 @@ it.skipIf(!process.env.LC_PDFS && process.env.npm_lifecycle_event !== "pdfs")("b
   mkdirSync("public/samples", { recursive: true }); // the workbench's sample applications, filled in
   for (const s of SAMPLES) writeFileSync(`public/samples/${s.file}`, await samplePdf(s));
   // The JSON Schema, and Ajv's checker for it as plain JavaScript (the site can't compile one while it runs).
-  // The form itself (questions, options, rules) as JSON, for builders in other languages (public/make_lc_pdf.py).
-  writeFileSync("public/lc-template.json", JSON.stringify(LC.template, null, 2) + "\n");
-  // The JavaScript PDF as a full build specification, for public/build_lc_pdf.py. Built once here with Python, so the
-  // spec carries the SHA-256 the builder's output must have (the builder ignores that key).
-  const spec = await lcSpec();
-  writeFileSync("public/lc-build-spec.json", JSON.stringify(spec) + "\n");
-  const out = join(tmpdir(), "lc-from-spec.pdf");
-  execFileSync("python3", ["public/build_lc_pdf.py", "public/lc-build-spec.json", out]);
-  const sha = createHash("sha256").update(readFileSync(out)).digest("hex");
-  writeFileSync("public/lc-build-spec.json", JSON.stringify({ expectedSha256: sha, ...spec }) + "\n");
-  const prompt = "public/lc-ai-build-from-spec-prompt.txt"; // its SHA-256 follows the spec
-  writeFileSync(prompt, readFileSync(prompt, "utf8").replace(/\b[0-9a-f]{64}\b/g, sha));
   const schema = toSchema(LC.template);
   writeFileSync("public/lc-application.schema.json", JSON.stringify(schema, null, 2) + "\n");
   const ajv = new Ajv2020({ allErrors: true, strict: false, code: { source: true, esm: true } });
