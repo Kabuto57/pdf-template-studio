@@ -24,6 +24,9 @@ import sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKIP = {"example_form.py"}   # the copy-me example, not a bank form
+# The document script's functions the button scripts call by name (in Acrobat they are document-level functions). The first four are
+# lcRules ... lcDates as before; the rest are found in the button scripts, so a new one in lc-form is passed on without a change here.
+CORE = ["lcRules", "lcPayload", "lcDrawQr", "lcDates"]
 HEADER = "// @ts-nocheck: lc-form's Acrobat JavaScript, copied word for word by scripts/fill-engine.py (do not edit; rerun it)\n"
 
 
@@ -37,6 +40,7 @@ def main(lc_form, out):
     import layout
     import pdf_writer
 
+    names = lib_names(acrobat_js.BUTTON_JS)
     files, raw = {}, {}
     for name in sorted(os.listdir(forms_dir)):
         if not name.endswith("_form.py") or name in SKIP:
@@ -62,9 +66,9 @@ def main(lc_form, out):
         fields = [{"name": f["name"], "type": f["type"], **({"options": f["options"]} if f["type"] == "radio" else {})} for f in lay.fields
                   if not re.fullmatch(r"__qr[12]_\d+", f["name"])]   # the 2 x 177 rows of the QR codes: the same on every form
         raw[name] = {"fields": fields, "ruleEvents": rule_events, "sectionButtons": section_buttons}
-        files[f"src/fill/gen/{name[:-3]}.ts"] = form_module(doc_script, events, rule_events, section_buttons)
+        files[f"src/fill/gen/{name[:-3]}.ts"] = form_module(doc_script, events, rule_events, section_buttons, names)
 
-    files["src/fill/gen/buttons.ts"] = buttons_module(acrobat_js.BUTTON_JS, pdf_writer.RULES_ON_EVENT, pdf_writer.RULES_ON_CALC)
+    files["src/fill/gen/buttons.ts"] = buttons_module(acrobat_js.BUTTON_JS, pdf_writer.RULES_ON_EVENT, pdf_writer.RULES_ON_CALC, names)
     files["src/fill/gen/menu.json"] = json_text(menu(build_all, lc_form))
     files["tests/fixtures/fill-fields.json"] = json_text(raw)
     for path, text in files.items():
@@ -98,23 +102,30 @@ def fn(code, params):
     return f"function ({params}) {{\n{code}\n}}"
 
 
-def form_module(doc_script, events, rule_events, section_buttons):
+def lib_names(buttons):
+    """Every document function a button script calls: CORE first, then the others in name order (lcWarnedAt is the buttons' own)."""
+    used = set(re.findall(r"\blc[A-Z]\w*", "\n".join(buttons.values()))) - {"lcWarnedAt"} - set(CORE)
+    return CORE + sorted(used)
+
+
+def form_module(doc_script, events, rule_events, section_buttons, names):
     """The document script is a function that defines lcRules ... and returns them; `this` is the document."""
     ev = ",\n".join(f"{json.dumps(n)}: {{ " + ", ".join(f"{k}: {fn(c, 'event, app')}" for k, c in kv.items()) + " }" for n, kv in events.items())
     return (HEADER +
-            "export const document = " + fn(doc_script + "\nreturn { lcRules: lcRules, lcPayload: lcPayload, lcDrawQr: lcDrawQr, lcDates: lcDates, lcQrMatrix: lcQrMatrix, lcWords: lcWords };", "app, color, display, console") + ";\n" +
+            "export const document = " + fn(doc_script + "\nreturn { lcRules: lcRules, lcPayload: lcPayload, lcDrawQr: lcDrawQr, lcDates: lcDates, lcQrMatrix: lcQrMatrix, lcWords: lcWords" +
+            "".join(f", {n}: typeof {n} == \"function\" ? {n} : undefined" for n in names if n not in CORE) + " };", "app, color, display, console") + ";\n" +
             f"export const keys = {{\n{ev}\n}};\n" +
             f"export const ruleEvents = {json.dumps(rule_events)};\n" +
             f"export const sectionButtons = {json.dumps(section_buttons)};\n")
 
 
-def buttons_module(buttons, on_event, on_calc):
+def buttons_module(buttons, on_event, on_calc, names):
     """Each button script runs with `this` = the document, and the functions of the document script as arguments (before-save too: the
     warning the PDF gives before saving or printing, which the page runs when the browser prints)."""
-    params = "app, event, lcRules, lcPayload, lcDrawQr, lcDates"
+    params = "app, event, " + ", ".join(names)
     body = ",\n".join(f"{json.dumps(k)}: {fn(v, params)}" for k, v in buttons.items())
     # before-save ("Before printing: ...", on the browser's own print) keeps the time it last warned in lcWarnedAt, a variable of the document script
-    return (HEADER + "let lcWarnedAt = 0;\n" + f"export const buttons = {{\n{body}\n}};\n" +
+    return (HEADER + "let lcWarnedAt = 0;\n" + f"export const libNames = {json.dumps(names)};\n" + f"export const buttons = {{\n{body}\n}};\n" +
             f"export const onEvent = {fn(on_event, 'event, lcRules')};\n" +
             f"export const onCalc = {fn(on_calc, 'event, lcRules')};\n")
 

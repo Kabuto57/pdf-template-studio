@@ -216,17 +216,23 @@ function lcDates(d) {
 var lcWarnedAt = 0;
 // On opening in Acrobat: show the calendars, and set every box's colour and lock.
 if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lcDates(this); lcRules(this); }
-// THE QR CODE'S TEXT. lcPayload(doc) returns every answered question as JSON:
+// THE QR CODES' TEXT. lcPayload(doc) returns every answered question as JSON:
 //   {"form": "LC-01", "version": "1.0", "saved": "...", "complete": true, "data": {field id: answer, ...}}
-// Tick boxes become true; "tick any" questions become lists of the ticked options. One QR code holds 2,300
-// characters of it; longer answers take two codes (lcDrawQr splits the text). The text is padded with spaces to
-// 2,300 (or 4,600 for two codes). , ["other_instructions"], "EBLC-01" and "1.0" are filled in by document_script
-// (step 2).
+// Tick boxes become true; "tick any" questions become lists of the ticked options. One QR code holds 2,300 bytes of it
+// (LC_QR_CAP); longer answers take as many codes as they need, at most 16 (LC_QR_MAX, the most that "structured append"
+// allows; lcDrawQr splits the text). The text is padded with spaces to fill the codes it needs: 2,300, 4,600 ... 36,800
+// bytes. Only beyond 16 codes are the long paragraphs shortened (and listed in "truncated"). , ["other_instructions"],
+// "EBLC-01" and "1.0" are filled in by document_script (step 2).
+var LC_QR_CAP = 2300, LC_QR_MAX = 16;
+// The text as UTF-8 bytes, one character per byte (what goes into the codes).
+function lcBytes(s) { return unescape(encodeURIComponent(s)); }
+// How many codes this text needs (0 for no text).
+function lcCodes(s) { return s ? Math.ceil(lcBytes(s).length / LC_QR_CAP) : 0; }
 function lcPayload(d) {
-var G = {}, LONG = ["other_instructions"], CAP = 2300;
+var G = {}, LONG = ["other_instructions"], CAP = LC_QR_CAP, BUDGET = LC_QR_MAX * LC_QR_CAP;
 var data = {}, i, n, f, k, v, g, m, out, cut = [], ok = true, t = new Date();
 for (i = 0; i < d.numFields; i++) {
-  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n)) continue;
+  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n) || /__qrx_/.test(n)) continue;
   f = d.getField(n); if (!f || f.type == "button" || f.type == "signature") continue;
   g = /^(.+)__(\d+)$/.exec(n);
   if (g && G[g[1]]) { if (f.value != "Off") { if (!data[g[1]]) data[g[1]] = []; data[g[1]].push(G[g[1]][+g[2]]); } continue; }
@@ -237,22 +243,23 @@ for (i = 0; i < d.numFields; i++) {
 if (typeof lcRules == "function") { m = lcRules(d); ok = !m.length && !(m.bad || []).length; }
 function pad(x) { return ("0" + x).slice(-2); }
 out = {"form": "EBLC-01", "version": "1.0", "saved": t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()) + "T" + pad(t.getHours()) + ":" + pad(t.getMinutes()), "complete": ok, "data": data};
-// Two QR codes hold 4,600 characters: if the answers are longer still, shorten the two long paragraphs and say so.
-for (i = 0; i < LONG.length && JSON.stringify(out).length > 2 * CAP; i++) {
+// 16 codes hold 36,800 bytes: only if the answers are longer still, shorten the long paragraphs (in order) and say so.
+for (i = 0; i < LONG.length && lcBytes(JSON.stringify(out)).length > BUDGET; i++) {
   k = LONG[i]; if (!data[k]) continue;
   cut.push(k); out.truncated = cut;
-  v = JSON.stringify(out).length - 2 * CAP + 3;
+  v = lcBytes(JSON.stringify(out)).length - BUDGET + 3;
   data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
 }
-// Padded with spaces to fill one code (2,300) or, when it doesn't fit in one, two codes (4,600).
-v = JSON.stringify(out); n = v.length > CAP ? 2 * CAP : CAP; while (v.length < n) v += " ";
+// Padded with spaces to fill the codes it needs (2,300 bytes each).
+v = JSON.stringify(out); n = lcBytes(v).length; m = Math.max(1, Math.ceil(n / CAP)) * CAP - (n - v.length);
+while (v.length < m) v += " ";
 return v;
 }
 // THE QR CODE ENCODER AND DRAWING (standard QR code, no library needed).
 // lcQrMatrix(bytes, part) returns the 177 x 177 grid of a version 40 QR code (true = dark square). bytes is the
 // text as UTF-8 bytes (one character per byte). part is null for a single code, or [index, total, parity] for
-// one of several codes ("structured append", part of the QR standard: each code says it is code 1 or 2 of 2,
-// so a scanner that supports it joins them; any other scanner reads each code's text, and the two texts are
+// one of several codes ("structured append", part of the QR standard: each code says it is code k of n, n at
+// most 16, so a scanner that supports it joins them; any other scanner reads each code's text, and the texts are
 // joined in order). Version 40, error correction M, byte mode, mask 0; at most 2,329 bytes per code.
 function lcQrMatrix(s, part) {
   var N = 177, i, j, x, y, m = [], f = [], bytes = [];
@@ -318,29 +325,81 @@ function lcQrMatrix(s, part) {
   for (y = 0; y < N; y++) for (x = 0; x < N; x++) if (!f[y][x] && (x + y) % 2 == 0) m[y][x] = !m[y][x];
   return m;
 }
-// lcDrawQr(doc, text) draws text as one QR code, or as two when it is too long for one, and returns how many.
-// Each code's rows go into the read-only text boxes "__qr1_0" ... "__qr1_176" (and "__qr2_..."), as the letter
-// "n" in the ZapfDingbats font (which prints as a black square) for each dark square. The second code's frame
-// and the "QR code 1 of 2" labels appear only when there are two. lcDrawQr(doc, "") clears both.
-function lcDrawQr(d, text) {
-  var ONE = 2329, s = unescape(encodeURIComponent(text)), parts = [], codes = [], parity = 0, i, k, y, x, row, calc = d.calculate;
-  if (s.length > 2 * ONE) throw new Error("the answers are too long for two QR codes (" + s.length + " characters, at most " + 2 * ONE + ")");
-  for (i = 0; i < s.length; i++) parity ^= s.charCodeAt(i) & 255;
-  if (s.length > ONE) parts = [s.slice(0, Math.ceil(s.length / 2)), s.slice(Math.ceil(s.length / 2))];
-  else if (s.length) parts = [s];
-  for (k = 0; k < parts.length; k++) codes.push(lcQrMatrix(parts[k], parts.length > 1 ? [k, parts.length, parity] : null));
-  d.calculate = false; // 354 rows: don't re-run the checks after each one
-  try {
-    for (k = 1; k <= 2; k++) {
-      for (y = 0; y < 177; y++) { row = ""; if (codes[k - 1]) for (x = 0; x < 177; x++) row += codes[k - 1][y][x] ? "n" : " ";
-        d.getField("__qr" + k + "_" + y).value = row; }
-      d.getField("__qr" + k + "_label").value = codes.length > 1 ? "QR code " + k + " of 2" + (k == 1 ? " (scan both codes)" : "") : "";
-    }
-    d.getField("__qr2_frame").display = codes.length > 1 ? display.visible : display.hidden;
-  } finally { d.calculate = calc; }
-  return codes.length;
+// THE PAGES THE CODES GO ON. Codes 1 and 2 sit on the form's QR code page (rows "__qr1_0" ... "__qr1_176", "__qr2_..."),
+// each row a read-only text box holding the letter "n" in the ZapfDingbats font (which prints as a black square) for each
+// dark square. Codes 3 to 16 go two to a page on extra pages, which exist only while needed: lcDrawQr copies the hidden page
+// template "qrx" (rows "__qrx_1_0" ... "__qrx_2_176") after the last page with Template.spawn, and deletes the pages it no
+// longer needs (when the viewer refuses to delete one, the page stays, empty and marked "not used", and is left out of
+// printing: lcLastPage). A spawned page's fields are renamed by the viewer (bRename: true) but still end in the template's
+// name, so lcExtra finds them by that ending. Don't write "getField(" for those fields: build_all.py rewrites it
+// to add the form's code in the joined PDF; d["getField"](name) is left alone, and the names found are already complete.
+// lcExtra(doc) returns the spawned pages' field-name prefixes, in page order: [{p: prefix, page: page number}].
+function lcExtra(d) {
+  var out = [], i, nm, m, f, q = d.getField("__qr"), first = q && typeof q.page == "number" ? q.page : -1;
+  for (i = 0; i < d.numFields; i++) {
+    nm = d.getNthFieldName(i); m = /^(.*)__qrx_1_0$/.exec(nm);
+    if (!m || /^([A-Z]+\.)?$/.test(m[1])) continue;     // not a row, or the template's own row ("" or the form's code)
+    f = d["getField"](nm);
+    if (f && typeof f.page == "number" && f.page > first && f.page < d.numPages) out.push({p: m[1], page: f.page});
+  }
+  out.sort(function (a, b) { return a.page - b.page; });
+  return out;
 }
-return { lcRules: lcRules, lcPayload: lcPayload, lcDrawQr: lcDrawQr, lcDates: lcDates, lcQrMatrix: lcQrMatrix, lcWords: lcWords };
+// Code j (0 = first) as a function: x -> the field "<row>" or "label" or "frame" of its slot.
+function lcSlot(d, pg, j) {
+  var t = j < 2 ? "__qr" + (j + 1) : "__qrx_" + ((j - 2) % 2 + 1), p = j < 2 ? null : pg[(j - 2) >> 1] && pg[(j - 2) >> 1].p;
+  return function (x) { return p === null ? d.getField(t + "_" + x) : p === undefined ? null : d["getField"](p + t + "_" + x); };
+}
+// Extra pages that n codes need.
+function lcPagesFor(n) { return n > 2 ? Math.ceil((n - 2) / 2) : 0; }
+// The last page of the form as printed: the QR code page, plus the extra pages the codes of this text use.
+function lcLastPage(d, text) { return d.getField("__qr").page + lcPagesFor(lcCodes(text)); }
+// "" when the codes on the pages are exactly those of this text (every code in use has its first row drawn, every other
+// slot is empty); otherwise what is wrong. Used before printing.
+function lcQrCheck(d, text) {
+  var n = lcCodes(text), pg = lcExtra(d), j, f;
+  if (pg.length < lcPagesFor(n)) return "the extra QR code pages are missing";
+  for (j = 0; j < 2 + 2 * pg.length || j < n; j++) {
+    f = lcSlot(d, pg, j)("0");
+    if (!f) return "QR code " + (j + 1) + " is missing";
+    if ((f.value !== "") != (j < n)) return j < n ? "QR code " + (j + 1) + " is blank" : "QR code " + (j + 1) + " is left over";
+  }
+  return "";
+}
+// lcDrawQr(doc, text) draws text as one QR code, or as many as it needs (at most 16, one per 2,300 bytes), and returns how
+// many (0 for ""; lcDrawQr(doc, "") clears everything and removes the extra pages). The text is cut into consecutive
+// equal slices; each code carries the structured-append header (its index, the total, the parity of the whole text), so a
+// scanner that supports it joins them, and any other scanner reads each slice and the slices are joined in order. The
+// frames, and the labels "QR code 1 of 3 (scan all 3 codes)", show only for codes in use.
+function lcDrawQr(d, text) {
+  var s = lcBytes(text), n = lcCodes(text), size = n ? Math.ceil(s.length / n) : 0, codes = [], parity = 0, i, k, j, y, x, row, pg, f, g, put, calc = d.calculate, more;
+  if (n > LC_QR_MAX) throw new Error("the answers are too long for " + LC_QR_MAX + " QR codes (" + s.length + " bytes, at most " + LC_QR_MAX * LC_QR_CAP + ")");
+  for (i = 0; i < s.length; i++) parity ^= s.charCodeAt(i) & 255;
+  for (k = 0; k < n; k++) codes.push(lcQrMatrix(s.slice(k * size, (k + 1) * size), n > 1 ? [k, n, parity] : null));   // all made before anything is touched
+  d.calculate = false; // thousands of rows: don't re-run the checks after each one
+  try {
+    pg = lcExtra(d);
+    for (more = lcPagesFor(n); pg.length < more; ) {                // add the pages that are needed
+      d.getTemplate("qrx").spawn({nPage: d.numPages, bRename: true, bOverlay: false});
+      g = lcExtra(d); if (g.length <= pg.length) throw new Error("the viewer did not add the page for QR code " + (2 * pg.length + 3));
+      pg = g;
+    }
+    while (pg.length > more) {                                      // take away the pages that are not
+      try { d.deletePages(pg[pg.length - 1].page); } catch (e) { break; }
+      g = lcExtra(d); if (g.length >= pg.length) break;
+      pg = g;
+    }
+    for (j = 0; j < 2 + 2 * pg.length; j++) {                       // every slot: its code, or empty
+      put = lcSlot(d, pg, j);
+      for (y = 0; y < 177; y++) { row = ""; if (codes[j]) for (x = 0; x < 177; x++) row += codes[j][y][x] ? "n" : " ";
+        put(y).value = row; }
+      if (f = put("label")) f.value = !codes[j] ? (j % 2 == 0 && j >= 2 + 2 * more ? "(this page is not used)" : "") : n < 2 ? "" : "QR code " + (j + 1) + " of " + n + (j == 0 ? (n == 2 ? " (scan both codes)" : " (scan all " + n + " codes)") : "");
+      if (f = put("frame")) f.display = codes[j] ? display.visible : display.hidden;
+    }
+  } finally { d.calculate = calc; }
+  return n;
+}
+return { lcRules: lcRules, lcPayload: lcPayload, lcDrawQr: lcDrawQr, lcDates: lcDates, lcQrMatrix: lcQrMatrix, lcWords: lcWords, lcLastPage: typeof lcLastPage == "function" ? lcLastPage : undefined, lcPagesFor: typeof lcPagesFor == "function" ? lcPagesFor : undefined, lcPipeText: typeof lcPipeText == "function" ? lcPipeText : undefined, lcQrCheck: typeof lcQrCheck == "function" ? lcQrCheck : undefined };
 };
 export const keys = {
 "beneficiary_name": { K: function (event, app) {

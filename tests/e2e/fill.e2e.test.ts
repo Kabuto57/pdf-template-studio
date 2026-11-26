@@ -175,7 +175,7 @@ describe.skipIf(!browser)("the fill page in Chromium", () => {
     const { page } = await open();
     await fillLc(page);
     await page.click("button:text('Generate QR Code')");
-    expect(await dialogText(page)).toContain("two codes have been generated");
+    expect(await dialogText(page)).toMatch(/need 2 QR codes, so 2 codes have been generated/);
     await ok(page);
     expect(await page.locator(".qr:not([hidden]) svg").count()).toBe(2);
     await page.fill('[name="applicant_name"]', "SOMEONE ELSE");
@@ -191,6 +191,48 @@ describe.skipIf(!browser)("the fill page in Chromium", () => {
     expect(await page.locator(".qr:not([hidden]) svg").count()).toBe(2);
     expect(await page.locator(".nocode").isVisible()).toBe(false);
   }, 90000);
+
+  it("a 9,000-character application: 4 codes (2 on the QR page, 2 on one extra page), the extra page goes when the answers shrink; the codes decode", async () => {
+    const { page, errors } = await open();
+    await fillLc(page);
+    const long = (id: string, text: string) => page.fill(`[name="${id}"]`, text).then(() => page.keyboard.press("Tab"));
+    await long("goods_description", "STEEL FITTINGS GRADE 316. ".repeat(230).slice(0, 4300));
+    await long("additional_conditions", "NO TRANSHIPMENT OF THE GOODS. ".repeat(100).slice(0, 1800));
+    const formPages = await page.locator(".pg").count();
+    await page.click("button:text('Generate QR Code')");
+    const said = await dialogText(page);
+    expect(said).toMatch(/need 4 QR codes, so 4 codes have been generated: two on the QR code page and the rest, two to a page, on the 1 page after it/);
+    await ok(page);
+    expect(await page.locator(".pg").count()).toBe(formPages + 1);
+    expect(await page.locator(".pg.extra .qr:not([hidden]) svg").count()).toBe(2);
+    expect(await page.locator(".qr:not([hidden]) svg").count()).toBe(4);
+    const shots = [];
+    for (const svg of await page.locator(".qr:not([hidden]) svg").all()) shots.push(new Blob([await svg.screenshot()]));
+    const payload = joinCodes((await Promise.all(shots.map(b => codesIn(b)))).flat())!;
+    expect(payload.complete).toBe(true);
+    expect(payload.data.goods_description).toBe("STEEL FITTINGS GRADE 316. ".repeat(230).slice(0, 4300).trim());
+    // printing: the extra page is part of the printout while its codes are valid
+    await page.emulateMedia({ media: "print" });
+    expect(await page.locator(".pg").count()).toBe(formPages + 1);
+    await page.emulateMedia({ media: "screen" });
+    // a stale printout has no extra page: nothing scannable is left
+    await page.fill('[name="applicant_name"]', "SOMEONE ELSE");
+    await page.keyboard.press("Tab");
+    await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+    await page.emulateMedia({ media: "print" });
+    expect(await page.locator(".pg.extra").count()).toBe(0);
+    expect(await page.locator(".qr:not([hidden]) svg").count()).toBe(0);
+    await page.emulateMedia({ media: "screen" });
+    // shorter answers: one code, no extra page
+    await long("goods_description", "STEEL FITTINGS");
+    await long("additional_conditions", "NONE");
+    await page.click("button:text('Generate QR Code')");
+    expect(await dialogText(page)).toContain("has been generated");
+    await ok(page);
+    expect(await page.locator(".pg").count()).toBe(formPages);
+    expect(await page.locator(".qr:not([hidden]) svg").count()).toBe(1);
+    expect(errors).toEqual([]);
+  }, 120000);
 
   it("two messages queued back to back: the second is not dismissed by the first one's late close event", async () => {
     const { page } = await open();

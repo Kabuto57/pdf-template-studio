@@ -72,6 +72,8 @@ export function formFile(t: Template, defaults: Values = {}, pdfName?: string, f
     `    "sections": [`,
     ...t.sections.flatMap(section),
     "    ],",
+    ...(t.qrFormat ? [`    "qrFormat": ${py(t.qrFormat)},`] : []),
+    ...(t.pipe ? [`    "pipe": ${py(t.pipe)},`] : []),
     ...(t.checks?.length ? [`    "checks": [`, ...t.checks.map(c => `        ${check(c)},`), "    ],"] : []),
     "}",
     "",
