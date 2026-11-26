@@ -33,7 +33,7 @@ When the customer presses **Generate QR Code** in Acrobat, the form builds one b
 | Answers' length | What is printed |
 |---|---|
 | Up to 2,300 characters | One code |
-| Up to 4,600 | Two codes, labelled "QR code 1 of 2" and "2 of 2". The text is cut in half. Each code also carries the QR standard's *structured append* label ("I am code 1 of 2"). |
+| Up to 36,800 (2,300 bytes a code) | 2 to 16 codes, labelled "QR code 1 of 7" and so on (codes 3 and up on extra QR pages, two to a page). The JSON text is padded with spaces to a whole number of 2,300-byte slices and cut into that many equal slices. Each code also carries the QR standard's *structured append* label: its index (0-based), the total, and the *parity* (the XOR of all bytes of the whole padded text). One code has no label. |
 | Longer | The long paragraphs are shortened and listed in `truncated`; ops asks the customer for the full text. |
 
 ---
@@ -49,17 +49,25 @@ The workbench tries three ways, cheapest first, and stops at the first that work
 | 3. Picture of the page (`codesIn`) | Scan, photo, or a PDF whose text became shapes | The page is drawn as an image at 2× size (pdf.js); zxing finds up to 4 QR codes on it. A scanned JPG or PNG is first wrapped in a one-page PDF. | Yes |
 
 Pages are searched from the **last page backwards**. For a printed copy every page is searched, in case pages were
-scanned out of order or the two codes are on different pages. Codes found on different pages are collected together.
+scanned out of order or its codes are on different pages. Codes found on different pages are collected together.
 
 ---
 
-## 3. Joining two codes: `joinCodes`
+## 3. Joining up to 16 codes: `joinResult` / `joinCodes`
+
+Codes found anywhere (any page, any image, any order) go in together. The order comes from each code's own
+structured-append label (zxing-wasm: `sequenceIndex`, `sequenceSize`, and `sequenceId`, which for QR is the parity as
+text). Permutations are never tried for labelled codes (16! orders).
 
 1. **Duplicates removed.** The same code found twice (a page scanned twice) counts once.
-2. **Counted.** None: nothing to read. More than two: refused (an application has one or two codes; more usually means two forms were scanned together).
-3. **Ordered.** If both codes carry the "1 of 2" / "2 of 2" label, that order is used. If not (some scanners drop it), both orders are tried: code 1 always starts the JSON with `{`, so only the right order gives valid JSON.
-4. **Bytes joined, then turned into text.** A character such as "é" is two bytes and the split can fall between them; joining bytes first keeps it whole.
-5. **Checked (`parsePayload`).** The result must be JSON with `form` and `data`. Otherwise the codes are not from this form, or don't belong together.
+2. **Labelled or not.** Labelled and unlabelled codes mixed are refused. Unlabelled codes (some scanners drop the label) are accepted only as one or two, and for two both orders are tried (code 1 always starts the JSON with `{`).
+3. **One application.** Labelled codes must all share the parity and the total. Different parities: "codes from N different applications", refused, never merged. Different totals, a total outside 1 to 16, or two different codes claiming the same index: refused.
+4. **Complete.** Missing indices are named: "Code 3 of 5 not found; scan all 5 codes." (or "Codes 2, 6 of 7 not found ...").
+5. **Bytes joined in index order, then checked.** The joined bytes must be at most 16 x 2,329, and their XOR must equal the parity every code carries (a damaged or foreign code fails here). A character such as "é" is two bytes and a split can fall between them; joining bytes first keeps it whole.
+6. **Parsed as data (`parsePayload`).** Trailing padding spaces are trimmed, then `JSON.parse` (never evaluated). The result must have `form` and `data`.
+
+`readQr` collects codes page by page (last page backwards) and tries the join after each page, so codes 1-2 and 3-4 on
+different pages work. If codes were found but never join, the reason above is shown to the operator (`QrRefusal`).
 
 ---
 
@@ -120,7 +128,7 @@ positions are already known)
 6. **Unmask.** A fixed pattern flipped over the data when the code was made (to avoid big solid blocks) is flipped back.
 7. **Bytes.** Data squares are read in a fixed zigzag, two columns at a time, from the bottom right; 8 squares make a byte.
 8. **Repair (Reed-Solomon).** About 40 % of the bytes are check bytes computed from the data. They find and correct flipped squares (a stain, a bad scan): at level M about 15 % of the code can be damaged. Beyond that the check fails and zxing reports **no code**. It never returns wrong text.
-9. **Text.** A header says "byte mode, N bytes" (and, for two codes, "code 1 of 2"). The bytes are the UTF-8 JSON text.
+9. **Text.** A header says "byte mode, N bytes" (and, for several codes, "code 3 of 7"). The bytes are the UTF-8 JSON text.
 
 Result: the exact JSON, character for character, or a clear failure.
 

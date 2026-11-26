@@ -4,8 +4,8 @@
 // page. Here it is found and decoded (zxing-wasm), and its JSON is matched against what else the PDF holds:
 //   - fields still there: every answer in the QR code must equal the field's answer (a stale code is flagged);
 //   - fields gone (printed): every typed answer in the QR code must appear in the printed text of the pages.
-//   - lc-form's LC splits long answers into TWO codes ("QR code 1 of 2", "2 of 2", QR structured append); one or two
-//     codes are joined (joinCodes). Every code is read with zxing-wasm, the same ZXing engine as lc-form's read_qr.py.
+//   - lc-form's LC splits long answers into up to 16 codes ("QR code 3 of 7", QR structured append); they are put in
+//     order by each code's own label and joined (joinResult). Every code is read with zxing-wasm, the same ZXing engine as lc-form's read_qr.py.
 import { PDFDocument, PDFTextField } from "pdf-lib";
 import { prepareZXingModule, readBarcodes } from "zxing-wasm/reader";
 import wasmUrl from "zxing-wasm/reader/zxing_reader.wasm?url";
@@ -76,22 +76,68 @@ export function matchPrinted(t: Template, p: Payload, text: string): { mismatche
   return { mismatches: readable ? out : [], readable };
 }
 
-/** One QR code read from a picture: its raw bytes, and its place in a structured-append set (-1 when not in one). */
-export interface Code { bytes: Uint8Array; index: number; size: number }
+/** One QR code read from a picture: its raw bytes, and its place in a structured-append set: index (0-based), size
+ *  (total) and id (the QR parity, as a string). index is -1 when the code is not in a set. */
+export interface Code { bytes: Uint8Array; index: number; size: number; id: string }
 
-/** The application from one code, or from two in either order (code 1 of 2 starts the JSON). Bytes are joined before
- *  decoding, so a character split between the two codes survives. undefined: no code, too many, or they don't join. */
-export function joinCodes(codes: Code[]): Payload | undefined {
-  const seen = new Map(codes.map(c => [c.bytes.join(","), c])), list = [...seen.values()]; // the same code twice counts once
-  if (!list.length || list.length > 2) return undefined;
-  const orders = list.length === 1 ? [list] : list.every(c => c.index >= 0) ? [[...list].sort((a, b) => a.index - b.index)] : [list, [...list].reverse()];
-  for (const order of orders) {
-    const all = new Uint8Array(order.reduce((n, c) => n + c.bytes.length, 0));
-    order.reduce((at, c) => (all.set(c.bytes, at), at + c.bytes.length), 0);
-    const p = parsePayload(new TextDecoder().decode(all));
-    if (p) return p;
+/** The most codes an application can have (QR structured append allows 16), and the most bytes they can hold. */
+export const MAX_CODES = 16;
+const MAX_BYTES = MAX_CODES * 2329;
+/** Thrown by readQr when QR codes were found but can't make one application; the message says why. */
+export class QrRefusal extends Error {}
+
+export type Joined = { payload: Payload } | { error: string };
+
+const key = (c: Code) => `${c.index},${c.size},${c.id},${c.bytes.join(",")}`;
+const numbers = (a: number[]) => (a.length === 1 ? `code ${a[0]}` : `codes ${a.join(", ")}`);
+const concat = (order: Code[]) => {
+  const all = new Uint8Array(order.reduce((n, c) => n + c.bytes.length, 0));
+  order.reduce((at, c) => (all.set(c.bytes, at), at + c.bytes.length), 0);
+  return all;
+};
+
+/** The application from 1 to 16 codes found anywhere (any page, any order). Codes that carry the structured-append label
+ *  are ordered by it (index, total, and the parity every code of one application shares); they are never ordered by
+ *  trying permutations. Codes without the label (some scanners drop it) are accepted only as one or two, in either order.
+ *  Bytes are joined before decoding, so a character split between two codes survives. The text is parsed as JSON only. */
+export function joinResult(codes: Code[]): Joined {
+  if (!codes.length) return { error: "No QR code found." };
+  const list = [...new Map(codes.map(c => [key(c), c])).values()]; // the same code twice counts once
+  const labelled = list.filter(c => c.index >= 0), plain = list.filter(c => c.index < 0);
+  if (labelled.length && plain.length) return { error: 'Some QR codes are labelled "code N of M" and some are not: they come from different applications. Scan one application at a time.' };
+  if (plain.length) {
+    if (plain.length > 2) return { error: `Found ${plain.length} different QR codes without a "code N of M" label; scan one application at a time.` };
+    for (const order of plain.length === 1 ? [plain] : [plain, [...plain].reverse()]) {
+      const p = parsePayload(new TextDecoder().decode(concat(order)));
+      if (p) return { payload: p };
+    }
+    return { error: plain.length === 1 ? "The QR code is only part of an application, or not one of ours. Scan all its codes." : "The two QR codes don't belong together." };
   }
-  return undefined;
+  const ids = new Set(list.map(c => c.id));
+  if (ids.size > 1) return { error: `The QR codes come from ${ids.size} different applications (their check values differ). Scan one application at a time.` };
+  const sizes = [...new Set(list.map(c => c.size))].sort((a, b) => a - b);
+  if (sizes.length > 1) return { error: `The QR codes disagree on how many codes there are (${sizes.join(" and ")}). Scan one application at a time.` };
+  const [n] = sizes;
+  if (!(n >= 1 && n <= MAX_CODES)) return { error: `The QR codes say they are one of ${n}; an application has 1 to ${MAX_CODES}.` };
+  const byIndex = new Map<number, Code>();
+  for (const c of list) {
+    if (c.index >= n) return { error: `A QR code says it is code ${c.index + 1} of ${n}.` };
+    if (byIndex.has(c.index)) return { error: `Two different QR codes both say they are code ${c.index + 1} of ${n}: they come from different applications. Scan one application at a time.` };
+    byIndex.set(c.index, c);
+  }
+  const missing = Array.from({ length: n }, (_, i) => i).filter(i => !byIndex.has(i)).map(i => i + 1);
+  if (missing.length) return { error: `${numbers(missing)} of ${n} not found; scan all ${n} codes.`.replace(/^c/, "C") };
+  const ordered = Array.from({ length: n }, (_, i) => byIndex.get(i)!);
+  const all = concat(ordered);
+  if (all.length > MAX_BYTES) return { error: `The QR text is longer than ${MAX_CODES} codes can hold: it didn't come from this form.` };
+  if (all.reduce((x, b) => x ^ b, 0) !== Number(ordered[0].id)) return { error: "The joined QR text doesn't match its check value (parity): a code is damaged, or the codes come from different applications." };
+  const p = parsePayload(new TextDecoder().decode(all)); // trailing padding spaces are trimmed there
+  return p ? { payload: p } : { error: "The QR codes join up, but are not an application from these forms." };
+}
+/** joinResult, as the payload or undefined (the reason is in joinResult). */
+export function joinCodes(codes: Code[]): Payload | undefined {
+  const r = joinResult(codes);
+  return "payload" in r ? r.payload : undefined;
 }
 
 // The browser loads the reader's WebAssembly from this site, not zxing-wasm's default CDN.
@@ -99,12 +145,12 @@ if (typeof document !== "undefined") prepareZXingModule({ overrides: { locateFil
 
 /** Every QR code in a picture (a page, or an uploaded scan). */
 export async function codesIn(img: ImageData | Blob): Promise<Code[]> {
-  const found = await readBarcodes(img, { formats: ["QRCode"], tryHarder: true, maxNumberOfSymbols: 4 });
-  return found.filter(r => r.isValid).map(r => ({ bytes: r.bytes, index: r.sequenceIndex, size: r.sequenceSize }));
+  const found = await readBarcodes(img, { formats: ["QRCode"], tryHarder: true, maxNumberOfSymbols: MAX_CODES });
+  return found.filter(r => r.isValid).map(r => ({ bytes: r.bytes, index: r.sequenceIndex, size: r.sequenceSize, id: r.sequenceId }));
 }
 
 /** Finds and decodes the QR code(s) on the last page (where the form prints them); `all`: then the other pages too (a
- *  printed copy may have its pages in another order, or the two codes scanned on separate pages). */
+ *  printed copy may have its pages in another order, or its codes on separate pages). */
 export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload: Payload; page: number; codes: number } | undefined> {
   // Form saved with its fields: "Generate QR Code" also keeps the code's text in the hidden field "__qr". Exact, no picture.
   const kept = await qrField(bytes).catch(() => undefined);
@@ -112,13 +158,14 @@ export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload:
   const doc = await getDocument({ data: bytes.slice(), ...PDFJS }).promise;
   try {
     const codes: Code[] = [];
+    let why = "";
     for (let n = doc.numPages; n >= (all ? 1 : doc.numPages); n--) {
       const page = await doc.getPage(n);
       // 1. One code as printed text (the studio form draws its squares as ZapfDingbats "n"): rebuilt from where each square is.
       const items = (await page.getTextContent()).items.filter(i => "str" in i) as { str: string; transform: number[] }[];
       const fromText = await qrFromText(items), payload = fromText && parsePayload(fromText);
       if (payload) return { payload, page: n, codes: 1 };
-      // 2. A picture of the page (a scan, or a copy whose text was turned into shapes), read by zxing: one or two codes.
+      // 2. A picture of the page (a scan, or a copy whose text was turned into shapes), read by zxing: up to 16 codes.
       // ponytail: one scale (2x ≈ 144 dpi of the PDF page; a scanned page keeps its own pixels); add more if real scans fail.
       const vp = page.getViewport({ scale: 2 }), canvas = document.createElement("canvas");
       canvas.width = Math.ceil(vp.width);
@@ -128,9 +175,11 @@ export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload:
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       await page.render({ canvas, viewport: vp }).promise;
       codes.push(...(await codesIn(ctx.getImageData(0, 0, canvas.width, canvas.height))));
-      const read = joinCodes(codes);
-      if (read) return { payload: read, page: n, codes: new Set(codes.map(c => c.bytes.join(","))).size };
+      const read = joinResult(codes);
+      if ("payload" in read) return { payload: read.payload, page: n, codes: new Set(codes.map(key)).size };
+      why = read.error;
     }
+    if (codes.length) throw new QrRefusal(why); // codes were found, but they don't make one application
     return undefined;
   } finally {
     await doc.destroy();

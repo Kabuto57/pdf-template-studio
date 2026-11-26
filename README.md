@@ -12,8 +12,8 @@ Everything runs in your browser: no account, no server, and your files are never
 | `index.html` | presenter | The journey and a comparison with the current vendor (XFA) form |
 | `demo-bank/` | customer | A fictional "Demo Bank" website: **Download PDF** gives the LC application; the email form "sends" the filled PDF to Trade Ops |
 | (Adobe Acrobat Reader) | customer | Fill in the PDF. Same layout and wording as the bank's form, roomier boxes; mandatory and conditional fields outlined in red; **Check form** lists what is missing; a warning on save/print |
-| `fill/` | customer | **No Adobe needed.** The same trade forms in any browser (Chrome ...): main menu with the Bank's terms tick box, all 13 forms, every check of the Acrobat PDF (red boxes, locked questions, formats, lengths, amount in words, cross-checks, **Check form**, **Reset form**), **Generate QR Code** (the same code or two codes the PDF makes) and **Print Form** (Chrome Print / Save as PDF: the form pages and the QR page, black and white) |
-| `trade-ops/` | Trade Ops | Inbox of emailed applications (or drop a PDF from real email). Every answer read exactly from the PDF's fields, checked (mandatory, conditional, dates, numbers, expiry after shipment), shown by section with the key facts on top. JSON / CSV, **Send to workflow** (simulated). **Printed or scanned forms:** drop the PDF, or a PNG/JPG scan of the QR page: the answers are read from its QR code, one code or two ("QR code 1 of 2" / "2 of 2", joined in either order), with zxing-wasm (`src/qr-read.ts`) |
+| `fill/` | customer | **No Adobe needed.** The same trade forms in any browser (Chrome ...): main menu with the Bank's terms tick box, all 13 forms, every check of the Acrobat PDF (red boxes, locked questions, formats, lengths, amount in words, cross-checks, **Check form**, **Reset form**), **Generate QR Code** (the same 1 to 16 codes the PDF makes) and **Print Form** (Chrome Print / Save as PDF: the form pages and the QR page, black and white) |
+| `trade-ops/` | Trade Ops | Inbox of emailed applications (or drop a PDF from real email). Every answer read exactly from the PDF's fields, checked (mandatory, conditional, dates, numbers, expiry after shipment), shown by section with the key facts on top. JSON / CSV, **Send to workflow** (simulated). **Printed or scanned forms:** drop the PDF, or a PNG/JPG scan of the QR page: the answers are read from its QR code, 1 to 16 codes ("QR code 3 of 7"; found on any page, in any order, put in order by each code's own structured-append label, refused with a clear message if one is missing), with zxing-wasm (`src/qr-read.ts`) |
 
 Demo script: open `demo-bank/`, **Download PDF**, fill it in Adobe Acrobat Reader (try ticking a document row: its boxes turn red), **Check form**, save, attach it in *Send your completed form*, **Send**, then open the Trade Ops workbench. The email is simulated inside the browser (IndexedDB), so the whole journey runs on one laptop.
 
@@ -355,7 +355,7 @@ fields at all fall back to reading the page text, and those results are marked "
 
 How the smart form itself works (layers, fields, scripts, mandatory logic, barcodes): [docs/how-the-bank-smart-form-is-built.md](docs/how-the-bank-smart-form-is-built.md).
 
-How the workbench reads the QR code (finding it, joining two codes, choosing the form, matching, how zxing decodes, why it isn't OCR): [docs/QR-READING.md](docs/QR-READING.md).
+How the workbench reads the QR code (finding it, joining up to 16 codes, choosing the form, matching, how zxing decodes, why it isn't OCR): [docs/QR-READING.md](docs/QR-READING.md).
 
 To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vitest run scripts`.
 
