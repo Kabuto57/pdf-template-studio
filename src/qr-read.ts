@@ -153,12 +153,34 @@ export async function codesIn(img: ImageData | Blob): Promise<Code[]> {
   return found.filter(r => r.isValid).map(r => ({ bytes: r.bytes, index: r.sequenceIndex, size: r.sequenceSize, id: r.sequenceId }));
 }
 
+export interface PageCodes { page: number; codes: Code[] }
+/** The most pages read from the first page with a code: codes 1-2 are on the QR page, two more on each extra page. */
+export const MAX_QR_PAGES = 9; // 16 codes need 1 + ceil((16 - 2) / 2) = 8 pages; one page of slack
+/** The most pages read from the end while none holds a QR code. */
+export const MAX_BLIND_PAGES = 12;
+
+/** Which page to read next (1-based), or undefined to stop. `read` is what was read so far, last page first. The codes say
+ *  how many there are (their total M: M codes lie on 1 + ceil((M - 2) / 2) pages, two to a page). Reading stops as soon as
+ *  no code is missing (the application joins, or the codes can never join), at 9 pages from the first page with a code
+ *  at the latest, or after 12 pages without any code: a long PDF is never read to its first page. `all` false: only the last page. */
+export function nextPage(read: PageCodes[], numPages: number, all = true): number | undefined {
+  const next = (read.length ? read[read.length - 1].page : numPages + 1) - 1;
+  if (next < 1 || (!all && read.length)) return undefined;
+  const first = read.findIndex(p => p.codes.length);
+  if (first < 0) return read.length < MAX_BLIND_PAGES ? next : undefined;
+  if (read.length - first >= MAX_QR_PAGES) return undefined;
+  // The codes' own total says how many there are (so how many pages hold them): stop as soon as none is missing.
+  const joined = joinResult(read.flatMap(p => p.codes));
+  return "error" in joined && /not found/.test(joined.error) ? next : undefined;
+}
+
 /** The application from the codes found on all the pages read (page numbers are 1-based): the same decision as joinResult
  *  over every code together. undefined: no code on any page. Throws QrRefusal (with the reason) when codes were found
  *  but they are not one whole application. `page` is the highest page that holds a code. */
-export function joinPages(pages: { page: number; codes: Code[] }[]): { payload: Payload; page: number; codes: number } | undefined {
+export function joinPages(pages: PageCodes[], all = false): { payload: Payload; page: number; codes: number } | undefined {
   const codes = pages.flatMap(p => p.codes);
-  if (!codes.length) return undefined;
+  // `all`: the last pages were read for a code and none was found, with pages still unread
+  if (!codes.length) { if (all && pages.length && pages[pages.length - 1].page > 1) throw new QrRefusal(`No QR code found in the last ${pages.length} pages.`); return undefined; }
   const read = joinResult(codes);
   if ("error" in read) throw new QrRefusal(read.error);
   return { payload: read.payload, page: Math.max(...pages.filter(p => p.codes.length).map(p => p.page)), codes: new Set(codes.map(key)).size };
@@ -172,13 +194,14 @@ export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload:
   if (kept) return { ...kept, codes: 0 };
   const doc = await getDocument({ data: bytes.slice(), ...PDFJS }).promise;
   try {
-    const pages: { page: number; codes: Code[] }[] = [];
-    for (let n = doc.numPages; n >= (all ? 1 : doc.numPages); n--) {
+    const pages: PageCodes[] = [];
+    for (let n = nextPage(pages, doc.numPages, all); n !== undefined; n = nextPage(pages, doc.numPages, all)) {
       const page = await doc.getPage(n);
       // 1. One code as printed text (the studio form draws its squares as ZapfDingbats "n"): rebuilt from where each square is.
+      // It is one code of this page like any other (no label: a whole application), so the same pages-and-joining rules apply.
       const items = (await page.getTextContent()).items.filter(i => "str" in i) as { str: string; transform: number[] }[];
-      const fromText = await qrFromText(items), payload = fromText && parsePayload(fromText);
-      if (payload) return { payload, page: n, codes: 1 };
+      const fromText = await qrFromText(items);
+      if (fromText && parsePayload(fromText)) { pages.push({ page: n, codes: [{ bytes: new TextEncoder().encode(fromText), index: -1, size: -1, id: "" }] }); continue; }
       // 2. A picture of the page (a scan, or a copy whose text was turned into shapes), read by zxing: up to 16 codes.
       // ponytail: one scale (2x ≈ 144 dpi of the PDF page; a scanned page keeps its own pixels); add more if real scans fail.
       const vp = page.getViewport({ scale: 2 }), canvas = document.createElement("canvas");
@@ -190,7 +213,7 @@ export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload:
       await page.render({ canvas, viewport: vp }).promise;
       pages.push({ page: n, codes: await codesIn(ctx.getImageData(0, 0, canvas.width, canvas.height)) });
     }
-    return joinPages(pages); // every page is read before deciding, so codes of another application on another page are seen
+    return joinPages(pages, all); // the pages that can hold this application's codes are read before deciding, so a foreign code among them is seen
   } finally {
     await doc.destroy();
   }

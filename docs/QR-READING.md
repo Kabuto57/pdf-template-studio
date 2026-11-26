@@ -66,8 +66,13 @@ text). Permutations are never tried for labelled codes (16! orders).
 5. **Bytes joined in index order, then checked.** The joined bytes must be at most 16 x 2,329, and their XOR must equal the parity every code carries (a damaged or foreign code fails here). A character such as "é" is two bytes and a split can fall between them; joining bytes first keeps it whole.
 6. **Parsed as data (`parsePayload`).** The bytes must be valid UTF-8 (strict; nothing is guessed at). `JSON.parse` (never evaluated) allows JSON's own white space, so the padding spaces are fine; a byte order mark or a no-break space is not padding and is refused. The result must have `form` and `data`.
 
-`readQr` reads every page (last page backwards), then decides once on all the codes together (`joinPages`), so codes 1-2 and
-3-4 on different pages work, and a code of another application on any page is seen and refused. If codes were found but
+`readQr` reads pages from the last backwards and decides once on all the codes read (`joinPages`), so codes 1-2 and 3-4 on
+different pages work, and a code of another application on a page read is seen and refused. Which pages are read
+(`nextPage`) follows from the codes themselves: each carries the total M, and M codes lie on 1 + ceil((M - 2) / 2) pages (codes
+1-2 on the QR page, two more on each extra page, 8 pages for 16). Reading stops as soon as no code is missing; while one is
+missing it goes on, but never more than 9 pages from the first page with a code; with no code at all it stops after the last 12
+pages ("No QR code found in the last 12 pages"). A long PDF is never rendered to its first page. A code drawn as printed
+text (`qrFromText`) counts as one code of its page in the same way. If codes were found but
 they don't join, the reason above is shown to the operator (`QrRefusal`).
 
 ---
