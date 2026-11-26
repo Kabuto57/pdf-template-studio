@@ -25,7 +25,7 @@ Start with the LC form description (`src/lc.ts`), then the form engine (`src/for
 |---|---|
 | `src/lc.ts` | **The LC application**: every section and question, one line each, with its rules. Most changes happen here; the top of the file explains how. |
 | `src/lc-pdf.ts` | The same LC drawn in the bank's original layout (secondary; the new design is the showcase). |
-| `src/bank-forms.json` | The other 12 trade forms, taken from the bank's smart form. |
+| `src/bank-forms.json` | The other 12 trade forms, taken from the bank's smart form (the fill page also offers LC-01P, a 14th, from lc-form). |
 | `src/lists.ts` | Currency and country lists. |
 
 ## The pages
@@ -35,15 +35,17 @@ Start with the LC form description (`src/lc.ts`), then the form engine (`src/for
 | `src/bank.ts` | Demo Bank website: **Download Form** builds the PDF fresh with `buildPdf`. |
 | `src/mail.ts` + `src/mailbox.ts` | The customer's email, and the pretend mailbox (the browser's IndexedDB). |
 | `src/ops.ts` + `src/customers.ts` | **Trade Ops Workbench**: reads the PDF, checks every rule and the customer record, shows the PDF side by side, then Approve / Reject and Submit. |
+| `src/qr-read.ts` + `src/form-registry.ts` | The workbench's QR reader (1 to 16 codes, PDFs up to 30 pages) and the choice of form for a printed copy. See `docs/QR-READING.md`. |
+| `src/fill/` | The fill-online page (`fill/index.html`): lc-form's Acrobat JavaScript run in the browser. |
 | `src/main.ts` | PDF Template Studio: design, fill, extract. |
 | `src/text.ts` | Everything that uses pdf.js: drawing PDF pages on screen, reading text from PDFs without fields, reading the old XFA forms. |
 
 ## Making a change
 
 ```bash
-npm install                                  # once
+npm ci                                       # once
 npm run dev                                  # the site at http://localhost:5173, reloads as you edit
-npm test                                     # all the checks (about 10 seconds)
+npm test                                     # all the checks (about a minute)
 LC_PDFS=1 npx vitest run scripts/lc-pdfs     # rewrite the downloadable LC PDFs in public/
 git push                                     # GitHub tests, builds and publishes the site
 ```

@@ -445,7 +445,7 @@ function layOnce(form: Template, answers: Values, extra: Record<string, number>)
     newPage();
     text("APPLICATION QR CODE (FOR BANK USE)", M, H - 56, 11, true);
     let y = H - 70;
-    for (const l of wrap("When the form is filled in, press Generate QR Code (under the code), then Print Form. The Bank scans the code to read the application (all the answers, as JSON). If the answers are too long for one code, a second code appears under the buttons: the Bank scans both. Do not write on or fold the codes.", 8, W - 2 * M)) {
+    for (const l of wrap("When the form is filled in, press Generate QR Code (under the code), then Print Form. The Bank scans the code to read the application (all the answers, as JSON). If the answers are too long for one code, more codes appear: a second one under the buttons and, for very long answers, more on extra pages after this one (up to 16 in all). The Bank scans all of them. Do not write on or fold the codes.", 8, W - 2 * M)) {
       text(l, M, y, 8, false, GREY);
       y -= 10;
     }

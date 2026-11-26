@@ -46,7 +46,7 @@ The workbench tries three ways, cheapest first, and stops at the first that work
 |---|---|---|---|
 | 1. Hidden field `__qr` (`qrField`) | PDF saved in Acrobat, fields still there | Generate QR Code also stores the exact JSON in a hidden field. Read as text. | No |
 | 2. Squares as text (`qrFromText`) | "Save as PDF" or printed to PDF | Each black square is a tiny font character (ZapfDingbats "n"), so the PDF stores where each one is. The code works out the square size, rebuilds the grid, redraws a clean picture and decodes it with zxing. | A clean picture rebuilt from the squares |
-| 3. Picture of the page (`codesIn`) | Scan, photo, or a PDF whose text became shapes | The page is drawn as an image at 2× size (pdf.js); zxing finds up to 4 QR codes on it. A scanned JPG or PNG is first wrapped in a one-page PDF. | Yes |
+| 3. Picture of the page (`codesIn`) | Scan, photo, or a PDF whose text became shapes | The page is drawn as an image at 2× size (pdf.js); zxing finds up to 16 QR codes on it. A scanned JPG or PNG is first wrapped in a one-page PDF. | Yes |
 
 Pages are searched from the **last page backwards**. For a printed copy every page is searched, in case pages were
 scanned out of order or its codes are on different pages. Codes found on different pages are collected together.
@@ -71,8 +71,9 @@ codes 1-2 and 3-4 on different pages work, and the blank backs of a duplex print
 don't matter. Reading is dynamic: it stops as soon as the codes found are a whole application, or can never be one (a
 foreign or mixed set, a wrong parity: refused at once). While codes are only missing (or none was found yet) it goes on
 towards the first page, so the pages read depend on the document, not on a fixed number. A real application is a few pages
-(8 QR pages for 16 codes), so there is one safety ceiling: a PDF of more than `MAX_PDF_PAGES` = 200 pages is refused before
-any page is rendered ("This PDF has N pages; the workbench reads PDFs of up to 200 pages."). A code drawn as printed
+(the QR page plus 7 extra pages for 16 codes), so there is one safety ceiling: a PDF of more than `MAX_PDF_PAGES` = 30 pages
+is refused before any page is rendered ("This PDF has N pages; the workbench reads PDFs of up to 30 pages."). 30 is the longest
+form (about 4 pages) plus 7 extra QR pages at 16 codes, doubled for the blank backs of a duplex print, plus a few attachments. A code drawn as printed
 text (`qrFromText`, `textPageCodes`) counts as one unlabelled code of its page, under the same rules. An old unlabelled
 two-code set with one half on each page still joins (the other half is looked for on the earlier pages); a lone half is
 refused once the document has been read. If codes were found but they don't join, the reason above is shown to the
@@ -80,9 +81,12 @@ operator (`QrRefusal`); with no code at all the answer is simply "none".
 
 **Limits while drawing a page** (`renderScale`). A page is drawn at 2x (an A4 page is about 2 megapixels), but never with more than
 `MAX_RENDER_PIXELS` = 25,000,000 pixels: a larger page is scaled down, not skipped. A page more than 14,400 units on a side is not
-drawn; if no code is found on the other pages the operator is told so. A page that fails to draw or decode stops the read with
+drawn; if no code is found on the other pages the operator is told so, and when the codes found are only some of an application
+(or a complete one), the message or a notice ends "N page(s) were too large to read." so a missing code is not blamed on the customer
+alone. A page that fails to draw or decode stops the read with
 "Page N could not be read: ...", worded as its own refusal in the workbench (not as "codes don't join"). A page count that is
-not a whole number is refused. A code already seen on a later page adds nothing, so a long PDF of repeated pages is read
+not a whole number is refused. A file pdf.js cannot open ("The PDF could not be opened: ...") or a document that will not close is
+also its own "render" refusal, so it is never shown as "form fields were removed and it has no readable QR code". A code already seen on a later page adds nothing, so a long PDF of repeated pages is read
 quickly. When the form's fields are intact the QR code is only a cross-check; if it can't be read the operator sees a notice
 that the cross-check was skipped, and why.
 
@@ -101,7 +105,7 @@ Needed only for a printed or scanned copy. A PDF that still has its fields carri
 - Old versions stay side by side.
 - An unknown form doesn't fail: the raw answers are shown with the warning "form X version Y is not known here".
 
-The workbench is the supported reader. (lc-form's `read_qr.py`, a local command-line tool outside this repository, finds the form file by **form code only**, and warns when the version differs.)
+The workbench is the supported reader.
 
 ---
 
@@ -128,7 +132,7 @@ in section 4. For the LC the cross-checks also run (e.g. expiry date after issue
 ## 6. How zxing decodes a QR code
 
 zxing is Google's open-source barcode reader, the same engine used by phone camera apps. The workbench uses
-`zxing-wasm` (runs in the browser; nothing is sent anywhere); lc-form's `read_qr.py` uses `zxing-cpp`.
+`zxing-wasm` (runs in the browser; nothing is sent anywhere).
 It uses fixed geometry and error-correction maths: no AI, no trained model, no guessing.
 
 **Part 1: finding the code in a picture** (scans and photos only; skipped for "Save as PDF" copies, whose square
@@ -158,9 +162,6 @@ Result: the exact JSON, character for character, or a clear failure.
 | Same input twice | Same output every time | Can differ |
 | Needs | About 2 MB library in the browser, nothing sent anywhere | A model, often a cloud service |
 
-Benchmark (10 test LCs, printed and scanned): QR 100 %, about 0.04 s per form; Gemini 3.7 Flash 99.5 %,
-about 39 s per form.
-
 **When OCR would be needed:** only for a scanned paper form with **no QR code**. The workbench doesn't do that; it
 says "looks like a scan, which would need OCR" and stops.
 
@@ -173,7 +174,5 @@ says "looks like a scan, which would need OCR" and stops.
 | `zxing-wasm` | Decoding every QR code in the workbench | MIT (ZXing engine: Apache-2.0) |
 | `pdfjs-dist` (PDF.js) | Square positions (way 2), drawing pages as images (way 3), page text (check B) | Apache-2.0 |
 | `pdf-lib` | Reading the hidden `__qr` field and the form stored in the PDF (way 1) | MIT |
-| `zxing-cpp` (lc-form, Python) | `read_qr.py` for scanned images | Apache-2.0 |
-| `pillow` (lc-form, Python) | Opening image files in `read_qr.py` | MIT-CMU |
 
 The QR code is **made** without any library: the form's own JavaScript encoder runs inside Acrobat.

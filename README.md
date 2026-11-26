@@ -1,35 +1,111 @@
 # PDF Template Studio
 
-Turn bank forms into clean, black-and-white fillable PDFs, fill them in, and pull the answers back out as data.
-Everything runs in your browser: no account, no server, and your files are never uploaded.
+## 1. What it is
+
+**Template Studio** turns bank forms into clean, black-and-white fillable PDFs, lets you fill them in, and pulls the answers back out as data. You design a form on a canvas (the studio, `studio.html`), fill it in, and extract its answers as JSON. Everything runs in your browser: no account, no server, and your files are never uploaded.
+
+Around the studio sits a small demo of a bank's trade-application journey, all with fictional "Demo Bank" data. A customer downloads the LC application from the **demo bank** website, or fills the same 14 trade forms in any browser on the **fill online** page (no Adobe needed; it can print up to 16 QR codes carrying the answers, two to a page after the first QR page). The **Trade Ops workbench** is where the filled PDF arrives: it reads every answer exactly from the form fields, and for a printed or scanned copy it reads the answers from the QR codes (1 to 16 of them, on any pages, PDFs of up to 30 pages), then checks them and shows them next to the PDF.
 
 **Live demo:** https://kabuto57.github.io/pdf-template-studio/ · **Studio:** https://kabuto57.github.io/pdf-template-studio/studio.html
 
-## The demo: LC application, from download to data
+## 2. Libraries used
+
+Versions are the ones in `package-lock.json`. Nothing here is a server: all run in the browser or in Node for the tests.
+
+| Library | Version | Licence | What it does here | Kind |
+|---|---|---|---|---|
+| [pdf-lib](https://pdf-lib.js.org) | 1.17.1 | MIT | Draws pages and creates, fills and reads real PDF form fields | runtime |
+| [pdfjs-dist](https://mozilla.github.io/pdf.js/) (PDF.js) | 5.4.296 | Apache-2.0 | Draws page previews, reads page text and Adobe XFA forms, draws scanned pages for QR reading | runtime |
+| [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) | 3.1.6 | MIT (ZXing engine: Apache-2.0) | Decodes QR codes in the Trade Ops workbench | runtime |
+| [ajv](https://ajv.js.org) | 8.20.0 | MIT | Checks an LC application's answers against its JSON Schema | runtime |
+| [Vite](https://vite.dev) | 8.3.5 | MIT | Dev server and static build (`dist/`) | dev |
+| [Vitest](https://vitest.dev) | 4.1.11 | MIT | Runs the tests | dev |
+| [TypeScript](https://www.typescriptlang.org) | 7.0.2 | Apache-2.0 | Type check (`tsc --noEmit`, part of the build) | dev |
+| [@types/node](https://www.npmjs.com/package/@types/node) | 26.6.6 | MIT | Node types for the tests and scripts | dev |
+
+## 3. Quick setup
+
+You need **Node.js 20.19 or newer, or 22.12 or newer** (Vite 8 requires it; GitHub's build uses Node 22) and npm, which comes with Node. Check with `node -v`. Get Node from https://nodejs.org (the LTS installer, no admin tools needed beyond the installer) or your company's software portal.
+
+```
+git clone https://github.com/Kabuto57/pdf-template-studio.git      # or unzip a copy of the folder
+cd pdf-template-studio
+npm ci          # installs exactly what package-lock.json says (needs the npm registry)
+npm run dev     # starts the site at http://localhost:5173
+```
+
+Leave that window open while you use the site; press Ctrl+C to stop it. Open these addresses in Chrome or Edge:
+
+| Part | Address |
+|---|---|
+| Demo guide (the journey) | http://localhost:5173/ |
+| Template Studio | http://localhost:5173/studio.html |
+| Demo Bank website | http://localhost:5173/demo-bank/ |
+| Demo Bank LC application (email form) | http://localhost:5173/demo-bank/apply.html |
+| Fill online (14 forms, no Adobe) | http://localhost:5173/fill/ |
+| Customer's email (pretend mailbox) | http://localhost:5173/customer-mail/ |
+| Trade Ops workbench | http://localhost:5173/trade-ops/ |
+| Bank back end (the pretend workflow) | http://localhost:5173/back-end/ |
+
+**Windows:** use Command Prompt or PowerShell, in the project folder; the commands are the same. If PowerShell says scripts are disabled, use Command Prompt. **Mac:** use Terminal. If port 5173 is busy, Vite says which port it took instead; use that number.
+
+**If `npm ci` is blocked** (a company policy that stops install scripts, or one that blocks a download): the only package with an install script is the optional, Mac-only `fsevents`, which the site does not need, so `npm ci --ignore-scripts` is safe here. With scripts switched off (this flag, or `ignore-scripts=true` in your npm settings) npm also skips the `predev` / `prebuild` step that copies PDF.js's standard fonts into `public/standard_fonts/`; run `node -e "require('fs').cpSync('node_modules/pdfjs-dist/standard_fonts','public/standard_fonts',{recursive:true})"` once yourself. If the registry itself is blocked, copy a finished `node_modules` folder from a machine where `npm ci` worked (same operating system), or use the static copy below on a machine that can build it. Nothing at run time calls the internet: after the install the site runs offline.
+
+## 4. How to run each part locally
+
+Start `npm run dev` first (section 3); the bank, mail and workbench pages share the browser's own storage, so use the **same browser and the same address** (`localhost:5173`) for the whole journey.
+
+- **Template Studio** (`/studio.html`): click **Open a form...** (top right), pick a form under *Smart forms*, edit it on the canvas, then **2 Fill** (type answers, **Save filled PDF**) and **3 Extract** (**Open filled PDF...**, or **Use the form I just saved**, then **Download JSON**).
+- **Demo Bank** (`/demo-bank/`): click **Download PDF** to get the LC application. Fill it in Adobe Acrobat Reader (its checks run only there; try ticking a document row and press **Check form**) and save it. **Fill online** on the same page opens `/demo-bank/apply.html`, a web form for the LC that ends in **Submit to Demo Bank**.
+- **Customer's email** (`/customer-mail/`): a pretend "New message" window: attach the saved PDF, give it a subject and send it to Trade Ops. The email is simulated inside the browser (IndexedDB), so the whole journey runs on one laptop.
+- **Fill online** (`/fill/`): tick the Bank's terms box, pick one of the 14 forms, fill it in. **Check form** lists what is missing, **Generate QR Code** makes the code or codes, **Print Form** opens the browser's print dialog (choose *Save as PDF*): that PDF is a printed copy with no fields, only its QR code or codes. Chrome or Edge is recommended.
+- **Trade Ops workbench** (`/trade-ops/`): the inbox shows the emails sent from `/customer-mail/`; click one to see its answers, checks and PDF side by side, then **Approve** or **Reject** and **Submit**. You can also drop a PDF on the page: the studio's **Sample filled PDFs** (in `/studio.html`) are ready-made applications to drop. To try the QR reader, drop a PDF made with **Print Form** (or a scan or photo of the QR page, PNG or JPG) onto the page: the answers are read from its QR codes. A refusal message says what is wrong (a code missing, codes from different applications, a PDF over 30 pages, pages too large to read).
+- **Back end** (`/back-end/`): the pretend workflow where **Send to workflow** in the workbench lands.
+
+**A static copy** (what GitHub Pages publishes, no dev server):
+
+```
+npm run build      # type-checks, then writes the site to dist/
+npm run preview    # serves dist/ at http://localhost:4173 (same pages as above, on that port)
+```
+
+`dist/` is plain files; any web server can host it (opening the HTML files straight from disk does not work, because browsers block scripts loaded that way).
+
+**Tests:**
+
+```
+npm test           # about a minute; every check runs in Node, nothing needs the internet
+```
+
+Some checks are skipped on a machine without the lc-form project (it regenerates files and compares them) or without Playwright (the browser check of the fill page); a skip is not a failure. `npm run pdfs` rewrites the files in `public/` that the site serves (needs Python with `pdfbuild/requirements.txt` installed in `.venv`).
+
+## 5. The detailed explanation
+
+### The demo: LC application, from download to data
 
 | Page | Who | What happens |
 |---|---|---|
 | `index.html` | presenter | The journey and a comparison with the current vendor (XFA) form |
 | `demo-bank/` | customer | A fictional "Demo Bank" website: **Download PDF** gives the LC application; the email form "sends" the filled PDF to Trade Ops |
 | (Adobe Acrobat Reader) | customer | Fill in the PDF. Same layout and wording as the bank's form, roomier boxes; mandatory and conditional fields outlined in red; **Check form** lists what is missing; a warning on save/print |
-| `fill/` | customer | **No Adobe needed.** The same trade forms in any browser (Chrome ...): main menu with the Bank's terms tick box, all 13 forms, every check of the Acrobat PDF (red boxes, locked questions, formats, lengths, amount in words, cross-checks, **Check form**, **Reset form**), **Generate QR Code** (the same 1 to 16 codes the PDF makes) and **Print Form** (Chrome Print / Save as PDF: the form pages and the QR page, black and white) |
-| `trade-ops/` | Trade Ops | Inbox of emailed applications (or drop a PDF from real email). Every answer read exactly from the PDF's fields, checked (mandatory, conditional, dates, numbers, expiry after shipment), shown by section with the key facts on top. JSON / CSV, **Send to workflow** (simulated). **Printed or scanned forms:** drop the PDF, or a PNG/JPG scan of the QR page: the answers are read from its QR code, 1 to 16 codes ("QR code 3 of 7"; found on any page, in any order, put in order by each code's own structured-append label, refused with a clear message if one is missing; PDFs of up to 200 pages), with zxing-wasm (`src/qr-read.ts`) |
+| `fill/` | customer | **No Adobe needed.** The same trade forms in any browser (Chrome ...): main menu with the Bank's terms tick box, all 14 forms (the 13 below plus LC-01P), every check of the Acrobat PDF (red boxes, locked questions, formats, lengths, amount in words, cross-checks, **Check form**, **Reset form**), **Generate QR Code** (the same 1 to 16 codes the PDF makes) and **Print Form** (Chrome Print / Save as PDF: the form pages and the QR page, black and white) |
+| `trade-ops/` | Trade Ops | Inbox of emailed applications (or drop a PDF from real email). Every answer read exactly from the PDF's fields, checked (mandatory, conditional, dates, numbers, expiry after shipment), shown by section with the key facts on top. JSON / CSV, **Send to workflow** (simulated). **Printed or scanned forms:** drop the PDF, or a PNG/JPG scan of the QR page: the answers are read from its QR code, 1 to 16 codes ("QR code 3 of 7"; extra QR pages hold two codes each; found on any page, in any order, put in order by each code's own structured-append label, refused with a clear message if one is missing; PDFs of up to 30 pages), with zxing-wasm (`src/qr-read.ts`) |
 
 Demo script: open `demo-bank/`, **Download PDF**, fill it in Adobe Acrobat Reader (try ticking a document row: its boxes turn red), **Check form**, save, attach it in *Send your completed form*, **Send**, then open the Trade Ops workbench. The email is simulated inside the browser (IndexedDB), so the whole journey runs on one laptop.
 
 How the LC looks like the bank's form: `scripts/xfa-layout.py` copies its page layout (boxes, wording, field positions) from the smart form into `src/lc-layout.json`, the bank form's own size, underlined fields as on the original; a second "new design" version uses the studio's black-and-white layout; `src/lc-pdf.ts` draws it with pdf-lib and puts our fields, rules and checks in it.
 
-## The studio (`studio.html`)
+### The studio (`studio.html`)
 
 The app has three steps along the top: **1 Design**, **2 Fill**, **3 Extract**.
 
-### Open a smart form
+#### Open a smart form
 
 1. Click **Open a form…** (top right).
 2. Under **Smart forms**, pick one, e.g. *Banker's Guarantee Application*. The studio opens on the LC.
 3. The form appears on the canvas, page by page, exactly as the lc-form project builds it.
 
-The thirteen smart forms are the form files of the [lc-form](https://github.com/Kabuto57/lc-form) project
+The thirteen smart forms in the studio are the form files of the [lc-form](https://github.com/Kabuto57/lc-form) project
 (`forms/*_form.py`: the old smart form's questions, wording and rules, in the new design). They are copied in by
 `scripts/smartforms.py` (see "Keeping in step with lc-form" below):
 
@@ -49,7 +125,7 @@ The thirteen smart forms are the form files of the [lc-form](https://github.com/
 | Bill of Exchange (Export Documentary Credit) | `bill_of_exchange_eblc_form.py` | 18 |
 | Bill of Exchange (Export Documentary Collection) | `bill_of_exchange_obc_form.py` | 16 |
 
-### 1. Design: the canvas
+#### 1. Design: the canvas
 
 The middle of the screen is the form itself; the studio's own marks (selection, conditions, drop places) are blue,
 so they never look like part of the form.
@@ -101,10 +177,10 @@ so they never look like part of the form.
 - **Fillable PDF**: its own fields and layout are kept; you can rename the questions.
 - **Printed PDF**: a field is added over every blank line (`____`) and tick box (`[ ]`, `☐`).
 
-### 2. Fill
+#### 2. Fill
 
 1. Click **2 Fill**.
-2. Type your answers on the left; the PDF on the right updates as you type. **Fill with sample** fills any form (all 13 bank forms, uploaded ones too) with made-up but realistic answers, guessed from each question's wording, so you can try Save, Extract and Review straight away.
+2. Type your answers on the left; the PDF on the right updates as you type. **Fill with sample** fills any form (all the bank forms, uploaded ones too) with made-up but realistic answers, guessed from each question's wording, so you can try Save and Extract straight away.
 3. Mandatory questions have a red `*`, and while blank they are **outlined in red**; a line at the top counts how many are left. Some are mandatory only after you pick an option, exactly as in the bank's smart form. On the LC, for example, picking **Drafts: Term** makes *Term* and *days after* mandatory, and ticking **Tolerance** makes *Plus value* and *Minus value* mandatory. Hover a question to see why it is mandatory. In Design, such a question shows "Required when …".
    **Save filled PDF** is blocked while any are blank: it lists them and jumps to the first. **Save as draft anyway** saves a `-draft.pdf` on purpose. In the PDF, mandatory boxes are outlined in red too.
 4. Click **Save filled PDF** (top right). The saved PDF is still fillable, so it can be opened and changed in Adobe Reader or Preview.
@@ -118,7 +194,7 @@ Or click **Download blank PDF** and fill it in Adobe Reader instead.
 - number boxes refuse letters, dates are checked, and each box takes no more characters than on the bank's form.
 Mac Preview and web browsers do not run PDF scripts: there the form still fills, but only the starting red outlines show.
 
-### 3. Extract
+#### 3. Extract
 
 1. Click **3 Extract**.
 2. Click **Open filled PDF…** or drop a PDF on the page. **Use the form I just saved** takes the one you saved in Fill.
@@ -138,37 +214,13 @@ It reads any PDF:
 | Printed or flattened PDF | From the text: `Label: value`, a label then its value on the same line, ticked boxes. Check these |
 | Scanned PDF | Not readable: it has no text (would need OCR) |
 
-### 4. Review (for the ops team)
+### How it's built
 
-This step follows how an application reaches operations today: the customer downloads the form, fills it in and emails it to the RM; the RM passes it to ops; ops print, scan and OCR it, check it in the workflow tool, then process it. With a fillable PDF there is no printing, scanning or OCR: ops open the PDF in **Extract** and every answer is read exactly. Then:
-
-1. Click **Review this application →** (or **4 Review**).
-2. Automatic checks run on the answers:
-
-| Check | What it looks for | Result if it finds something |
-|---|---|---|
-| Mandatory questions | Required answers left blank | FAIL |
-| Dates | Not DD/MM/YYYY, not a real date, expiry not after the effective date | FAIL |
-| Expiry | Expiry date already passed | CHECK |
-| Amounts | Amount is not a number above zero | FAIL |
-| Contact details | Email or phone number in the wrong format | FAIL |
-| Sanctions screening | A name (applicant, beneficiary, bank, party…) that matches the screening list, allowing for punctuation, company suffixes and small typos | CHECK: escalate to compliance |
-| High-risk countries | A sanctioned or high-risk country (North Korea, Iran, Myanmar, Syria, Cuba, Russia, Belarus, Crimea) anywhere in the answers | CHECK: enhanced due diligence |
-| Purpose and goods | Red-flag words (weapons, military, dual-use, nuclear, cash, crypto…) | CHECK: confirm the purpose |
-
-3. Pick a decision (**Accept**, **Return to customer** or **Escalate to compliance**), add your name and notes.
-4. **Download review report** saves a PDF with the decision, every check and every answer. The report is itself a fillable form, so it can be signed, filed and extracted like any other.
-5. **Copy for AI review** copies the answers, the checks and instructions to the clipboard. Paste them into the bank's approved AI assistant for a second opinion: inconsistencies, things that make no commercial sense, money-laundering red flags, and questions to ask the customer. The page itself sends nothing anywhere.
-
-The screening list is a **demo list of made-up names**. Real screening uses the bank's provider (e.g. World-Check, Dow Jones, the MAS, UN and OFAC lists). Under **Screening list**, paste an export, one name per line; it is kept in your browser only.
-
-## How it's built
-
-### The stack
+#### The stack
 
 | Layer | What | Why |
 |---|---|---|
-| Language | **TypeScript** (strict), about 1,000 lines in `src/` | Plain, typed JavaScript; no framework |
+| Language | **TypeScript** (strict) | Plain, typed JavaScript; no framework |
 | UI | Plain DOM (`document.createElement`) + one CSS file | Small and easy to read; nothing to learn first |
 | Writing PDFs | **[pdf-lib](https://pdf-lib.js.org)** | Draws pages and creates real form fields (text boxes, radio buttons, tick boxes, drop-downs); fills and reads them |
 | Reading hard PDFs | **[pdf.js](https://mozilla.github.io/pdf.js/)** (Mozilla, the PDF viewer in Firefox) | Opens encrypted PDFs, Adobe XFA smart forms, and page text. Loaded only when needed |
@@ -179,15 +231,14 @@ The screening list is a **demo list of made-up names**. Real screening uses the 
 There is **no server and no database**. The website is just files (HTML, JS, CSS). Everything happens in the
 visitor's browser, so a PDF someone opens is never uploaded anywhere.
 
-### Folder structure
+#### Folder structure
 
 ```
 pdf-template-studio/
-├── index.html                 the page: top bar (steps, Open a form, Download, Save), left panel, PDF preview
+├── studio.html                the studio page: top bar (steps, Open a form, Download, Save), left panel, PDF preview
 ├── src/
 │   ├── main.ts                the studio: three steps (Design on the canvas / Fill / Extract), buttons, file upload, PDF preview
 │   ├── lc.ts                  the LC application, rebuilt by hand to match the bank's form, plus its sample answers
-│   ├── review.ts              ops review: automatic checks, name screening, AI prompt, review report
 │   ├── pdf.ts                 table of contents for the form engine in src/form/ (see CODE-TOUR.md)
 │   ├── form/                  the form engine, one job per file: build, rules, dates, red frames, Acrobat checks, read
 │   ├── text.ts                PDF reader (pdf.js): XFA smart forms, page text, "Label: value" pairs, blanks, preview drawing
@@ -210,8 +261,10 @@ pdf-template-studio/
 │   └── styles.css             black-and-white look
 ├── scripts/
 │   ├── smartforms.py          copies lc-form's form files (and its Helvetica widths) into src/canvas/
-│   ├── bank-forms.test.ts     rebuilds bank-forms.json from the bank's smart form PDF
-│   └── all-in-one.test.ts     builds the all-in-one PDF holding every bank form
+│   ├── fill-engine.py         copies lc-form's Acrobat JavaScript into src/fill/gen/ (generated; do not edit)
+│   ├── xfa-layout.py, xfa-rules.py   one-off tools that read the bank's old smart form
+│   ├── bank-forms.test.ts     rebuilds bank-forms.json from the bank's smart form PDF (skipped without it)
+│   └── lc-pdfs.test.ts        rewrites public/ files: the two LC PDFs, the sample PDFs, the LC's JSON Schema (npm run pdfs)
 ├── tests/                     automated checks (run with npm test)
 │   ├── canvas-layout.test.ts  every field of every smart form lands where lc-form's layout.py puts it
 │   ├── canvas-form-file.test.ts  exported form files load in lc-form and give back the same forms
@@ -219,13 +272,15 @@ pdf-template-studio/
 │   ├── pdf.test.ts            build -> fill -> extract gives back every answer
 │   ├── upload.test.ts         uploaded fillable / printed PDFs, text extraction
 │   ├── xfa.test.ts            reading an XFA smart form
-│   └── review.test.ts         checks pass a clean form and flag bad dates, listed names, risky countries
+│   ├── qr-read.test.ts, qr-multi.test.ts   the workbench's QR reader: 1 to 16 codes, page rules, limits
+│   ├── fill.test.ts, e2e/     the fill-online page (the e2e check needs Playwright and is skipped otherwise)
+│   └── ...                    and the rest (forms, lc, layout, validate, customers)
 ├── .github/workflows/pages.yml   test, build and publish on every push
 ├── vite.config.ts             build settings + Content Security Policy
 └── package.json               dependencies: pdf-lib, pdfjs-dist (dev: typescript, vite, vitest)
 ```
 
-### Filling the forms in the browser (`fill/`)
+#### Filling the forms in the browser (`fill/`)
 
 `fill/index.html` is lc-form's `build_all.py` one-PDF without Adobe. It runs **lc-form's own Acrobat JavaScript**
 (`acrobat_js.py`, filled in per form by `pdf_writer.py`: the rules engine `lcRules`, `lcPayload`, the QR encoder
@@ -253,7 +308,7 @@ After lc-form changes: `~/Documents/lc-form/.venv/bin/python scripts/fill-engine
 when Playwright is found (`PLAYWRIGHT_DIR=<folder with node_modules/playwright>`, default `~/Documents/template-studio`) and is skipped otherwise, e.g. on
 GitHub's CI. Playwright is not a dependency of this repo.
 
-### Keeping in step with lc-form
+#### Keeping in step with lc-form
 
 The canvas copies lc-form's layout step (`layout.py`) into `src/canvas/layout.ts`, so a form looks the same in the
 studio as in the PDF lc-form builds. After the forms or the layout change in lc-form:
@@ -265,7 +320,7 @@ npm test                                                                        
 
 If `canvas-layout.test.ts` fails after a `layout.py` change, copy the change into `layout.ts` (same names, same order).
 
-### The data model: a template
+#### The data model: a template
 
 Every form, built in or uploaded, becomes one small JSON object. This is the heart of the app:
 
@@ -288,7 +343,7 @@ interface Field {
 
 Answers are a flat object keyed by field id: `{ "applicant_name": "TAN ENG", "currency": "SGD", "agree": true }`.
 
-### The flow
+#### The flow
 
 ```
  ┌───────────────────────────── 0. Getting a template ─────────────────────────────┐
@@ -316,15 +371,9 @@ Answers are a flat object keyed by field id: `{ "applicant_name": "TAN ENG", "cu
                                           │
                                           ▼
                             table on screen + JSON (Download / Copy)
-                                          │
-                                          ▼
- 4. Review   answers ──review()──▶ PASS / CHECK / FAIL per check
-                                          │
-                       ops decision ──────┼──▶ reportTemplate() ──buildPdf()──▶ review report PDF
-                                          └──▶ aiPrompt() ──▶ clipboard ──▶ bank's approved AI
 ```
 
-### The key functions
+#### The key functions
 
 | Function | File | What it does |
 |---|---|---|
@@ -333,20 +382,17 @@ Answers are a flat object keyed by field id: `{ "applicant_name": "TAN ENG", "cu
 | `importPdf(bytes)` | `pdf.ts` | Turns an uploaded PDF into a template: keeps a fillable PDF's fields, or adds fields over the blanks of a printed one |
 | `readXfa(bytes)` | `text.ts` | Uses pdf.js to open an Adobe smart form (even with an owner password) and walks its form tree: every field's subform path, type, choices, caption and value |
 | `renderPages(bytes, width)` | `text.ts` | Draws the preview pages on canvases with pdf.js. The browser's own PDF viewer is not used, because it counts every redrawn preview as a file download and company security software checks each one |
-| `review(rows, watchlist)` | `review.ts` | Runs the ops checks on the extracted answers and returns PASS / CHECK / FAIL with the reason for each |
-| `sameName(a, b)` | `review.ts` | Name matching for screening: ignores case, punctuation and suffixes like PTE LTD or FZE, and allows small typos (letter-pair similarity of 85% or more) |
-| `reportTemplate(...)` | `review.ts` | Turns the decision, checks and answers into a Template, so the review report is built by the same `buildPdf()` |
 | `xfaTemplate(xfa, code)` | `text.ts` | Turns one form from a smart-form bundle (e.g. `BG`) into a Template: sections from subforms, readable questions from captions or field names (`txtApplicantName` → "Applicant name"), drop-downs, dates |
 | `readText` / `pairs` / `blanks` | `text.ts` | For PDFs without fields: groups page text into lines, finds `Label: value` answers and ticked boxes, and finds `____` / `☐` blanks |
 
-### How extraction knows the phone number is the phone number
+#### How extraction knows the phone number is the phone number
 
 It never guesses from the page picture. Each question is a **real PDF form field** whose name is its key
 (`applicant_info_tel_no`), whose tooltip is its question ("Applicant info: Tel no"), and the whole template is
 saved inside the PDF. So reading the answers is a lookup, exactly like reading a database row. Only PDFs with no
 fields at all fall back to reading the page text, and those results are marked "check these".
 
-### How the bank forms were made
+#### How the bank forms were made
 
 1. `readXfa()` opened the bank's trade smart form (`Trade-Smartform.pdf`, 13 forms built in Adobe LiveCycle).
 2. For each form, `xfaTemplate()` produced a Template. Currency and country drop-downs got the standard ISO
@@ -368,38 +414,19 @@ To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vi
 { "id": "term", "label": "Term", "kind": "text", "requiredIf": [{ "field": "drafts", "values": ["Term:"] }] }
 ```
 
-`isRequired(field, answers)` in `pdf.ts` decides, and Fill, Save, Extract and Review all use it.
+`isRequired(field, answers)` in `pdf.ts` decides, and Fill, Save and Extract all use it.
 
 ```
 BANK_PDF=~/Downloads/Trade-Smartform.pdf BANK_RULES=rules.json npx vitest run scripts/bank-forms
 ```
 
-### Safety
+#### Safety
 
 - No server: nothing a user opens or types leaves their browser.
 - A Content Security Policy (set in `vite.config.ts`) stops the page loading or sending anything to other sites.
 - The bank's original PDF is not in this repository.
 
-## Run it locally
-
-```
-npm install
-npm run dev      # http://localhost:5173
-npm test         # build -> fill -> extract round trips, uploads, XFA
-npm run build    # static site in dist/
-```
-
-To rebuild the bank forms from a newer smart form (the PDF itself is not in this repo):
-
-```
-BANK_PDF=~/Downloads/Trade-Smartform.pdf npx vitest run scripts
-```
-
-Every push to `main` runs the tests and publishes the site to GitHub Pages.
-
-## Notes and limits
-
-- **All-in-one form:** [Trade-Application-All-in-One.pdf](https://kabuto57.github.io/pdf-template-studio/Trade-Application-All-in-One.pdf) puts all 13 bank forms in one fillable PDF, with an "Application type" tick list first. Rebuild it with `ALL_IN_ONE=public/Trade-Application-All-in-One.pdf npx vitest run scripts/all-in-one`.
+### Notes and limits
 
 - The bank's name is replaced with "the Bank" in the forms; the layout is a plain redraw, not the bank's own design.
 - Some choices come pre-selected because the smart form has them as defaults.
