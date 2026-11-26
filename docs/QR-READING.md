@@ -66,14 +66,17 @@ text). Permutations are never tried for labelled codes (16! orders).
 5. **Bytes joined in index order, then checked.** The joined bytes must be at most 16 x 2,329, and their XOR must equal the parity every code carries (a damaged or foreign code fails here). A character such as "é" is two bytes and a split can fall between them; joining bytes first keeps it whole.
 6. **Parsed as data (`parsePayload`).** The bytes must be valid UTF-8 (strict; nothing is guessed at). `JSON.parse` (never evaluated) allows JSON's own white space, so the padding spaces are fine; a byte order mark or a no-break space is not padding and is refused. The result must have `form` and `data`.
 
-`readQr` reads pages from the last backwards and decides once on all the codes read (`joinPages`), so codes 1-2 and 3-4 on
-different pages work, and a code of another application on a page read is seen and refused. Which pages are read
-(`nextPage`) follows from the codes themselves: each carries the total M, and M codes lie on 1 + ceil((M - 2) / 2) pages (codes
-1-2 on the QR page, two more on each extra page, 8 pages for 16). Reading stops as soon as no code is missing; while one is
-missing it goes on, but never more than 9 pages from the first page with a code; with no code at all it stops after the last 12
-pages ("No QR code found in the last 12 pages"). A long PDF is never rendered to its first page. A code drawn as printed
-text (`qrFromText`) counts as one code of its page in the same way. If codes were found but
-they don't join, the reason above is shown to the operator (`QrRefusal`).
+`readQr` reads pages from the last backwards (`readPages`, `nextPage`) and decides on all the codes read (`joinPages`), so
+codes 1-2 and 3-4 on different pages work, and the blank backs of a duplex print or attachment pages after the QR page
+don't matter. Reading is dynamic: it stops as soon as the codes found are a whole application, or can never be one (a
+foreign or mixed set, a wrong parity: refused at once). While codes are only missing (or none was found yet) it goes on
+towards the first page, so the pages read depend on the document, not on a fixed number. A real application is a few pages
+(8 QR pages for 16 codes), so there is one safety ceiling: a PDF of more than `MAX_PDF_PAGES` = 200 pages is refused before
+any page is rendered ("This PDF has N pages; the workbench reads PDFs of up to 200 pages."). A code drawn as printed
+text (`qrFromText`, `textPageCodes`) counts as one unlabelled code of its page, under the same rules. An old unlabelled
+two-code set with one half on each page still joins (the other half is looked for on the earlier pages); a lone half is
+refused once the document has been read. If codes were found but they don't join, the reason above is shown to the
+operator (`QrRefusal`); with no code at all the answer is simply "none".
 
 ---
 
@@ -90,7 +93,7 @@ Needed only for a printed or scanned copy. A PDF that still has its fields carri
 - Old versions stay side by side.
 - An unknown form doesn't fail: the raw answers are shown with the warning "form X version Y is not known here".
 
-The Python reader (lc-form's `read_qr.py`) finds the form file by **form code only**, and warns when the version differs.
+The workbench is the supported reader. (lc-form's `read_qr.py`, a local command-line tool outside this repository, finds the form file by **form code only**, and warns when the version differs.)
 
 ---
 

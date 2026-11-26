@@ -3,7 +3,9 @@
 // joined in the order their labels say. Payload as lc-form makes it: JSON padded with spaces to n x 2300 bytes, n equal slices.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { codesIn, joinCodes, joinPages, joinResult, MAX_BLIND_PAGES, MAX_CODES, MAX_QR_PAGES, nextPage, QrRefusal, type Code, type PageCodes } from "../src/qr-read";
+import { SAMPLES, samplePdf } from "../src/demo-applications";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { codesIn, joinCodes, joinPages, joinResult, MAX_CODES, MAX_PDF_PAGES, QrRefusal, readPages, textPageCodes, type Code } from "../src/qr-read";
 
 const CAP = 2300;
 const src = readFileSync(new URL("../src/fill/gen/lc_form.ts", import.meta.url), "utf8");
@@ -185,76 +187,130 @@ describe("1 to 16 structured-append codes", () => {
     expect(() => joinPages([{ page: 5, codes: [A[0]] }])).toThrow(/not found; scan all 4 codes/);
   }, 30000);
 
-  // The page-selection logic of readQr (which pages of a long PDF are rendered), driven without a canvas.
+  // The page-selection logic of readQr (which pages of a PDF are rendered), driven without a canvas.
   describe("which pages are read", () => {
-    /** Reads a numPages-page document whose pages hold `at` (page number -> codes), as readQr would; returns the page numbers read. */
-    function reading(numPages: number, at: Record<number, Code[]>, all = true) {
-      const read: PageCodes[] = [];
-      for (let n = nextPage(read, numPages, all); n !== undefined; n = nextPage(read, numPages, all)) {
-        expect(read.length).toBeLessThanOrEqual(MAX_QR_PAGES + MAX_BLIND_PAGES); // never runs away
-        read.push({ page: n, codes: at[n] ?? [] });
-      }
-      return read;
+    /** Reads a numPages-page document whose pages hold `at` (page number -> codes), as readQr does (readPages); returns the page numbers asked for. */
+    async function reading(numPages: number, at: Record<number, Code[]>, all = true) {
+      const asked: number[] = [];
+      const result = await readPages(numPages, all, async n => (asked.push(n), at[n] ?? []));
+      return { asked, result };
     }
-    /** The codes of an n-code application laid out as lc-form does: two a page, ending on the last of `numPages` pages. */
-    async function laidOut(n: number, numPages: number) {
-      const codes = await scan(app(n, `lay-${n}`)), pages = Math.ceil(n / 2), at: Record<number, Code[]> = {};
-      for (let k = 0; k < pages; k++) at[numPages - pages + 1 + k] = codes.slice(2 * k, 2 * k + 2);
-      return { codes, at, pages };
+    const plain = (b: Uint8Array): Code => ({ bytes: b, index: -1, size: -1, id: "" });
+    /** The codes of an n-code application laid out as lc-form does: two a page from page `from`, `step` pages apart. */
+    async function laidOut(n: number, from: number, step = 1) {
+      const codes = await scan(app(n, `lay-${n}`)), at: Record<number, Code[]> = {};
+      for (let k = 0; k < Math.ceil(n / 2); k++) at[from + k * step] = codes.slice(2 * k, 2 * k + 2);
+      return { codes, at };
     }
-    const nums = (r: PageCodes[]) => r.map(p => p.page);
+    const down = (from: number, n: number) => Array.from({ length: n }, (_, k) => from - k);
 
-    for (const n of [1, 2, 7, 16]) {
-      it(`${n} code${n > 1 ? "s" : ""} in a 200-page PDF: only the ${Math.ceil(n / 2)} QR page${n > 2 ? "s" : ""} are read`, async () => {
-        const { at, pages } = await laidOut(n, 200), read = reading(200, at);
-        expect(nums(read)).toEqual(Array.from({ length: pages }, (_, k) => 200 - k));
-        expect(joinPages(read)!.codes).toBe(n);
-        expect(pages).toBe(Math.ceil(n / 2));
+    for (const [n, pagesRead] of [[1, 1], [2, 1], [7, 4], [16, 8]] as const) {
+      it(`${n} code${n > 1 ? "s" : ""} on the last pages of a 200-page PDF: ${pagesRead} page${pagesRead > 1 ? "s" : ""} read, then it stops`, async () => {
+        const { at } = await laidOut(n, 200 - pagesRead + 1), { asked, result } = await reading(200, at);
+        expect(asked).toEqual(down(200, pagesRead));
+        expect(result!.codes).toBe(n);
       }, 60000);
     }
 
-    it("no code anywhere: the last 12 pages are read, then it stops", () => {
-      expect(nums(reading(200, {}))).toEqual(Array.from({ length: MAX_BLIND_PAGES }, (_, k) => 200 - k));
-      expect(nums(reading(5, {}))).toEqual([5, 4, 3, 2, 1]); // a short PDF is read to its first page
+    it("16 codes with a blank back to every page (duplex), over 15 pages, join", async () => {
+      const { at } = await laidOut(16, 1, 2), { asked, result } = await reading(15, at); // codes on pages 1, 3, ..., 15
+      expect(Object.keys(at)).toHaveLength(8);
+      expect(asked).toEqual(down(15, 15));
+      expect(result!.codes).toBe(16);
+    }, 60000);
+
+    it("1 code followed by 13 attachment pages joins", async () => {
+      const { at } = await laidOut(1, 1), { asked, result } = await reading(14, at);
+      expect(asked).toEqual(down(14, 14));
+      expect(result!.codes).toBe(1);
+    }, 30000);
+
+    it("no code anywhere: every page of a 200-page PDF is read and the answer is 'none', not an exception", async () => {
+      const { asked, result } = await reading(200, {});
+      expect(asked).toEqual(down(200, 200));
+      expect(result).toBeUndefined();
     });
 
-    it("no code in the last pages of a long PDF is a refusal that says how many pages were read; a short PDF just has none", () => {
-      expect(() => joinPages(reading(200, {}), true)).toThrow(/No QR code found in the last 12 pages/);
-      expect(joinPages(reading(5, {}), true)).toBeUndefined();
-      expect(joinPages(reading(200, {}, false))).toBeUndefined();
-    });
-
-    it("a code not on the last page: pages before it are read until a code is found, then its pages", async () => {
-      const { at } = await laidOut(4, 190), read = reading(200, at); // 10 empty pages at the end
-      expect(nums(read)).toEqual([200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189]);
+    it("the page ceiling: 200 pages are read, 201 are refused before any page is read", async () => {
+      expect(MAX_PDF_PAGES).toBe(200);
+      expect((await reading(200, {})).asked).toHaveLength(200);
+      let asked = 0;
+      await expect(readPages(201, true, async () => (asked++, []))).rejects.toThrow("This PDF has 201 pages; the workbench reads PDFs of up to 200 pages.");
+      expect(asked).toBe(0);
+      await expect(readPages(5000, false, async () => [])).rejects.toBeInstanceOf(QrRefusal);
     });
 
     it("only the last page is read when `all` is false", async () => {
-      const { at } = await laidOut(4, 200);
-      expect(nums(reading(200, at, false))).toEqual([200]);
+      const { at } = await laidOut(2, 200);
+      expect((await reading(200, at, false)).asked).toEqual([200]);
+      await expect(reading(200, { 199: at[200] }, false)).resolves.toMatchObject({ asked: [200], result: undefined });
     });
 
-    it("a foreign code on a QR page is still refused", async () => {
-      const { at } = await laidOut(4, 200), foreign = (await scan(app(1, "foreign")))[0];
-      at[199] = [...at[199], foreign];
-      const read = reading(200, at);
-      expect(nums(read)).toEqual([200, 199]);
-      expect(() => joinPages(read)).toThrow(/Some QR codes are labelled|different applications/);
+    it("a foreign code on a QR page is refused at once, without reading further", async () => {
+      const { at } = await laidOut(4, 199), foreign = (await scan(app(1, "foreign")))[0];
+      at[200] = [...at[200], foreign];
+      const asked: number[] = [];
+      await expect(readPages(200, true, async n => (asked.push(n), at[n] ?? []))).rejects.toThrow(/Some QR codes are labelled|different applications/);
+      expect(asked).toEqual([200]);
       const other = (await scan(app(4, "foreign4")))[1];
-      at[199] = [...at[199].slice(0, 2), other];
-      expect(() => joinPages(reading(200, at))).toThrow(/different applications/);
+      at[200] = [...at[200].slice(0, 2), other];
+      await expect(readPages(200, true, async n => at[n] ?? [])).rejects.toThrow(/different applications/);
     }, 30000);
 
-    it("a missing code: pages are read up to 9 from the first with a code, then it is refused", async () => {
-      const { codes } = await laidOut(4, 200), at: Record<number, Code[]> = { 200: [codes[2], codes[3]] }; // codes 1 and 2 are nowhere
-      const read = reading(200, at);
-      expect(nums(read)).toEqual(Array.from({ length: MAX_QR_PAGES }, (_, k) => 200 - k));
-      expect(() => joinPages(read)).toThrow(/Codes 1, 2 of 4 not found/);
+    it("a missing code: every earlier page is read looking for it, then the refusal names it", async () => {
+      const { codes } = await laidOut(4, 199), at: Record<number, Code[]> = { 200: [codes[2], codes[3]] }; // codes 1 and 2 are nowhere
+      const seen: number[] = [];
+      await expect(readPages(200, true, async n => (seen.push(n), at[n] ?? []))).rejects.toThrow(/Codes 1, 2 of 4 not found/);
+      expect(seen).toEqual(down(200, 200));
     }, 30000);
 
-    it("a hostile total (255) does not make it read more than 9 pages", () => {
+    it("a hostile total (255) is refused at once", async () => {
       const hostile: Code = { bytes: new Uint8Array([123]), index: 0, size: 255, id: "123" };
-      expect(reading(200, { 200: [hostile] }).length).toBeLessThanOrEqual(MAX_QR_PAGES);
+      const asked: number[] = [];
+      await expect(readPages(200, true, async n => (asked.push(n), n === 200 ? [hostile] : []))).rejects.toThrow(/1 to 16/);
+      expect(asked).toEqual([200]);
     });
+
+    // A legacy two-code set (no structured-append label, each half a code of its own) on two pages, in either order.
+    const text = new TextEncoder().encode('{"form":"LC-01","version":"1.0","saved":"x","complete":true,"data":{"a":"' + "z".repeat(60) + '"}}');
+    const half1 = plain(text.slice(0, 40)), half2 = plain(text.slice(40));
+    it("unlabelled halves on pages 4 and 5 of 5 join (the other half is looked for on the page before)", async () => {
+      for (const [a, b] of [[half1, half2], [half2, half1]]) {
+        const { asked, result } = await reading(5, { 5: [a], 4: [b] });
+        expect(asked).toEqual([5, 4]);
+        expect(result!.payload.form).toBe("LC-01");
+        expect(result!.codes).toBe(2);
+      }
+    });
+    it("a lone unlabelled half with no partner refuses after the whole document is read", async () => {
+      const seen: number[] = [];
+      await expect(readPages(5, true, async n => (seen.push(n), n === 5 ? [half1] : []))).rejects.toThrow(/only part of an application/);
+      expect(seen).toEqual([5, 4, 3, 2, 1]);
+    });
+
+    it("a printed-text code whose text is not an application is not taken as a code (the page picture is read instead)", async () => {
+      const draw = (t: string) => { // as the form's own drawing: a dark square is a text item "n", 3.5 pt apart
+        const m = encode(t, null), items: { str: string; transform: number[] }[] = [];
+        m.forEach((row, y) => row.forEach((dark, x) => dark && items.push({ str: "n", transform: [3.5, 0, 0, 3.5, x * 3.5, 800 - y * 3.5] })));
+        return items;
+      };
+      expect(await textPageCodes(draw("just some words, not JSON"))).toBeUndefined();
+      const ok = await textPageCodes(draw('{"form":"LC-01","data":{}}'));
+      expect(ok).toHaveLength(1);
+    }, 30000);
+
+    it("a code drawn as printed text goes through the same rules as a picture code (a foreign code on its page is refused)", async () => {
+      const s = SAMPLES.find(x => x.printed)!, bytes = await samplePdf(s);
+      const doc = await getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+      const last = doc.numPages, items = (await (await doc.getPage(last)).getTextContent()).items as { str: string; transform: number[] }[];
+      const fromText = (await textPageCodes(items))!;
+      expect(fromText).toHaveLength(1);
+      expect(fromText[0].index).toBe(-1);
+      const ok = await readPages(last, true, async n => (n === last ? fromText : []));
+      expect(ok!.payload.form).toBe("LC-01");
+      expect(ok!.page).toBe(last);
+      const foreign = (await scan(app(2, "foreign-on-page")))[0];
+      await expect(readPages(last, true, async n => (n === last ? [...fromText, foreign] : []))).rejects.toThrow(/Some QR codes are labelled/);
+    }, 60000);
   });
 });
