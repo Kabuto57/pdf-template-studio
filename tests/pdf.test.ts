@@ -229,7 +229,6 @@ describe("the JavaScript version", async () => {
 
 describe("every conditional rule lights up its field (the PDF's own script)", async () => {
   const { LC } = await import("../src/lc");
-  const { buildLcPdf } = await import("../src/lc-pdf");
   const fields = LC.template.sections.flatMap(s => s.fields), byId = new Map(fields.map(f => [f.id, f]));
   // The answer that makes each rule apply, as Acrobat reports it (tick boxes "Yes"/"Off", radios their option).
   const trigger = (id: string, values: string[]) => byId.get(id)!.kind === "check" ? (values[0] === "true" ? "Yes" : "Off") : values[0];
@@ -240,7 +239,7 @@ describe("every conditional rule lights up its field (the PDF's own script)", as
     const up = activeRules(byId.get(id)!)[0];
     return { ...(up ? chain(up.field, trigger(up.field, up.values)) : {}), [id]: value };
   };
-  for (const [name, make] of [["new design", () => buildPdf(LC.template)], ["original look", () => buildLcPdf()]] as const) {
+  for (const [name, make] of [["new design", () => buildPdf(LC.template)]] as const) {
     const doc = await PDFDocument.load(await make()), lib = library(doc);
     it.each(cases)(`${name}: %s turns red when %s = %s`, (target, by, value) => {
       const state: Record<string, Fake> = {};

@@ -93,7 +93,7 @@ Some checks are skipped on a machine without the lc-form project (it regenerates
 
 Demo script: open `demo-bank/`, **Download PDF**, fill it in Adobe Acrobat Reader (try ticking a document row: its boxes turn red), **Check form**, save, attach it in *Send your completed form*, **Send**, then open the Trade Ops workbench. The email is simulated inside the browser (IndexedDB), so the whole journey runs on one laptop.
 
-How the LC looks like the bank's form: `scripts/xfa-layout.py` copies its page layout (boxes, wording, field positions) from the smart form into `src/lc-layout.json`, the bank form's own size, underlined fields as on the original; a second "new design" version uses the studio's black-and-white layout; `src/lc-pdf.ts` draws it with pdf-lib and puts our fields, rules and checks in it.
+The LC has the bank form's own sections, wording and fields, drawn in the studio's black-and-white layout by `buildPdf` (`src/form/build.ts`), with our fields, rules and checks in it.
 
 ### The studio (`studio.html`)
 
@@ -262,7 +262,7 @@ pdf-template-studio/
 ├── scripts/
 │   ├── smartforms.py          copies lc-form's form files (and its Helvetica widths) into src/canvas/
 │   ├── fill-engine.py         copies lc-form's Acrobat JavaScript into src/fill/gen/ (generated; do not edit)
-│   ├── xfa-layout.py, xfa-rules.py   one-off tools that read the bank's old smart form
+│   ├── xfa-rules.py           one-off tool that reads the bank's old smart form
 │   ├── bank-forms.test.ts     rebuilds bank-forms.json from the bank's smart form PDF (skipped without it)
 │   └── lc-pdfs.test.ts        rewrites public/ files: the two LC PDFs, the sample PDFs, the LC's JSON Schema (npm run pdfs)
 ├── tests/                     automated checks (run with npm test)
@@ -302,10 +302,10 @@ A printout made without a valid QR code carries a boxed "NO VALID QR CODE" notic
 exist is refused on leaving its box with Acrobat's date message.
 `demo-bank/apply.html` (LC only, emails the filled PDF to Trade Ops) is kept; it is not replaced by `fill/`.
 
-After lc-form changes: `~/Documents/lc-form/.venv/bin/python scripts/fill-engine.py ~/Documents/lc-form`, then `npm test`
+After lc-form changes (use the Python in lc-form's own `.venv`, and give it the folder where you cloned lc-form): `<lc-form folder>/.venv/bin/python scripts/fill-engine.py <lc-form folder>`, then `npm test`
 (`tests/fill.test.ts` regenerates the files and compares bytes; skipped without lc-form).
 `tests/e2e/fill.e2e.test.ts` drives the page in Chromium (Reset form, Main menu, maximum lengths, QR decode, print): it runs inside `npm test`
-when Playwright is found (`PLAYWRIGHT_DIR=<folder with node_modules/playwright>`, default `~/Documents/template-studio`) and is skipped otherwise, e.g. on
+when Playwright is found (`PLAYWRIGHT_DIR=<folder with node_modules/playwright>`, default: your `Documents/template-studio` folder) and is skipped otherwise, e.g. on
 GitHub's CI. Playwright is not a dependency of this repo.
 
 #### Keeping in step with lc-form
@@ -314,7 +314,7 @@ The canvas copies lc-form's layout step (`layout.py`) into `src/canvas/layout.ts
 studio as in the PDF lc-form builds. After the forms or the layout change in lc-form:
 
 ```
-~/Documents/lc-form/.venv/bin/python scripts/smartforms.py ~/Documents/lc-form   # forms, letter widths, test fixture
+<lc-form folder>/.venv/bin/python scripts/smartforms.py <lc-form folder>   # forms, letter widths, test fixture
 npm test                                                                          # canvas-layout.test.ts compares every field
 ```
 
@@ -417,7 +417,7 @@ To redo it from a newer smart form: `BANK_PDF=path/to/Trade-Smartform.pdf npx vi
 `isRequired(field, answers)` in `pdf.ts` decides, and Fill, Save and Extract all use it.
 
 ```
-BANK_PDF=~/Downloads/Trade-Smartform.pdf BANK_RULES=rules.json npx vitest run scripts/bank-forms
+BANK_PDF=<your downloads folder>/Trade-Smartform.pdf BANK_RULES=rules.json npx vitest run scripts/bank-forms
 ```
 
 #### Safety

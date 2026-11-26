@@ -4,23 +4,10 @@ import { FORMATS, buildPdf, dateOptions, extractPdf, isActive, joinDate, type Fi
 import { SAMPLES } from "../src/demo-applications";
 import { validateLc } from "../src/form/validate";
 import { LC, LC_SAMPLE } from "../src/lc";
-import { buildLcPdf } from "../src/lc-pdf";
-
-describe("LC in the bank's layout", () => {
-  it("has a box for every question and gives every answer back", async () => {
-    const pdf = await buildLcPdf(LC_SAMPLE);
-    const names = new Set((await PDFDocument.load(pdf)).getForm().getFields().map(f => f.getName()));
-    const missing = LC.template.sections.flatMap(s => s.fields).filter(f => !names.has(f.kind === "checks" ? `${f.id}__0` : f.kind === "date" ? `${f.id}__list` : f.id)).map(f => f.id);
-    // The bank's layout has 3 address lines, as the smart form does; the 4th line is only in the new design.
-    expect(missing).toEqual(["applicant_address_4", "beneficiary_address_4"]);
-    const { data } = await extractPdf(pdf);
-    for (const [k, v] of Object.entries(LC_SAMPLE)) expect([k, data[k]]).toEqual([k, v]);
-  });
-});
 
 describe("fields can be typed in, in Acrobat", () => {
   // Acrobat needs the font named in each field's /DA in the form's /DR; without it clicking a field does nothing.
-  it.each([["original look", () => buildLcPdf()], ["new design", () => buildPdf(LC.template)]])("%s", async (_, make) => {
+  it.each([["new design", () => buildPdf(LC.template)]])("%s", async (_, make) => {
     const doc = await PDFDocument.load(await make());
     const af = doc.getForm().acroForm.dict;
     const fonts = (af.lookup(PDFName.of("DR")) as PDFDict).lookup(PDFName.of("Font")) as PDFDict;
@@ -45,7 +32,7 @@ describe("within Adobe's limits", () => {
     for (const [, o] of doc.context.enumerateIndirectObjects()) walk(o instanceof PDFRawStream ? o.dict : o);
     return max;
   };
-  it.each([["original look", () => buildLcPdf(LC_SAMPLE)], ["new design", () => buildPdf(LC.template, LC_SAMPLE)]])("%s: no string over 32,767 bytes", async (_, make) => {
+  it.each([["new design", () => buildPdf(LC.template, LC_SAMPLE)]])("%s: no string over 32,767 bytes", async (_, make) => {
     expect(longest(await PDFDocument.load(await make()))).toBeLessThanOrEqual(32767);
   });
 });
@@ -54,7 +41,6 @@ describe("red frames without JavaScript", () => {
   it.each([
     // the tick box itself + 4 strips around each of the 6 boxes: made out to (3 options), freight (2), notify party (1),
     // + a grey "not yet" shade under each of those 6 boxes
-    ["original look", () => buildLcPdf(), 1 + 4 * 6 + 6],
     // the tick box + per question: 4 strips around all its options + its label in red; + the 6 shades
     ["new design", () => buildPdf(LC.template), 1 + 3 * (4 + 1) + 6],
   ] as const)("%s: ticking Bill of lading frames its 3 questions", async (_, make, n) => {
@@ -80,7 +66,7 @@ describe("dates: Acrobat's calendar when its JavaScript runs, drop-downs otherwi
     const names = doc.catalog.lookup(PDFName.of("Names"), PDFDict).lookup(PDFName.of("JavaScript"), PDFDict).lookup(PDFName.of("Names"), PDFArray);
     return new TextDecoder().decode(decodePDFRawStream(names.lookup(1, PDFDict).lookup(PDFName.of("JS")) as PDFRawStream).decode());
   };
-  it.each([["original look", () => buildLcPdf(LC_SAMPLE)], ["new design", () => buildPdf(LC.template, LC_SAMPLE)]])("%s", async (_, make) => {
+  it.each([["new design", () => buildPdf(LC.template, LC_SAMPLE)]])("%s", async (_, make) => {
     const pdf = await make(), js = await script(pdf);
     const fields: Record<string, any> = { expiry_date: { display: 1 } };
     const d = { getField: (n: string) => fields[n] ??= { display: 0 } };
@@ -150,7 +136,7 @@ describe("Check form button: blanks, formats and funny characters", () => {
       return { miss: [...m] as string[], bad: m.bad as string[], first: m.first as string, red: (id: string) => fields[id].strokeColor === 1, fields };
     };
   };
-  it.each([["original look", () => buildLcPdf()], ["new design", () => buildPdf(LC.template)]])("%s", async (_, make) => {
+  it.each([["new design", () => buildPdf(LC.template)]])("%s", async (_, make) => {
     const check = await lcRules(make);
     expect(check(LC_SAMPLE)).toMatchObject({ miss: [], bad: [] });
     const r = check({ ...LC_SAMPLE, contact_tel: "6123 ABC", applicant_name: "Café * Co", expiry_date: "31/02/2026", amount: "4,80,000.0.0" });

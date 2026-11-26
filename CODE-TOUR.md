@@ -9,7 +9,7 @@ Start with the LC form description (`src/lc.ts`), then the form engine (`src/for
 | `types.ts` | The vocabulary: a question (`Field`), a condition (`Rule`), a section, a whole form (`Template`), the answer formats (amount, phone, account, number). |
 | `rules.ts` | Two questions everyone asks: **is this question mandatory right now?** (`isRequired`) and **does it apply right now?** (`isActive`). |
 | `look.ts` | Page size, margins, colours, text wrapping. Change the numbers here to restyle every form. |
-| `build.ts` | **`buildPdf`**: turns a form description into a fillable PDF (the new design): title, black section bars, labels with a red `*`, and the boxes. |
+| `build.ts` | **`buildPdf`**: turns a form description into a fillable PDF (the studio's black-and-white design): title, black section bars, labels with a red `*`, and the boxes. |
 | `dates.ts` | Date questions: a drop-down of real dates (no 31 Feb), plus Acrobat's calendar when JavaScript runs. |
 | `red-frames.ts` | Red frames and grey shading that work **with JavaScript off**, using extra copies of the tick box that switch on together. |
 | `acrobat-script.ts` | The checks that run **inside Acrobat when JavaScript is on**: red outlines, locking, typing filters, the "Check form" button, warnings before save or print. |
@@ -24,7 +24,6 @@ Start with the LC form description (`src/lc.ts`), then the form engine (`src/for
 | File | What it is |
 |---|---|
 | `src/lc.ts` | **The LC application**: every section and question, one line each, with its rules. Most changes happen here; the top of the file explains how. |
-| `src/lc-pdf.ts` | The same LC drawn in the bank's original layout (secondary; the new design is the showcase). |
 | `src/bank-forms.json` | The other 12 trade forms, taken from the bank's smart form (the fill page also offers LC-01P, a 14th, from lc-form). |
 | `src/lists.ts` | Currency and country lists. |
 
@@ -46,7 +45,7 @@ Start with the LC form description (`src/lc.ts`), then the form engine (`src/for
 npm ci                                       # once
 npm run dev                                  # the site at http://localhost:5173, reloads as you edit
 npm test                                     # all the checks (about a minute)
-LC_PDFS=1 npx vitest run scripts/lc-pdfs     # rewrite the downloadable LC PDFs in public/
+LC_PDFS=1 npx vitest run scripts/lc-pdfs     # rewrite the LC PDFs, sample PDFs and schema in public/
 git push                                     # GitHub tests, builds and publishes the site
 ```
 

@@ -19,6 +19,7 @@ import { clearInbox, deleteMail, inbox, saveMail, type Mail } from "./mailbox";
 import { date, validateLc } from "./form/validate";
 import { compare, find } from "./customers";
 import type { Mismatch, Payload } from "./qr-read";
+import { qrNotes, refusalText, skippedNotice } from "./qr-notes";
 import { addForm, findForm, knownForms, removeForm } from "./form-registry";
 
 const text = () => import("./text"); // pdf.js: only for the original-PDF view and old smart forms
@@ -156,7 +157,7 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
     const printed = !result?.rows.length, q = await import("./qr-read");
     let refusal = "", skipped = ""; // refusal: QR codes were found but don't make one application, say why; skipped: why the QR cross-check did not run
     const found = await q.readQr(bytes, printed).catch(e => {
-      if (e instanceof q.QrRefusal) { refusal = e.kind === "codes" ? `its QR codes can't be read as one application. ${e.message}` : `its QR code can't be read. ${e.message}`; skipped = e.message; }
+      if (e instanceof q.QrRefusal) { refusal = refusalText(e); skipped = e.message; }
       return undefined;
     });
     let qr: Opened["qr"];
@@ -193,7 +194,7 @@ async function open(bytes: Uint8Array, name: string, mail?: Mail) {
       );
     }
     current = { result, name, bytes, mail, vendor, qr, qrSkipped: qr ? undefined : skipped || undefined,
-      qrNotice: found?.skipped ? `${found.skipped} page(s) were too large to read.` : undefined };
+      qrNotice: skippedNotice(found) };
     original = structuredClone(result.data) as Values;
     // Corrections made before (kept with the email when it was submitted): apply them again.
     for (const c of mail?.corrections ?? []) {
@@ -308,8 +309,7 @@ function render() {
   // The QR code against the fields or the printed pages.
   for (const m of qr?.mismatches ?? [])
     issues.push({ id: m.id, msg: qr!.printed ? `the QR code says "${m.qr}", but it is not on the printed pages` : `the QR code says "${m.qr || "(blank)"}", the form says "${m.pdf || "(blank)"}": the code is out of date` });
-  if (current!.qrSkipped) issues.push({ id: "QR code", msg: `the QR code cross-check was skipped: ${current!.qrSkipped}` });
-  if (current!.qrNotice) issues.push({ id: "QR code", msg: current!.qrNotice });
+  for (const msg of qrNotes(current!)) issues.push({ id: "QR code", msg });
   if (qr?.unknown) issues.push({ id: "QR code", msg: `form ${qr.payload.form} version ${qr.payload.version} is not known here, so the answers are shown as they are, without questions or checks. Add its blank PDF under Forms.` });
   if (qr && !qr.payload.complete) issues.push({ id: "QR code", msg: "the form was not complete when the code was generated" });
   if (qr?.printed) for (const id of qr.payload.truncated ?? []) issues.push({ id, msg: "shortened in the QR code to fit; ask the customer for the full text" });
