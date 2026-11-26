@@ -1,7 +1,7 @@
 // A FORM ON THE PAGE: the form's pages as lc-form's layout draws them (SVG: wording, sections, lines), with a real box over
 // every PDF box. What the boxes show (value, red outline, locked, hidden) is what the scripts wrote in doc.ts; what the
 // person does (typing, ticking) is handed to engine.ts, which runs lc-form's scripts. Nothing is sent or stored anywhere.
-import { H, type PdfField, type Widget } from "../canvas/layout";
+import { H, M, W, type PdfField, type Widget } from "../canvas/layout";
 import { pagesSvg } from "../canvas/render";
 import { h } from "../dom";
 import type { Colour, Field } from "./doc";
@@ -13,6 +13,12 @@ const grey = (g: number) => `rgb(${Math.round(g * 255)},${Math.round(g * 255)},$
 /** Acrobat's colour array as CSS. */
 export const css = (c: Colour) => c[0] === "RGB" ? `rgb(${[1, 2, 3].map(i => Math.round(+c[i] * 255)).join(",")})` : c[0] === "G" ? grey(+c[1]) : "transparent";
 const dmy = (iso: string) => iso.split("-").reverse().join("/");
+/** lc-form's extra QR code page (its hidden page template "qrx"): heading, a line of wording, the footer; the frames are drawn over it. */
+const extraSvg = (code: string) => `<svg class="cv-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="QR code page, continued">`
+  + `<text x="${M}" y="56" font-size="11" font-weight="bold">APPLICATION QR CODE (CONTINUED)</text>`
+  + `<text x="${M}" y="70" font-size="8" fill="#808080">More codes of the same application, continuing from the QR code page. The Bank scans every code, in order. Do not write on or fold the codes.</text>`
+  + `<line x1="${M}" y1="${H - 36}" x2="${W - M}" y2="${H - 36}" stroke="#bfbfbf" stroke-width=".5"/>`
+  + `<text x="${M}" y="${H - 24}" font-size="7" fill="#808080">${code.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text></svg>`;
 const iso = (d: string) => (/^\d\d\/\d\d\/\d{4}$/.test(d) ? d.split("/").reverse().join("-") : "");
 
 interface Bound { wrap: HTMLElement; el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement; widget: Widget }
@@ -155,7 +161,7 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
     }
   }
   function flush() {
-    const qr = [...doc.dirty].some(f => f.name.startsWith("__qr"));
+    const qr = [...doc.dirty].some(f => f.name.includes("__qr")); // the QR code's boxes, also on the spawned pages (P1_0.__qrx_1_5)
     for (const f of doc.dirty) sync(f);
     doc.dirty.clear();
     if (qr) { drawQr(); updateNote(); }
@@ -175,16 +181,31 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
 
   // ---- the QR page: its buttons, and the codes lcDrawQr wrote into the 2 x 177 rows
   const qrPage = pages[laid.qr.page];
-  const slots = laid.qr.slots.map(([x, y, size], k) => {
+  type Slot = { label: HTMLElement; box: HTMLElement };
+  /** A code's frame and label on a page; the frame shows only while its code is in use (the first code's always does). */
+  const slotOn = (page: HTMLElement, [x, y, size]: number[], first: boolean): Slot => {
     const label = h("div", { className: "qr-label" });
     label.style.left = pt(x); label.style.top = pt(H - y - size - 11); label.style.width = pt(size);
     const box = h("div", { className: "qr" });
     box.style.left = pt(x); box.style.top = pt(H - y - size); box.style.width = box.style.height = pt(size);
-    box.hidden = k > 0;
-    if (k > 0) box.classList.add("second");
-    qrPage.append(label, box);
+    box.hidden = !first;
+    if (!first) box.classList.add("second");
+    page.append(label, box);
     return { label, box };
-  });
+  };
+  const slots = laid.qr.slots.map((s, k) => slotOn(qrPage, s, k === 0));
+  // the extra QR code pages (codes 3 and up, two to a page): there while the stand-in document has pages beyond the form's
+  const extra: { page: HTMLElement; slots: Slot[] }[] = [];
+  const formPages = laid.pages.length;
+  function syncPages(want: number) {
+    while (extra.length > want) extra.pop()!.page.remove();
+    while (extra.length < want) {
+      const page = h("section", { className: "pg extra" });
+      page.insertAdjacentHTML("afterbegin", extraSvg(eng.form.form.formCode ?? eng.form.form.title));
+      (extra.at(-1)?.page ?? qrPage).after(page);
+      extra.push({ page, slots: laid.qr.slots.map(s => slotOn(page, s, false)) });
+    }
+  }
   [["Generate QR Code", "generate-qr"], ["Print Form", "print-form"]].forEach(([caption, script], i) => {
     const b = h("button", { type: "button", className: "sec screen", onclick: () => act(script as Script) }, caption);
     b.style.left = pt(laid.qr.button[0] + i * 162); b.style.top = pt(H - laid.qr.button[1] - 22);
@@ -193,9 +214,10 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
   });
   let covered = false; // the "no valid QR code" notice is up: no code, old or new, is shown or printed
   function drawQr() {
-    const codes = eng.codes();
-    slots.forEach(({ label, box }, k) => {
-      const code = covered ? undefined : codes[k];
+    const codes = covered ? [] : eng.codes();
+    syncPages(covered ? 0 : doc.numPages - formPages);
+    [...slots, ...extra.flatMap(e => e.slots)].forEach(({ label, box }, k) => {
+      const code = codes[k];
       box.hidden = k > 0 && !code;
       label.textContent = code?.label ?? "";
       box.replaceChildren();

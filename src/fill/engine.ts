@@ -4,7 +4,7 @@
 // when to call which script, and what `app.alert` and `this.print` do.
 import { SMART_FORMS, type SmartForm } from "../canvas/forms";
 import { layout, type Laid } from "../canvas/layout";
-import { buttons, onCalc, onEvent } from "./gen/buttons";
+import { buttons, libNames, onCalc, onEvent } from "./gen/buttons";
 import { Doc, buildDoc, color, display } from "./doc";
 
 interface FormScripts {
@@ -19,6 +19,7 @@ interface Library {
   lcDrawQr: (d: Doc, text: string) => number;
   lcDates: (d: Doc) => void;
   lcQrMatrix: (bytes: string, part: number[] | null) => boolean[][];
+  [more: string]: unknown; // the others the button scripts call by name (libNames)
 }
 export interface App { viewerType: string; alert: (message: string, icon?: number, buttons?: number) => number; beep: (n?: number) => void }
 /** Acrobat's `event` while a box's script runs. */
@@ -85,9 +86,12 @@ export class Engine {
   /** The text lcPayload makes for the QR code (the answers as JSON, padded with spaces). */
   payload() { return this.lib.lcPayload(this.doc); }
   /** A button's script ("check-form", "generate-qr" ...). */
-  press(script: keyof typeof buttons) {
-    const l = this.lib;
-    buttons[script].call(this.doc, this.app, this.event(), l.lcRules, l.lcPayload, l.lcDrawQr, l.lcDates);
+  press(script: keyof typeof buttons) { this.run(script, this.event()); }
+  /** A pipe-format form (FORM["qrFormat"]) has its own Generate QR Code and Print Form scripts, as its PDF's buttons have. */
+  private run(script: keyof typeof buttons, event: KeyEvent) {
+    const pipe = (this.form.form as { qrFormat?: string }).qrFormat === "pipe" && (script === "generate-qr" || script === "print-form");
+    (buttons[pipe ? `${script}-pipe` as keyof typeof buttons : script] as (...a: unknown[]) => void)
+      .call(this.doc, this.app, event, ...libNames.map(n => this.lib[n]));
   }
   /** Runs a script whose own messages are not shown (the page asks, or says, in its own way); returns the messages. */
   private quietly(f: () => void) {
@@ -101,7 +105,7 @@ export class Engine {
   /** Reset form, once the question is answered yes. */
   reset() { this.quietly(() => { this.answer = 4; this.press("reset-form"); }); }
   /** What the browser's own Print does first: the PDF's "Before printing" warning (shown when something is missing or wrong). */
-  warnBeforePrint() { buttons["before-save"].call(this.doc, this.app, this.event({ name: "WillPrint" }), this.lib.lcRules, this.lib.lcPayload, this.lib.lcDrawQr, this.lib.lcDates); }
+  warnBeforePrint() { this.run("before-save", this.event({ name: "WillPrint" })); }
   /** Would Print Form print now? The Print Form script decides (a QR code made from these very answers): null when it would, else its message. */
   qrProblem(): string | null {
     let printed = false;
@@ -111,12 +115,16 @@ export class Engine {
   }
   /** The script of a button inside the form (a section's buttons=[...]). */
   sectionButton(name: string): keyof typeof buttons | undefined { return this.scripts.sectionButtons[name]; }
-  /** The QR codes now in the form: each a 177 x 177 grid (rows of "n" and " "), as lcDrawQr wrote them. */
+  /** The QR codes now in the form, in order: each a 177 x 177 grid (rows of "n" and " "), as lcDrawQr wrote them. Codes 1 and 2 are
+   *  on the QR code page, then two to a spawned page (found as lcExtra finds them: by the field name's ending). */
   codes(): { rows: string[]; label: string }[] {
+    const pages = this.doc.list.flatMap(f => { const m = /^(.*)__qrx_1_0$/.exec(f.name); return m && !/^([A-Z]+\.)?$/.test(m[1]) ? [{ p: m[1], page: f.page }] : []; })
+      .sort((a, b) => a.page - b.page);
     const out = [];
-    for (const k of [1, 2]) {
-      const rows = Array.from({ length: 177 }, (_, y) => this.doc.getField(`__qr${k}_${y}`)!.value);
-      if (rows.some(r => r.includes("n"))) out.push({ rows, label: this.doc.getField(`__qr${k}_label`)!.value });
+    for (let j = 0; j < 2 + 2 * pages.length; j++) {
+      const tag = j < 2 ? `__qr${j + 1}` : `${pages[(j - 2) >> 1].p}__qrx_${(j - 2) % 2 + 1}`;
+      const rows = Array.from({ length: 177 }, (_, y) => this.doc.getField(`${tag}_${y}`)!.value);
+      if (rows.some(r => r.includes("n"))) out.push({ rows, label: this.doc.getField(`${tag}_label`)!.value });
     }
     return out;
   }

@@ -81,6 +81,8 @@ export interface Template {
   formCode?: string;     // the form's reference and version, shown in the header and footer, e.g. "Form LC-01 · v1.0"
   pages?: number;        // at least this many pages (the layout editor's empty pages to draw on)
   checks?: Check[];      // smart forms: checks across answers
+  qrFormat?: string;     // smart forms: "pipe" = the QR codes hold the old smart form's pipe-delimited records (lc-form's lc_pipe_form.py)
+  pipe?: unknown;        // ... and this is its table of positions, carried as lc-form has it (the studio does not read it)
   file?: string;         // smart forms: the form file's name in lc-form/forms (e.g. "lc_form.py"), for the export
   pdfName?: string;      // smart forms: the PDF's file name when built (the form file's PDF_NAME)
 }
