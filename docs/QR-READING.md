@@ -78,6 +78,14 @@ two-code set with one half on each page still joins (the other half is looked fo
 refused once the document has been read. If codes were found but they don't join, the reason above is shown to the
 operator (`QrRefusal`); with no code at all the answer is simply "none".
 
+**Limits while drawing a page** (`renderScale`). A page is drawn at 2x (an A4 page is about 2 megapixels), but never with more than
+`MAX_RENDER_PIXELS` = 25,000,000 pixels: a larger page is scaled down, not skipped. A page more than 14,400 units on a side is not
+drawn; if no code is found on the other pages the operator is told so. A page that fails to draw or decode stops the read with
+"Page N could not be read: ...", worded as its own refusal in the workbench (not as "codes don't join"). A page count that is
+not a whole number is refused. A code already seen on a later page adds nothing, so a long PDF of repeated pages is read
+quickly. When the form's fields are intact the QR code is only a cross-check; if it can't be read the operator sees a notice
+that the cross-check was skipped, and why.
+
 ---
 
 ## 4. Choosing the form: `findForm`

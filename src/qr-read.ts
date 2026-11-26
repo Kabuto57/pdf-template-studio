@@ -84,7 +84,10 @@ export interface Code { bytes: Uint8Array; index: number; size: number; id: stri
 export const MAX_CODES = 16;
 const MAX_BYTES = MAX_CODES * 2329;
 /** Thrown by readQr when QR codes were found but can't make one application; the message says why. */
-export class QrRefusal extends Error {}
+export class QrRefusal extends Error {
+  /** "codes": found but not one application; "pages": too many pages; "render": a page could not be drawn or decoded. */
+  constructor(message: string, readonly kind: "codes" | "pages" | "render" = "codes") { super(message); }
+}
 
 /** `more`: the codes found so far may still become an application if more codes turn up (some are missing). */
 export type Joined = { payload: Payload } | { error: string; more?: true };
@@ -167,20 +170,37 @@ export const tooManyPages = (n: number) => `This PDF has ${n} pages; the workben
  *  up to the first page. `all` false: only the last page. */
 export function nextPage(read: PageCodes[], numPages: number, all = true): number | undefined {
   const next = (read.length ? read[read.length - 1].page : numPages + 1) - 1;
-  if (next < 1 || (!all && read.length)) return undefined;
+  if (!(next >= 1) || (!all && read.length)) return undefined; // (`!(>=)`: a NaN never loops)
   const codes = read.flatMap(p => p.codes);
   if (!codes.length) return next;
   const joined = joinResult(codes);
   return "error" in joined && joined.more ? next : undefined;
 }
 
-/** The pages' codes, read from the last page backwards by `codesOf(page number)` as far as nextPage says. Throws QrRefusal for a
- *  PDF over MAX_PDF_PAGES. */
+/** The pages' codes, read from the last page backwards by `codesOf(page number)` as far as nextPage says. Each page keeps only the
+ *  codes not seen on a page before (a repeated code adds nothing, so the work does not grow with the pages). Throws QrRefusal for a
+ *  PDF over MAX_PDF_PAGES or a page count that is not a whole number, and, naming the page, when a page can't be read. */
 export async function readPages(numPages: number, all: boolean, codesOf: (page: number) => Promise<Code[]>) {
-  if (numPages > MAX_PDF_PAGES) throw new QrRefusal(tooManyPages(numPages));
-  const pages: PageCodes[] = [];
-  for (let n = nextPage(pages, numPages, all); n !== undefined; n = nextPage(pages, numPages, all)) pages.push({ page: n, codes: await codesOf(n) });
+  if (!Number.isInteger(numPages) || numPages < 0) throw new QrRefusal(`This PDF reports ${numPages} pages, which is not possible.`, "pages");
+  if (numPages > MAX_PDF_PAGES) throw new QrRefusal(tooManyPages(numPages), "pages");
+  const pages: PageCodes[] = [], seen = new Set<string>();
+  for (let n = nextPage(pages, numPages, all); n !== undefined; n = nextPage(pages, numPages, all)) {
+    let codes: Code[];
+    try { codes = await codesOf(n); } catch (e) { throw e instanceof QrRefusal ? e : new QrRefusal(`Page ${n} could not be read: ${e instanceof Error ? e.message : String(e)}`, "render"); }
+    pages.push({ page: n, codes: codes.filter(c => { const k = key(c); return !seen.has(k) && !!seen.add(k); }) });
+  }
   return joinPages(pages);
+}
+
+/** A page is drawn at 2x (about 144 dpi of the PDF page: an A4 page is then about 2 Mpx), but never with more than this many pixels
+ *  (a 100 MB canvas is 25 Mpx): bigger pages are scaled down, not skipped. */
+export const MAX_RENDER_PIXELS = 25_000_000;
+/** A page more than this many units (1/72 inch) on a side is not drawn at all (the PDF limit is 14,400). */
+export const MAX_PAGE_SIDE = 14_400;
+/** The scale to draw a page of w x h units at, or undefined when the page is too large to draw. */
+export function renderScale(w: number, h: number): number | undefined {
+  if (!(w > 0 && h > 0) || w > MAX_PAGE_SIDE || h > MAX_PAGE_SIDE) return undefined;
+  return Math.min(2, Math.sqrt(MAX_RENDER_PIXELS / (w * h)));
 }
 
 /** A QR code drawn as printed text (qrFromText) as one unlabelled code of its page, like any other code: the same joining rules apply. */
@@ -202,32 +222,52 @@ export function joinPages(pages: PageCodes[]): { payload: Payload; page: number;
 
 /** Finds and decodes the QR code(s) on the last page (where the form prints them); `all`: then the other pages too (a
  *  printed copy may have its pages in another order, or its codes on separate pages). */
-export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload: Payload; page: number; codes: number } | undefined> {
+export async function readQr(bytes: Uint8Array, all = false) {
   // Form saved with its fields: "Generate QR Code" also keeps the code's text in the hidden field "__qr". Exact, no picture.
   const kept = await qrField(bytes).catch(() => undefined);
   if (kept) return { ...kept, codes: 0 };
   const doc = await getDocument({ data: bytes.slice(), ...PDFJS }).promise;
   try {
-    return await readPages(doc.numPages, all, async n => {
-      const page = await doc.getPage(n);
-      // 1. One code as printed text (the studio form draws its squares as ZapfDingbats "n"): rebuilt from where each square is.
-      const items = (await page.getTextContent()).items.filter(i => "str" in i) as { str: string; transform: number[] }[];
-      const fromText = await textPageCodes(items);
-      if (fromText) return fromText;
-      // 2. A picture of the page (a scan, or a copy whose text was turned into shapes), read by zxing: up to 16 codes.
-      // ponytail: one scale (2x ≈ 144 dpi of the PDF page; a scanned page keeps its own pixels); add more if real scans fail.
-      const vp = page.getViewport({ scale: 2 }), canvas = document.createElement("canvas");
-      canvas.width = Math.ceil(vp.width);
-      canvas.height = Math.ceil(vp.height);
-      const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      await page.render({ canvas, viewport: vp }).promise;
-      return codesIn(ctx.getImageData(0, 0, canvas.width, canvas.height));
-    });
+    return await readDocument(doc, all, canvasCodes);
   } finally {
     await doc.destroy();
   }
+}
+
+/** The page's picture (drawn at `scale`) read by zxing: up to 16 codes. */
+async function canvasCodes(page: { getViewport(o: { scale: number }): { width: number; height: number }; render(o: never): { promise: Promise<unknown> } }, scale: number) {
+  const vp = page.getViewport({ scale }), canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(vp.width);
+  canvas.height = Math.ceil(vp.height);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvas, viewport: vp } as never).promise;
+  return codesIn(ctx.getImageData(0, 0, canvas.width, canvas.height));
+}
+
+/** The pdf.js side of readQr, with the page-picture reader passed in (so it can be tested with fakes): each page's text is tried as a
+ *  printed code first, then its picture is read at renderScale; a page too large to draw is skipped and, if no code is found
+ *  anywhere, said. */
+export async function readDocument(
+  doc: { numPages: number; getPage(n: number): Promise<any> }, // eslint-disable-line @typescript-eslint/no-explicit-any
+  all: boolean,
+  picture: (page: any, scale: number) => Promise<Code[]>, // eslint-disable-line @typescript-eslint/no-explicit-any
+) {
+  const skipped: number[] = [];
+  const found = await readPages(doc.numPages, all, async n => {
+    const page = await doc.getPage(n);
+    // 1. One code as printed text (the studio form draws its squares as ZapfDingbats "n"): rebuilt from where each square is.
+    const items = (await page.getTextContent()).items.filter((i: object) => "str" in i) as { str: string; transform: number[] }[];
+    const fromText = await textPageCodes(items);
+    if (fromText) return fromText;
+    // 2. A picture of the page (a scan, or a copy whose text was turned into shapes).
+    const size = page.getViewport({ scale: 1 }), scale = renderScale(size.width, size.height);
+    if (scale === undefined) { skipped.push(n); return []; }
+    return picture(page, scale);
+  });
+  if (!found && skipped.length) throw new QrRefusal(`${skipped.length === 1 ? `Page ${skipped[0]} is` : `${skipped.length} pages are`} too large to read (more than ${MAX_PAGE_SIDE} units on a side), and no QR code was found on the others.`, "render");
+  return found;
 }
 
 /** The code's text from the hidden field "__qr", with the page its rows are on. */

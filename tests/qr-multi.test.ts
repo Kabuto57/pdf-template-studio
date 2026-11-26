@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SAMPLES, samplePdf } from "../src/demo-applications";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { codesIn, joinCodes, joinPages, joinResult, MAX_CODES, MAX_PDF_PAGES, QrRefusal, readPages, textPageCodes, type Code } from "../src/qr-read";
+import { codesIn, joinCodes, joinPages, joinResult, MAX_CODES, MAX_PAGE_SIDE, MAX_PDF_PAGES, MAX_RENDER_PIXELS, nextPage, QrRefusal, readDocument, readPages, renderScale, textPageCodes, type Code } from "../src/qr-read";
 
 const CAP = 2300;
 const src = readFileSync(new URL("../src/fill/gen/lc_form.ts", import.meta.url), "utf8");
@@ -312,5 +312,97 @@ describe("1 to 16 structured-append codes", () => {
       const foreign = (await scan(app(2, "foreign-on-page")))[0];
       await expect(readPages(last, true, async n => (n === last ? [...fromText, foreign] : []))).rejects.toThrow(/Some QR codes are labelled/);
     }, 60000);
+  });
+
+  describe("rendering limits, odd page counts, repeats, and the pdf.js glue", () => {
+    it("the render scale: 2 for an A4 page, scaled down so a huge page stays under the pixel cap, none past 14,400 units", () => {
+      expect(renderScale(595, 842)).toBe(2);
+      for (const [w, h] of [[14400, 14400], [14400, 5000], [10000, 10000]]) {
+        const k = renderScale(w, h)!;
+        expect(k).toBeLessThan(2);
+        expect(w * h * k * k).toBeLessThanOrEqual(MAX_RENDER_PIXELS * 1.0000001);
+        expect(Math.ceil(w * k) * Math.ceil(h * k)).toBeLessThanOrEqual(MAX_RENDER_PIXELS * 1.01); // the canvas that is made
+      }
+      expect(renderScale(MAX_PAGE_SIDE, 100)).toBe(2);
+      expect(renderScale(MAX_PAGE_SIDE + 1, 100)).toBeUndefined();
+      expect(renderScale(100, MAX_PAGE_SIDE + 1)).toBeUndefined();
+      for (const bad of [0, -1, NaN]) expect(renderScale(bad, 100)).toBeUndefined();
+    });
+
+    it("a page count that is not a whole number is refused and always terminates", async () => {
+      for (const n of [NaN, 2.5, -1, Infinity]) {
+        let asked = 0;
+        await expect(readPages(n, true, async () => (asked++, [])), String(n)).rejects.toBeInstanceOf(QrRefusal);
+        expect(asked).toBe(0);
+      }
+      expect(nextPage([], NaN)).toBeUndefined();
+      expect(await readPages(0, true, async () => [])).toBeUndefined();
+    });
+
+    it("200 pages that all repeat the same 16 codes read fast: a code seen before adds nothing", async () => {
+      const a = app(16, "repeat"), codes = await scan(a);
+      let called = 0;
+      const t = Date.now();
+      // codes 1-15 on every page and the 16th nowhere: all 200 pages are read looking for it
+      await expect(readPages(200, true, async () => (called++, codes.slice(0, 15)))).rejects.toThrow(/Code 16 of 16 not found/);
+      expect(called).toBe(200);
+      expect(Date.now() - t).toBeLessThan(2500);
+    }, 60000);
+
+    // readQr's pdf.js glue with fakes: a document of pages with a viewport, text items and a picture reader.
+    const fakePage = (w: number, h: number, items: { str: string; transform: number[] }[] = []) => ({
+      getTextContent: async () => ({ items: [...items, { type: "beginMarked" }] }), getViewport: () => ({ width: w, height: h }),
+    });
+    const fakeDoc = (pages: Record<number, ReturnType<typeof fakePage>>, numPages: number) => ({ numPages, getPage: async (n: number) => pages[n] ?? fakePage(595, 842) });
+
+    it("readDocument: pictures are read at the scale renderScale gives, and the codes join", async () => {
+      const a = app(3, "glue"), codes = await scan(a), scales: [number, number][] = [];
+      const doc = fakeDoc({ 9: fakePage(595, 842), 8: fakePage(14400, 14400) }, 9);
+      const found = await readDocument(doc, true, async (page, scale) => {
+        const v = page.getViewport({ scale: 1 });
+        scales.push([v.width, scale]);
+        return scales.length === 1 ? codes.slice(0, 1) : codes.slice(1);
+      });
+      expect(found!.payload).toEqual(a.json);
+      expect(scales[0]).toEqual([595, 2]);
+      expect(scales[1][0]).toBe(14400);
+      expect(scales[1][1]).toBeLessThan(0.9);
+    }, 30000);
+
+    it("readDocument: a page too large to draw is skipped and counted; with no code anywhere that is said", async () => {
+      let drawn = 0;
+      const doc = fakeDoc({ 3: fakePage(20000, 100), 2: fakePage(20000, 100), 1: fakePage(595, 842) }, 3);
+      await expect(readDocument(doc, true, async () => (drawn++, []))).rejects.toThrow(/2 pages are too large to read .*no QR code was found on the others/);
+      expect(drawn).toBe(1); // only page 1 was drawn
+      const one = fakeDoc({ 1: fakePage(20000, 100) }, 1);
+      await expect(readDocument(one, true, async () => [])).rejects.toThrow(/Page 1 is too large/);
+      expect(await readDocument(fakeDoc({}, 2), true, async () => [])).toBeUndefined(); // normal pages, no code: none
+    });
+
+    it("readDocument: a failing render or decode is a QrRefusal naming the page, not a bare error", async () => {
+      const doc = fakeDoc({}, 4);
+      const err = await readDocument(doc, true, async () => { throw new Error("Invalid canvas size"); }).catch(e => e);
+      expect(err).toBeInstanceOf(QrRefusal);
+      expect(err.kind).toBe("render");
+      expect(err.message).toBe("Page 4 could not be read: Invalid canvas size");
+      const bad = { numPages: 2, getPage: async () => { throw new Error("broken page"); } };
+      await expect(readDocument(bad, true, async () => [])).rejects.toThrow("Page 2 could not be read: broken page");
+    });
+
+    it("readDocument: a printed-text code is used before any picture is drawn", async () => {
+      const s = SAMPLES.find(x => x.printed)!, bytes = await samplePdf(s);
+      const pdf = await getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+      let drawn = 0;
+      const found = await readDocument(pdf, true, async () => (drawn++, []));
+      expect(found!.payload.form).toBe("LC-01");
+      expect(drawn).toBe(0);
+    }, 60000);
+
+    it("the page-count and render refusals have their own kind (the workbench words them differently)", async () => {
+      expect((await readPages(201, true, async () => []).catch(e => e)).kind).toBe("pages");
+      expect((await readPages(10, true, async () => []).then(() => ({ kind: "none" }))).kind).toBe("none");
+      const err = await readPages(2, true, async () => (await scan(app(2, "k"))).slice(0, 1)).catch(e => e);
+      expect(err.kind).toBe("codes");
+    }, 30000);
   });
 });
