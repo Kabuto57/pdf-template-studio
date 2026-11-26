@@ -27,7 +27,7 @@ export interface Mismatch { id: string; label: string; qr: string; pdf: string }
 /** The QR code's text as a payload, or undefined when it isn't one of ours. */
 export function parsePayload(text: string): Payload | undefined {
   try {
-    const p = JSON.parse(text.trim());
+    const p = JSON.parse(text); // (JSON's own white space, such as the padding spaces, is fine; a BOM or no-break space is not)
     return p && typeof p === "object" && typeof p.data === "object" && p.data && "form" in p ? p : undefined;
   } catch {
     return undefined;
@@ -90,6 +90,9 @@ export type Joined = { payload: Payload } | { error: string };
 
 const key = (c: Code) => `${c.index},${c.size},${c.id},${c.bytes.join(",")}`;
 const numbers = (a: number[]) => (a.length === 1 ? `code ${a[0]}` : `codes ${a.join(", ")}`);
+/** The bytes as UTF-8 text, or undefined when they are not valid UTF-8 (a damaged code; never guessed at). */
+const utf8 = (b: Uint8Array) => { try { return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(b); } catch { return undefined; } };
+const parseBytes = (b: Uint8Array) => { const t = utf8(b); return t === undefined ? undefined : parsePayload(t); };
 const concat = (order: Code[]) => {
   const all = new Uint8Array(order.reduce((n, c) => n + c.bytes.length, 0));
   order.reduce((at, c) => (all.set(c.bytes, at), at + c.bytes.length), 0);
@@ -108,11 +111,12 @@ export function joinResult(codes: Code[]): Joined {
   if (plain.length) {
     if (plain.length > 2) return { error: `Found ${plain.length} different QR codes without a "code N of M" label; scan one application at a time.` };
     for (const order of plain.length === 1 ? [plain] : [plain, [...plain].reverse()]) {
-      const p = parsePayload(new TextDecoder().decode(concat(order)));
+      const p = parseBytes(concat(order));
       if (p) return { payload: p };
     }
     return { error: plain.length === 1 ? "The QR code is only part of an application, or not one of ours. Scan all its codes." : "The two QR codes don't belong together." };
   }
+  if (list.some(c => !/^[0-9]{1,3}$/.test(c.id))) return { error: "A QR code's check value (parity) is not a number." };
   const ids = new Set(list.map(c => c.id));
   if (ids.size > 1) return { error: `The QR codes come from ${ids.size} different applications (their check values differ). Scan one application at a time.` };
   const sizes = [...new Set(list.map(c => c.size))].sort((a, b) => a - b);
@@ -131,7 +135,7 @@ export function joinResult(codes: Code[]): Joined {
   const all = concat(ordered);
   if (all.length > MAX_BYTES) return { error: `The QR text is longer than ${MAX_CODES} codes can hold: it didn't come from this form.` };
   if (all.reduce((x, b) => x ^ b, 0) !== Number(ordered[0].id)) return { error: "The joined QR text doesn't match its check value (parity): a code is damaged, or the codes come from different applications." };
-  const p = parsePayload(new TextDecoder().decode(all)); // trailing padding spaces are trimmed there
+  const p = parseBytes(all); // JSON.parse allows the trailing padding spaces
   return p ? { payload: p } : { error: "The QR codes join up, but are not an application from these forms." };
 }
 /** joinResult, as the payload or undefined (the reason is in joinResult). */
@@ -149,6 +153,17 @@ export async function codesIn(img: ImageData | Blob): Promise<Code[]> {
   return found.filter(r => r.isValid).map(r => ({ bytes: r.bytes, index: r.sequenceIndex, size: r.sequenceSize, id: r.sequenceId }));
 }
 
+/** The application from the codes found on all the pages read (page numbers are 1-based): the same decision as joinResult
+ *  over every code together. undefined: no code on any page. Throws QrRefusal (with the reason) when codes were found
+ *  but they are not one whole application. `page` is the highest page that holds a code. */
+export function joinPages(pages: { page: number; codes: Code[] }[]): { payload: Payload; page: number; codes: number } | undefined {
+  const codes = pages.flatMap(p => p.codes);
+  if (!codes.length) return undefined;
+  const read = joinResult(codes);
+  if ("error" in read) throw new QrRefusal(read.error);
+  return { payload: read.payload, page: Math.max(...pages.filter(p => p.codes.length).map(p => p.page)), codes: new Set(codes.map(key)).size };
+}
+
 /** Finds and decodes the QR code(s) on the last page (where the form prints them); `all`: then the other pages too (a
  *  printed copy may have its pages in another order, or its codes on separate pages). */
 export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload: Payload; page: number; codes: number } | undefined> {
@@ -157,8 +172,7 @@ export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload:
   if (kept) return { ...kept, codes: 0 };
   const doc = await getDocument({ data: bytes.slice(), ...PDFJS }).promise;
   try {
-    const codes: Code[] = [];
-    let why = "";
+    const pages: { page: number; codes: Code[] }[] = [];
     for (let n = doc.numPages; n >= (all ? 1 : doc.numPages); n--) {
       const page = await doc.getPage(n);
       // 1. One code as printed text (the studio form draws its squares as ZapfDingbats "n"): rebuilt from where each square is.
@@ -174,13 +188,9 @@ export async function readQr(bytes: Uint8Array, all = false): Promise<{ payload:
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       await page.render({ canvas, viewport: vp }).promise;
-      codes.push(...(await codesIn(ctx.getImageData(0, 0, canvas.width, canvas.height))));
-      const read = joinResult(codes);
-      if ("payload" in read) return { payload: read.payload, page: n, codes: new Set(codes.map(key)).size };
-      why = read.error;
+      pages.push({ page: n, codes: await codesIn(ctx.getImageData(0, 0, canvas.width, canvas.height)) });
     }
-    if (codes.length) throw new QrRefusal(why); // codes were found, but they don't make one application
-    return undefined;
+    return joinPages(pages); // every page is read before deciding, so codes of another application on another page are seen
   } finally {
     await doc.destroy();
   }

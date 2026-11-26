@@ -61,13 +61,14 @@ text). Permutations are never tried for labelled codes (16! orders).
 
 1. **Duplicates removed.** The same code found twice (a page scanned twice) counts once.
 2. **Labelled or not.** Labelled and unlabelled codes mixed are refused. Unlabelled codes (some scanners drop the label) are accepted only as one or two, and for two both orders are tried (code 1 always starts the JSON with `{`).
-3. **One application.** Labelled codes must all share the parity and the total. Different parities: "codes from N different applications", refused, never merged. Different totals, a total outside 1 to 16, or two different codes claiming the same index: refused.
+3. **One application.** Each code's check value must be ASCII digits. Labelled codes must all share the parity and the total. Different parities: "codes from N different applications", refused, never merged. Different totals, a total outside 1 to 16, or two different codes claiming the same index: refused.
 4. **Complete.** Missing indices are named: "Code 3 of 5 not found; scan all 5 codes." (or "Codes 2, 6 of 7 not found ...").
 5. **Bytes joined in index order, then checked.** The joined bytes must be at most 16 x 2,329, and their XOR must equal the parity every code carries (a damaged or foreign code fails here). A character such as "é" is two bytes and a split can fall between them; joining bytes first keeps it whole.
-6. **Parsed as data (`parsePayload`).** Trailing padding spaces are trimmed, then `JSON.parse` (never evaluated). The result must have `form` and `data`.
+6. **Parsed as data (`parsePayload`).** The bytes must be valid UTF-8 (strict; nothing is guessed at). `JSON.parse` (never evaluated) allows JSON's own white space, so the padding spaces are fine; a byte order mark or a no-break space is not padding and is refused. The result must have `form` and `data`.
 
-`readQr` collects codes page by page (last page backwards) and tries the join after each page, so codes 1-2 and 3-4 on
-different pages work. If codes were found but never join, the reason above is shown to the operator (`QrRefusal`).
+`readQr` reads every page (last page backwards), then decides once on all the codes together (`joinPages`), so codes 1-2 and
+3-4 on different pages work, and a code of another application on any page is seen and refused. If codes were found but
+they don't join, the reason above is shown to the operator (`QrRefusal`).
 
 ---
 

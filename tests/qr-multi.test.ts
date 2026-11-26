@@ -3,7 +3,7 @@
 // joined in the order their labels say. Payload as lc-form makes it: JSON padded with spaces to n x 2300 bytes, n equal slices.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { codesIn, joinCodes, joinResult, MAX_CODES, type Code } from "../src/qr-read";
+import { codesIn, joinCodes, joinPages, joinResult, MAX_CODES, QrRefusal, type Code } from "../src/qr-read";
 
 const CAP = 2300;
 const src = readFileSync(new URL("../src/fill/gen/lc_form.ts", import.meta.url), "utf8");
@@ -140,5 +140,48 @@ describe("1 to 16 structured-append codes", () => {
     expect(joinCodes(p1)).toBeUndefined(); // the first page alone is not an application
     expect(msg(p1)).toBe("Codes 3, 4 of 4 not found; scan all 4 codes.");
     expect(joinCodes([...p2, ...p1])).toEqual(a.json);
+  }, 30000);
+
+  it("three unlabelled codes are refused (an unlabelled set is one or two codes), even when they would join in the order given", () => {
+    const text = new TextEncoder().encode('{"form":"LC-01","version":"1.0","saved":"x","complete":true,"data":{"a":"' + "z".repeat(60) + '"}}');
+    const third = Math.floor(text.length / 3), plain = (b: Uint8Array): Code => ({ bytes: b, index: -1, size: -1, id: "" });
+    const three = [plain(text.slice(0, third)), plain(text.slice(third, 2 * third)), plain(text.slice(2 * third))];
+    expect(msg(three)).toMatch(/3 different QR codes without a "code N of M" label/);
+    expect(joinCodes([plain(text.slice(0, 40)), plain(text.slice(40))])!.form).toBe("LC-01"); // two unlabelled codes still join
+  });
+
+  it("one image holding all 16 codes: every code is read (not just a few)", async () => {
+    const a = app(16, "sixteen"), found = await codesIn(page(a.matrices));
+    expect(found).toHaveLength(16);
+    expect(joinCodes(found)).toEqual(a.json);
+  }, 60000);
+
+  it("the joined bytes must be valid UTF-8, and only JSON's own white space may surround the JSON", () => {
+    const enc = (s: string) => [...new TextEncoder().encode(s)];
+    const one = (bytes: number[]): Code => ({ bytes: Uint8Array.from(bytes), index: 0, size: 1, id: String(bytes.reduce((x, b) => x ^ b, 0)) });
+    const json = '{"form":"LC-01","data":{"a":"x"}}';
+    expect(joinCodes([one(enc(json))])!.form).toBe("LC-01");
+    expect(joinCodes([one(enc(json + "   "))])!.form).toBe("LC-01"); // the padding
+    expect(joinCodes([one([...enc('{"form":"LC-01","data":{"a":"'), 0xff, ...enc('"}}')])])).toBeUndefined(); // invalid UTF-8: not guessed at
+    expect(joinCodes([one([...enc(json), 0xc2, 0xa0])])).toBeUndefined(); // a trailing no-break space is not padding
+    expect(joinCodes([one([0xef, 0xbb, 0xbf, ...enc(json)])])).toBeUndefined(); // nor is a byte order mark
+  });
+
+  it("the check value must be ASCII digits", () => {
+    const bytes = new TextEncoder().encode('{"form":"LC-01","data":{}}');
+    for (const id of ["", String.fromCharCode(178), "+1", "1e1", " 7"]) expect(msg([{ bytes, index: 0, size: 1, id }]), JSON.stringify(id)).toMatch(/not a number/);
+  });
+
+  it("joinPages decides on the codes of every page together", async () => {
+    const A = await scan(app(4, "pa")), B = await scan(app(4, "pb"));
+    const ok = joinPages([{ page: 5, codes: [A[0], A[1]] }, { page: 4, codes: [] }, { page: 3, codes: [A[3], A[2]] }])!;
+    expect(ok.page).toBe(5);
+    expect(ok.codes).toBe(4);
+    expect(joinPages([{ page: 2, codes: [] }])).toBeUndefined();
+    // codes of another application on an earlier page: refused, even though the later pages alone would join
+    const mixed = [{ page: 5, codes: A }, { page: 2, codes: [B[0]] }];
+    expect(() => joinPages(mixed)).toThrow(QrRefusal);
+    expect(() => joinPages(mixed)).toThrow(/different applications/);
+    expect(() => joinPages([{ page: 5, codes: [A[0]] }])).toThrow(/not found; scan all 4 codes/);
   }, 30000);
 });
