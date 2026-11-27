@@ -14,13 +14,15 @@ import { SMART_FORMS, groupSmartForms, smartFormLabel } from "./canvas/forms";
 import { formFile, formFileName } from "./canvas/form-file";
 import { writePdf } from "./canvas/write-pdf";
 import type { Line, Xfa } from "./text";
-import { addQr, codeSvg, generateQr, type Qr } from "./studio-qr";
+import { addQr, codeSvg, generateQr, usable, type Qr } from "./studio-qr";
 
 /** The form as a PDF: an uploaded PDF filled in its own layout, anything else written from the canvas layout. */
 const pdfOf = (t: Template, v: Values = {}) => (t.base ? buildPdf(t, v) : writePdf(t, v));
 /** The codes Generate QR Code made for the answers now in the form: any change of an answer drops them (like Print Form's "answers have changed"). */
 let qr: Qr | undefined;
-const withQr = async (pdf: Promise<Uint8Array>, q = qr) => (q ? addQr(await pdf, q) : pdf);
+/** The codes, only while the form and answers are the ones they were made from (replacing the form or editing it on the canvas drops them). */
+const live = () => (qr = usable(qr, t, values));
+const withQr = async (pdf: Promise<Uint8Array>, q = live()) => (q ? addQr(await pdf, q) : pdf);
 
 const text = () => import("./text"); // pdf.js is big: load it only when a PDF without fields needs reading
 
@@ -204,6 +206,7 @@ function dropQr() {
 function showQr(message?: string) {
   const box = document.getElementById("qrBox");
   if (!box) return;
+  live();
   box.replaceChildren(
     ...(message ? [h("p", { className: qr ? "note" : "error", role: "alert", style: "white-space: pre-wrap" }, message)] : []),
     ...(qr ? [h("p", { className: "note", role: "status" }, `${qr.codes.length === 1 ? "QR code" : `${qr.codes.length} QR codes`} made from these answers. Save filled PDF puts ${qr.codes.length === 1 ? "it" : "them"} on the QR page.`)] : []),
@@ -495,7 +498,7 @@ panes($(".main"));
 
 // The canvas (Design step for every form but an uploaded PDF).
 const canvas = $("#canvas");
-mountCanvas(canvas, { form: () => t, values: () => values, setValues: v => { values = v; }, changed: save }); // the canvas redraws itself
+mountCanvas(canvas, { form: () => t, values: () => values, setValues: v => { values = v; }, changed: () => { qr = undefined; save(); } }); // the canvas redraws itself
 
 // ---- Shell ----
 function go(v: View) {
@@ -580,6 +583,7 @@ $("#templateSel").onchange = async e => {
     t = opened(f);
     values = clone(f.defaults);
   }
+  qr = undefined;
   resetCanvas();
   go("design");
   pristine = JSON.stringify(t);
@@ -599,7 +603,8 @@ $<HTMLInputElement>("#templateIn").onchange = async e => {
     });
     t = r.template;
     values = r.values;
-    resetCanvas();
+    qr = undefined;
+  resetCanvas();
     go("design");
     pristine = JSON.stringify(t);
     const n = t.sections.reduce((a, s) => a + s.fields.length, 0);
@@ -665,7 +670,8 @@ async function pickXfaForm(xfa: Xfa, name: string) {
       t = template;
       values = v;
       dialog.close();
-      resetCanvas();
+      qr = undefined;
+  resetCanvas();
       go("design");
       pristine = JSON.stringify(t);
       notice(`Rebuilt ${f.title}: ${f.count} questions. The Review tab lists what to tidy.`);

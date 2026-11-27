@@ -8,18 +8,24 @@ import { H, W, safe } from "./canvas/layout";
 import { openForm, type Engine } from "./fill/engine";
 import type { Template, Values } from "./pdf";
 
-export interface Qr { text: string; codes: { rows: string[]; label: string }[]; slots: [number, number, number][]; page: number; heading: string }
+export interface Qr { key: string; text: string; codes: { rows: string[]; label: string }[]; slots: [number, number, number][]; page: number; heading: string }
 export type Result = { qr: Qr } | { message: string };
 
 const NONE = "Generate QR Code works for the smart forms. For an edited or uploaded form, export the form file (the </> button) and build it with lc-form: `python build.py <form file>`.";
 
+/** JSON with the keys of every object sorted: equal whatever order the keys were added in. */
+export const canonical = (x: unknown): string => JSON.stringify(x, (_, v) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v));
+/** What a set of codes was made from: the form and its answers. Codes are used only while this still matches. */
+export const qrKey = (t: Template, values: Values) => canonical([t, values]);
+
 /** The smart form `t` still is (its file, unedited), or undefined. */
 function smartFormOf(t: Template) {
   const f = SMART_FORMS.find(s => s.file === t.file);
-  return f && JSON.stringify({ ...t, file: undefined, pdfName: undefined }) === JSON.stringify(f.form) ? f : undefined;
+  return f && canonical({ ...t, file: undefined, pdfName: undefined }) === canonical(f.form) ? f : undefined;
 }
 
-/** The studio's answers into the engine's boxes (a question left out is blank), then Acrobat's calculation runs once. */
+/** The studio's answers into the engine's boxes (a question left out is blank). The form's own Generate QR Code script runs lcRules itself,
+ *  which is all Acrobat's calculation does (onCalc), so nothing else needs firing. */
 function fillIn(eng: Engine, t: Template, values: Values) {
   const qs = t.sections.flatMap(s => s.fields), doc = eng.doc;
   for (const q of qs) {
@@ -30,7 +36,6 @@ function fillIn(eng: Engine, t: Template, values: Values) {
     else if (q.kind === "select") { const o = safe(String(v ?? "")); set(q.id, doc.getField(q.id)?.options.includes(o) ? o : ""); }
     else set(q.id, typeof v === "string" ? safe(v).slice(0, q.max || undefined) : "");
   }
-  if (qs[0]) eng.fire(qs[0].id);
 }
 
 /** Generate QR Code: the form's own checks first (the message lists what is missing or wrong), then the codes. */
@@ -42,7 +47,7 @@ export async function generateQr(t: Template, values: Values): Promise<Result> {
   eng.press("generate-qr");
   const codes = eng.codes();
   if (!codes.length) return { message: eng.alerts.at(-1) ?? "The QR code could not be generated." };
-  return { qr: { text: eng.doc.getField("__qr")!.value, codes, slots: eng.laid.qr.slots, page: eng.laid.qr.page, heading: form.form.formCode ?? form.form.title } };
+  return { qr: { key: qrKey(t, values), text: eng.doc.getField("__qr")!.value, codes, slots: eng.laid.qr.slots, page: eng.laid.qr.page, heading: form.form.formCode ?? form.form.title } };
 }
 
 /** One filled rectangle per run of dark squares of a code, in the slot's PDF units (origin bottom left; 4 squares quiet zone). */
@@ -85,3 +90,6 @@ export function codeSvg(rows: string[], n: number) {
   rows.forEach((row, y) => { for (const m of row.matchAll(/n+/g)) d += `M${m.index! + 4} ${y + 4}h${m[0].length}v1h-${m[0].length}z`; });
   return `<svg viewBox="0 0 185 185" role="img" aria-label="QR code ${n}"><path d="${d}" shape-rendering="crispEdges"/></svg>`;
 }
+
+/** The codes, only while the form and answers are the ones they were made from (else undefined). */
+export const usable = (q: Qr | undefined, t: Template, values: Values) => (q && q.key === qrKey(t, values) ? q : undefined);
