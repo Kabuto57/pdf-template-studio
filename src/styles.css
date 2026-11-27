@@ -159,3 +159,8 @@ input:invalid, select:invalid { box-shadow: none; }
 
 .code { flex: 1; margin: 0; overflow: auto; padding: 12px 14px; background: #f7f7f7; font: 1em/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre; tab-size: 4; }
 .code .chg { background: #fff3b0; }
+
+/* Generate QR Code (2 Fill): the codes made from the answers */
+.qr-code { margin: 8px 8px 0 0; display: inline-block; text-align: center; }
+.qr-code svg { width: 180px; height: 180px; background: #fff; border: 1px solid var(--line, #ccc); }
+.qr-code figcaption { font-size: 12px; color: var(--grey); }

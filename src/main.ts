@@ -14,9 +14,13 @@ import { SMART_FORMS, groupSmartForms, smartFormLabel } from "./canvas/forms";
 import { formFile, formFileName } from "./canvas/form-file";
 import { writePdf } from "./canvas/write-pdf";
 import type { Line, Xfa } from "./text";
+import { addQr, codeSvg, generateQr, type Qr } from "./studio-qr";
 
 /** The form as a PDF: an uploaded PDF filled in its own layout, anything else written from the canvas layout. */
 const pdfOf = (t: Template, v: Values = {}) => (t.base ? buildPdf(t, v) : writePdf(t, v));
+/** The codes Generate QR Code made for the answers now in the form: any change of an answer drops them (like Print Form's "answers have changed"). */
+let qr: Qr | undefined;
+const withQr = async (pdf: Promise<Uint8Array>, q = qr) => (q ? addQr(await pdf, q) : pdf);
 
 const text = () => import("./text"); // pdf.js is big: load it only when a PDF without fields needs reading
 
@@ -57,7 +61,7 @@ function refresh(now = false) {
   save();
   clearTimeout(timer);
   if (onCanvas()) return renderCanvas();
-  timer = window.setTimeout(async () => showPdf(await pdfOf(t, view === "fill" ? values : {})), now ? 0 : 450);
+  timer = window.setTimeout(async () => showPdf(await (view === "fill" ? withQr(pdfOf(t, values)) : pdfOf(t))), now ? 0 : 450);
 }
 
 // ---- 1. Design ----
@@ -95,6 +99,7 @@ function input(f: Field): HTMLElement {
   const v = values[f.id];
   const set = (x: Value) => {
     values[f.id] = x;
+    dropQr();
     paint();
     refresh();
   };
@@ -183,6 +188,33 @@ function input(f: Field): HTMLElement {
   }
 }
 
+/** Generate QR Code: the form's own checks (the message lists what is missing or wrong), then the codes are shown and go into Save filled PDF. */
+async function makeQr() {
+  const r = await generateQr(t, values);
+  qr = "qr" in r ? r.qr : undefined;
+  showQr("message" in r ? r.message : undefined);
+  if (qr) refresh(true);
+}
+function dropQr() {
+  if (!qr) return;
+  qr = undefined;
+  showQr("The answers have changed: press Generate QR Code again.");
+  refresh();
+}
+function showQr(message?: string) {
+  const box = document.getElementById("qrBox");
+  if (!box) return;
+  box.replaceChildren(
+    ...(message ? [h("p", { className: qr ? "note" : "error", role: "alert", style: "white-space: pre-wrap" }, message)] : []),
+    ...(qr ? [h("p", { className: "note", role: "status" }, `${qr.codes.length === 1 ? "QR code" : `${qr.codes.length} QR codes`} made from these answers. Save filled PDF puts ${qr.codes.length === 1 ? "it" : "them"} on the QR page.`)] : []),
+    ...(qr?.codes ?? []).map((c, k) => {
+      const d = h("figure", { className: "qr-code" }, h("figcaption", {}, c.label || `QR code ${k + 1}`));
+      d.insertAdjacentHTML("afterbegin", codeSvg(c.rows, k + 1));
+      return d;
+    }),
+  );
+}
+
 function renderFill() {
   $("#panel").replaceChildren(
     h(
@@ -199,6 +231,7 @@ function renderFill() {
           type: "button",
           onclick: () => {
             values = sampleFor(t);
+            qr = undefined;
             renderFill();
             refresh(true);
           },
@@ -211,13 +244,16 @@ function renderFill() {
           type: "button",
           onclick: () => {
             values = {};
+            qr = undefined;
             renderFill();
             refresh(true);
           },
         },
         "Clear",
       ),
+      h("button", { type: "button", id: "qrBtn", onclick: makeQr }, "Generate QR Code"),
     ),
+    h("div", { id: "qrBox" }),
     ...t.sections.map((s, si) =>
       h(
         "fieldset",
@@ -242,6 +278,7 @@ function renderFill() {
   );
   $("#panel .btns").after(h("p", { id: "left", role: "status" }));
   paint();
+  showQr();
 }
 
 const star = (f: Field) => h("span", { className: "req", "aria-label": "mandatory", hidden: !f.required }, " *");
@@ -498,7 +535,7 @@ $("#blankBtn").onclick = async () => download((await pdfOf(t)) as BlobPart, `${s
 $("#saveBtn").onclick = async () => {
   const gaps = missing(),
     save = async (suffix: string) => {
-      filled = await pdfOf(t, values);
+      filled = await withQr(pdfOf(t, values));
       download(filled as BlobPart, `${slug(t.title)}-${suffix}.pdf`, "application/pdf");
     };
   if (!gaps.length) return save("filled");
