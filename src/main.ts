@@ -10,7 +10,7 @@ import type { Extracted, Field, Template, Value, Values } from "./pdf";
 import { GUARANTEE, sampleFor } from "./sample";
 import { panes } from "./panes";
 import { mountCanvas, render as renderCanvas, resetCanvas } from "./canvas/canvas";
-import { SMART_FORMS } from "./canvas/forms";
+import { SMART_FORMS, groupSmartForms, smartFormLabel } from "./canvas/forms";
 import { formFile, formFileName } from "./canvas/form-file";
 import { writePdf } from "./canvas/write-pdf";
 import type { Line, Xfa } from "./text";
@@ -474,7 +474,11 @@ function go(v: View) {
   refresh(true);
 }
 
-$("#smartForms").append(...SMART_FORMS.map(f => h("option", { value: `smart:${f.file}` }, f.form.title)));
+$("#otherForms").before(
+  ...groupSmartForms(SMART_FORMS).map(g =>
+    h("optgroup", { label: g.label }, ...g.forms.map(f => h("option", { value: `smart:${f.file}` }, smartFormLabel(f)))),
+  ),
+);
 document
   .querySelectorAll<HTMLButtonElement>("[data-view]")
   .forEach(b => (b.onclick = () => go(b.dataset.view as View)));

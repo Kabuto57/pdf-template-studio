@@ -55,7 +55,7 @@ Leave that window open while you use the site; press Ctrl+C to stop it. Open the
 
 Start `npm run dev` first (section 3); the bank, mail and workbench pages share the browser's own storage, so use the **same browser and the same address** (`localhost:5173`) for the whole journey.
 
-- **Template Studio** (`/studio.html`): click **Open a form...** (top right), pick a form under *Smart forms*, edit it on the canvas, then **2 Fill** (type answers, **Save filled PDF**) and **3 Extract** (**Open filled PDF...**, or **Use the form I just saved**, then **Download JSON**).
+- **Template Studio** (`/studio.html`): click **Open a form...** (top right), pick a form under *Import*, *Export*, *Loans* or *Guarantees*, edit it on the canvas, then **2 Fill** (type answers, **Save filled PDF**) and **3 Extract** (**Open filled PDF...**, or **Use the form I just saved**, then **Download JSON**).
 - **Demo Bank** (`/demo-bank/`): click **Download PDF** to get the LC application. Fill it in Adobe Acrobat Reader (its checks run only there; try ticking a document row and press **Check form**) and save it. **Fill online** on the same page opens `/demo-bank/apply.html`, a web form for the LC that ends in **Submit to Demo Bank**.
 - **Customer's email** (`/customer-mail/`): a pretend "New message" window: attach the saved PDF, give it a subject and send it to Trade Ops. The email is simulated inside the browser (IndexedDB), so the whole journey runs on one laptop.
 - **Fill online** (`/fill/`): tick the Bank's terms box, pick one of the 14 forms, fill it in. **Check form** lists what is missing, **Generate QR Code** makes the code or codes, **Print Form** opens the browser's print dialog (choose *Save as PDF*): that PDF is a printed copy with no fields, only its QR code or codes. Chrome or Edge is recommended.
@@ -102,7 +102,7 @@ The app has three steps along the top: **1 Design**, **2 Fill**, **3 Extract**.
 #### Open a smart form
 
 1. Click **Open a form…** (top right).
-2. Under **Smart forms**, pick one, e.g. *Banker's Guarantee Application*. The studio opens on the LC.
+2. Under **Guarantees**, pick one, e.g. *Banker's Guarantee Application*. The studio opens on the LC.
 3. The form appears on the canvas, page by page, exactly as the lc-form project builds it.
 
 The thirteen smart forms in the studio are the form files of the [lc-form](https://github.com/Kabuto57/lc-form) project
