@@ -323,6 +323,29 @@ describe("1 to 16 QR codes: codes 3 and up on extra QR pages, two to a page, add
   });
 });
 
+describe("Shipment from / to on the fill page: the boxes follow the choice, as in the old smart form", () => {
+  // [choice, shows the port box, shows the place box]
+  const SIDES = { shipment_from: [["Port of Loading / Airport of Departure", 1, 0], ["Dispatch from", 0, 1], ["Place of Taking in charge", 1, 1], ["Place of Receipt", 1, 1]],
+                  shipment_to: [["Port of Discharge / Airport of Destination", 1, 0], ["For Transportation to", 0, 1], ["Place of Final Destination", 1, 1], ["Place of Delivery", 1, 1]] } as const;
+  for (const [side, choices] of Object.entries(SIDES))
+    for (const [choice, port, place] of choices)
+      it(`${choice}: port box ${port ? "required and unlocked" : "greyed and locked"}, place box ${place ? "required and unlocked" : "greyed and locked"}`, async () => {
+        const eng = await engineOf("lc_pipe_form.py"), at = (id: string) => eng.doc.getField(id)!;
+        at(side).value = choices[2][0];   // first a choice that shows both boxes, both filled in ...
+        eng.fire(side);
+        for (const id of [`${side}_port`, `${side}_place`]) { at(id).value = "STALE"; eng.fire(id); }
+        at(side).value = choice;          // ... then the choice under test: what no longer applies is greyed, locked and cleared
+        eng.fire(side);
+        for (const [kind, shown] of [["port", port], ["place", place]] as const) {
+          const one = at(`${side}_${kind}`), two = at(`${side}_${kind}_2`);
+          expect([one.readonly, two.readonly], `${choice} ${kind}`).toEqual([!shown, !shown]);
+          expect(one.value === "", `${choice} ${kind} cleared`).toBe(!shown);
+          expect([one.required, two.required], `${choice} ${kind} mandatory while blank`).toEqual([false, false]);   // (filled in "STALE", or locked)
+          if (shown) { one.value = ""; eng.fire(`${side}_${kind}`); expect(one.required).toBe(true); }
+        }
+      });
+});
+
 /** The code as a picture: 4 pixels a square, 4 white squares around it (rows of "n" and " ", as lcDrawQr wrote them). */
 function picture(rows: string[], px = 4) {
   const n = rows.length + 8, w = n * px, data = new Uint8ClampedArray(w * w * 4).fill(255);

@@ -54,6 +54,12 @@ describe.skipIf(!browser)("the fill page in Chromium", () => {
       else if (q.kind === "select") await box.selectOption(v);
       else { await box.first().pressSequentially(v.replace(/\n/g, " ")); await box.first().press("Tab"); }
     }
+    // lc-form's LC has a Port box for the port choices ("Port of ..."): the sample's place (src/lc.ts's one box) goes there
+    for (const side of ["shipment_from", "shipment_to"]) {
+      const port = page.locator(`[name="${side}_port"]`).first();
+      await port.pressSequentially(s[`${side}_place`]);
+      await port.press("Tab");
+    }
   }
   const dialogText = (page: any) => page.textContent("dialog.msg[open] p");
   const ok = (page: any) => page.locator("dialog.msg[open] button.primary").click();
