@@ -1,538 +1,1494 @@
 // @ts-nocheck: lc-form's Acrobat JavaScript, copied word for word by scripts/fill-engine.py (do not edit; rerun it)
 export const document = function (app, color, display, console) {
+// =====================================================================================================================
 // THE RULES ENGINE (runs inside Acrobat). Built into the PDF as the document script "lcRules".
+//
 // lcRules(doc) checks every question and colours its box:
 //   blank or wrong mandatory answer -> red outline, pink fill, marked Required
 //   answered and right              -> black outline, white fill
 //   doesn't apply yet               -> greyed out, locked, and its answer cleared
 // It returns the list of missing questions, plus .bad (wrong answers) and .first (where to put the cursor).
+//
+// lcWords(amount, currency) writes an amount in words ("USD One Thousand ... only").
 // lcDates(doc) shows each date's calendar box and hides its drop-down list (Acrobat only).
-// {"application_date":{"kind":"date","label":"Date","hasRule":1,"always":1,"check":1},"mode_of_advising":{"kind":"radio","label":"Mode of advising","hasRule":1,"always":1},"applicant_name":{"kind":"text","label":"Applicant name","hasRule":1,"always":1,"check":1},"applicant_address_1":{"kind":"text","label":"Applicant address","hasRule":1,"always":1,"check":1},"applicant_address_2":{"kind":"text","label":"Applicant address (line 2)","check":1},"applicant_address_3":{"kind":"text","label":"Applicant address (line 3)","check":1},"applicant_address_4":{"kind":"text","label":"Applicant address (line 4)","check":1},"contact_name":{"kind":"text","label":"Contact party for this application & confirmation of FX rate: Name","hasRule":1,"always":1,"check":1},"contact_tel":{"kind":"text","label":"Contact party: Tel no","hasRule":1,"always":1,"check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"contact_fax":{"kind":"text","label":"Contact party: Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"dc_no":{"kind":"text","label":"DC no","check":1},"bank_code":{"kind":"text","label":"Bank code","check":1},"advising_bank_name":{"kind":"text","label":"Name","check":1},"advising_bank_address_1":{"kind":"text","label":"Address","check":1},"advising_bank_address_2":{"kind":"text","label":"Address (line 2)","check":1},"advising_bank_address_3":{"kind":"text","label":"Address (line 3)","check":1},"third_party_name":{"kind":"text","label":"Name","check":1},"third_party_address_1":{"kind":"text","label":"Address","check":1},"third_party_address_2":{"kind":"text","label":"Address (line 2)","check":1},"third_party_address_3":{"kind":"text","label":"Address (line 3)","check":1},"beneficiary_name":{"kind":"text","label":"Beneficiary's name","hasRule":1,"always":1,"check":1},"beneficiary_address_1":{"kind":"text","label":"Beneficiary's address","hasRule":1,"always":1,"check":1},"beneficiary_address_2":{"kind":"text","label":"Beneficiary's address (line 2)","check":1},"beneficiary_address_3":{"kind":"text","label":"Beneficiary's address (line 3)","check":1},"beneficiary_address_4":{"kind":"text","label":"Beneficiary's address (line 4)","check":1},"beneficiary_contact":{"kind":"text","label":"Contact person","check":1},"beneficiary_tel":{"kind":"text","label":"Tel no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"beneficiary_fax":{"kind":"text","label":"Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"currency":{"kind":"select","label":"Currency","hasRule":1,"always":1},"amount":{"kind":"text","label":"Amount","hasRule":1,"always":1,"check":["^\\d{1,3}(,?\\d{3})*(\\.\\d{1,2})?$","is not an amount"]},"tolerance":{"kind":"check","label":"Tolerance on credit amount & goods quantity"},"tolerance_plus":{"kind":"text","label":"Tolerance + (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"tolerance_minus":{"kind":"text","label":"Tolerance - (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"price_basis":{"kind":"radio","label":"Price basis","hasRule":1,"always":1},"price_basis_other":{"kind":"text","label":"Others (please specify)","hasRule":1,"requiredIf":[["price_basis",["Others"],0]],"activeIf":[["price_basis",["Others"],0]],"check":1},"partial_shipment":{"kind":"radio","label":"Partial shipment","hasRule":1,"always":1},"transhipment":{"kind":"radio","label":"Transhipment","hasRule":1,"always":1},"shipment_from":{"kind":"select","label":"Shipment from"},"shipment_from_place":{"kind":"text","label":"Shipment from: place","hasRule":1,"requiredIf":[["shipment_from",[""],1]],"check":1},"shipment_from_place_2":{"kind":"text","label":"Shipment from: place (line 2)","check":1},"shipment_to":{"kind":"select","label":"Shipment to"},"shipment_to_place":{"kind":"text","label":"Shipment to: place","hasRule":1,"requiredIf":[["shipment_to",[""],1]],"check":1},"shipment_to_place_2":{"kind":"text","label":"Shipment to: place (line 2)","check":1},"latest_shipment_date":{"kind":"date","label":"Latest shipment date","check":1},"expiry_date":{"kind":"date","label":"Date of expiry (in beneficiary's country)","hasRule":1,"always":1,"check":1},"presentation_days":{"kind":"text","label":"Presentation period (days after shipment)","check":["^\\d+$","should be a whole number"]},"back_to_back":{"kind":"check","label":"This is a back-to-back DC to be issued against the master credit (the \"Master DC\")"},"master_dc_no":{"kind":"text","label":"Master credit no","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"master_dc_issued_by":{"kind":"text","label":"Issued by","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"drafts":{"kind":"check","label":"Drafts for the percentage of invoice value below, at"},"drafts_percent":{"kind":"text","label":"Percentage of invoice value (%)","hasRule":1,"requiredIf":[["drafts",["true"],0]],"activeIf":[["drafts",["true"],0]],"check":["^\\d+$","should be a whole number"]},"drafts_at":{"kind":"radio","label":"Drafts at","hasRule":1,"requiredIf":[["drafts",["true"],0]],"activeIf":[["drafts",["true"],0]]},"term_days":{"kind":"text","label":"Term: days","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":["^\\d+$","should be a whole number"]},"term_after":{"kind":"text","label":"days after","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":1},"draft_date":{"kind":"date","label":"Date","hasRule":1,"requiredIf":[["drafts_at",["Date"],0]],"activeIf":[["drafts_at",["Date"],0]],"check":1},"term_prepay":{"kind":"radio","label":"If it is a term LC, please select one","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]]},"doc_bill_of_lading":{"kind":"check","label":"Full set of Clean on Board marine bills of lading"},"bl_made_out_to":{"kind":"radio","label":"Made out to","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_made_out_to_other":{"kind":"text","label":"Made out to (other)","hasRule":1,"requiredIf":[["bl_made_out_to",["other (specify)"],0]],"activeIf":[["bl_made_out_to",["other (specify)"],0]],"check":1},"bl_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]],"check":1},"doc_air_waybill":{"kind":"check","label":"Original Air Waybill consigned to the Bank"},"awb_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]]},"awb_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]],"check":1},"doc_delivery_order":{"kind":"check","label":"Delivery order signed by beneficiary made out to applicant"},"do_originals":{"kind":"text","label":"Delivery order: originals","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_copies":{"kind":"text","label":"Delivery order: copies","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_countersigned_by":{"kind":"select","label":"Countersigned by how many of our signatories","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"do_signature_verified":{"kind":"select","label":"Whose signature(s) ... to be verified by the Bank","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"doc_insurance":{"kind":"check","label":"Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion"},"insurance_arrangement":{"kind":"select","label":"For FOB/CFR/FCA/CPT","activeIf":[["doc_insurance",["true"],0]]},"insurance_cover_no":{"kind":"text","label":"Open cover no","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"insurance_cover_with":{"kind":"text","label":"With","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"doc_beneficiary_certificate":{"kind":"check","label":"Beneficiary's certificate stating 1 set of non-negotiable documents has been sent to applicant"},"bencert_sent_by":{"kind":"checks","label":"Sent by","options":["faxed","mailed","couriered"],"hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]]},"bencert_days":{"kind":"text","label":"Within (days after shipment)","hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_commercial_invoice":{"kind":"check","label":"Signed commercial invoice"},"invoice_originals":{"kind":"text","label":"Commercial invoice: originals","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"invoice_copies":{"kind":"text","label":"Commercial invoice: copies","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_packing_list":{"kind":"check","label":"Packing list"},"packing_list_originals":{"kind":"text","label":"Packing list: originals","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"packing_list_copies":{"kind":"text","label":"Packing list: copies","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_weight_note":{"kind":"check","label":"Weight note"},"weight_note_originals":{"kind":"text","label":"Weight note: originals","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"weight_note_copies":{"kind":"text","label":"Weight note: copies","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_certificate_of_origin":{"kind":"check","label":"Certificate of origin"},"origin_originals":{"kind":"text","label":"Certificate of origin: originals","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_copies":{"kind":"text","label":"Certificate of origin: copies","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_country":{"kind":"text","label":"Showing country of origin as","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":1},"doc_other":{"kind":"check","label":"Other documents"},"other_documents_1":{"kind":"text","label":"Other documents","hasRule":1,"requiredIf":[["doc_other",["true"],0]],"activeIf":[["doc_other",["true"],0]],"check":1},"other_documents_2":{"kind":"text","label":"Other documents (line 2)","activeIf":[["doc_other",["true"],0]],"check":1},"goods_description":{"kind":"long","label":"Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","hasRule":1,"always":1,"check":1},"additional_conditions":{"kind":"long","label":"Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","check":1},"bank_charges":{"kind":"check","label":"All bank charges are for account of","hasRule":1,"always":1},"bank_charges_for":{"kind":"radio","label":"Charges for account of","hasRule":1,"requiredIf":[["bank_charges",["true"],0]],"activeIf":[["bank_charges",["true"],0]]},"confirmation":{"kind":"check","label":"Confirmation required"},"confirmation_charges":{"kind":"radio","label":"Confirmation charges","hasRule":1,"requiredIf":[["confirmation",["true"],0]],"activeIf":[["confirmation",["true"],0]]},"post_shipment_financing":{"kind":"check","label":"Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies"},"financing_type":{"kind":"radio","label":"Financing","hasRule":1,"requiredIf":[["post_shipment_financing",["true"],0]],"activeIf":[["post_shipment_financing",["true"],0]]},"financing_currency":{"kind":"select","label":"Foreign currency financing in (type of currency)","hasRule":1,"requiredIf":[["financing_type",["Foreign Currency Financing"],0]],"activeIf":[["financing_type",["Foreign Currency Financing"],0]]},"forward_contract_no":{"kind":"text","label":"Forward contract no","hasRule":1,"requiredIf":[["financing_type",["Apply Forward Contract"],0]],"activeIf":[["financing_type",["Apply Forward Contract"],0]],"check":1},"advance_payment":{"kind":"check","label":"We authorise you to debit DC amount in full from our account for advance payment"},"advance_payment_account":{"kind":"text","label":"Account no for advance payment","hasRule":1,"requiredIf":[["advance_payment",["true"],0]],"activeIf":[["advance_payment",["true"],0]],"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"issuance_charges_account":{"kind":"text","label":"Account no for DC issuance charges","hasRule":1,"always":1,"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"authorised_person":{"kind":"text","label":"Name and title of authorised person(s)","check":1}} is filled in by document_script (step 2) with the rules table built from the form; ["application_date","latest_shipment_date","expiry_date","draft_date"] with the date
-// question ids. Acrobat's JavaScript is old-style: var, no arrow functions.
-// The rules table, the index "box -> the questions to re-check when it changes" (null = always check everything), and what
-// the last run saw: v = each box's last-seen value, st = each box's last-written look (so unchanged boxes are not written again).
+//
+// The form's own data is pasted into this script when the PDF is built (see document_script in pdf_writer.py):
+//   lcModel  the rules table: one entry per question (its label, kind, "applies only if" rules, "mandatory if" rules ...)
+//   lcDeps   an index: box name -> the questions to re-check when that box changes (null = always check everything)
+//   lcState  what the last run saw, so the next run can skip work that cannot have changed:
+//              v  = each box's last-seen value (a box whose value did not change is not checked again)
+//              st = each box's last-written look (a box whose look did not change is not written again)
+//
+// Acrobat's JavaScript is old-style (ES3/ES5): write "var" and "function" only, and none of the newer (ES6) syntax or
+// methods. Plain ASCII characters only (the build checks this).
+// Every read or write of an Acrobat field is slow, so the code below avoids repeating them.
+// =====================================================================================================================
 var lcModel = {"application_date":{"kind":"date","label":"Date","hasRule":1,"always":1,"check":1},"mode_of_advising":{"kind":"radio","label":"Mode of advising","hasRule":1,"always":1},"applicant_name":{"kind":"text","label":"Applicant name","hasRule":1,"always":1,"check":1},"applicant_address_1":{"kind":"text","label":"Applicant address","hasRule":1,"always":1,"check":1},"applicant_address_2":{"kind":"text","label":"Applicant address (line 2)","check":1},"applicant_address_3":{"kind":"text","label":"Applicant address (line 3)","check":1},"applicant_address_4":{"kind":"text","label":"Applicant address (line 4)","check":1},"contact_name":{"kind":"text","label":"Contact party for this application & confirmation of FX rate: Name","hasRule":1,"always":1,"check":1},"contact_tel":{"kind":"text","label":"Contact party: Tel no","hasRule":1,"always":1,"check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"contact_fax":{"kind":"text","label":"Contact party: Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"dc_no":{"kind":"text","label":"DC no","check":1},"bank_code":{"kind":"text","label":"Bank code","check":1},"advising_bank_name":{"kind":"text","label":"Name","check":1},"advising_bank_address_1":{"kind":"text","label":"Address","check":1},"advising_bank_address_2":{"kind":"text","label":"Address (line 2)","check":1},"advising_bank_address_3":{"kind":"text","label":"Address (line 3)","check":1},"third_party_name":{"kind":"text","label":"Name","check":1},"third_party_address_1":{"kind":"text","label":"Address","check":1},"third_party_address_2":{"kind":"text","label":"Address (line 2)","check":1},"third_party_address_3":{"kind":"text","label":"Address (line 3)","check":1},"beneficiary_name":{"kind":"text","label":"Beneficiary's name","hasRule":1,"always":1,"check":1},"beneficiary_address_1":{"kind":"text","label":"Beneficiary's address","hasRule":1,"always":1,"check":1},"beneficiary_address_2":{"kind":"text","label":"Beneficiary's address (line 2)","check":1},"beneficiary_address_3":{"kind":"text","label":"Beneficiary's address (line 3)","check":1},"beneficiary_address_4":{"kind":"text","label":"Beneficiary's address (line 4)","check":1},"beneficiary_contact":{"kind":"text","label":"Contact person","check":1},"beneficiary_tel":{"kind":"text","label":"Tel no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"beneficiary_fax":{"kind":"text","label":"Fax no","check":["^\\+?[\\d ()-]*\\d[\\d ()-]*$","is not a phone number (digits, spaces, + - ( ) only)"]},"currency":{"kind":"select","label":"Currency","hasRule":1,"always":1},"amount":{"kind":"text","label":"Amount","hasRule":1,"always":1,"check":["^\\d{1,3}(,?\\d{3})*(\\.\\d{1,2})?$","is not an amount"]},"tolerance":{"kind":"check","label":"Tolerance on credit amount & goods quantity"},"tolerance_plus":{"kind":"text","label":"Tolerance + (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"tolerance_minus":{"kind":"text","label":"Tolerance - (%)","hasRule":1,"requiredIf":[["tolerance",["true"],0]],"activeIf":[["tolerance",["true"],0]],"check":["^\\d+$","should be a whole number"]},"price_basis":{"kind":"radio","label":"Price basis","hasRule":1,"always":1},"price_basis_other":{"kind":"text","label":"Others (please specify)","hasRule":1,"requiredIf":[["price_basis",["Others"],0]],"activeIf":[["price_basis",["Others"],0]],"check":1},"partial_shipment":{"kind":"radio","label":"Partial shipment","hasRule":1,"always":1},"transhipment":{"kind":"radio","label":"Transhipment","hasRule":1,"always":1},"shipment_from":{"kind":"select","label":"Shipment from"},"shipment_from_place":{"kind":"text","label":"Shipment from: place","hasRule":1,"requiredIf":[["shipment_from",[""],1]],"check":1},"shipment_from_place_2":{"kind":"text","label":"Shipment from: place (line 2)","check":1},"shipment_to":{"kind":"select","label":"Shipment to"},"shipment_to_place":{"kind":"text","label":"Shipment to: place","hasRule":1,"requiredIf":[["shipment_to",[""],1]],"check":1},"shipment_to_place_2":{"kind":"text","label":"Shipment to: place (line 2)","check":1},"latest_shipment_date":{"kind":"date","label":"Latest shipment date","check":1},"expiry_date":{"kind":"date","label":"Date of expiry (in beneficiary's country)","hasRule":1,"always":1,"check":1},"presentation_days":{"kind":"text","label":"Presentation period (days after shipment)","check":["^\\d+$","should be a whole number"]},"back_to_back":{"kind":"check","label":"This is a back-to-back DC to be issued against the master credit (the \"Master DC\")"},"master_dc_no":{"kind":"text","label":"Master credit no","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"master_dc_issued_by":{"kind":"text","label":"Issued by","hasRule":1,"requiredIf":[["back_to_back",["true"],0]],"activeIf":[["back_to_back",["true"],0]],"check":1},"drafts":{"kind":"check","label":"Drafts for the percentage of invoice value below, at"},"drafts_percent":{"kind":"text","label":"Percentage of invoice value (%)","hasRule":1,"requiredIf":[["drafts",["true"],0]],"activeIf":[["drafts",["true"],0]],"check":["^\\d+$","should be a whole number"]},"drafts_at":{"kind":"radio","label":"Drafts at","hasRule":1,"requiredIf":[["drafts",["true"],0]],"activeIf":[["drafts",["true"],0]]},"term_days":{"kind":"text","label":"Term: days","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":["^\\d+$","should be a whole number"]},"term_after":{"kind":"text","label":"days after","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]],"check":1},"draft_date":{"kind":"date","label":"Date","hasRule":1,"requiredIf":[["drafts_at",["Date"],0]],"activeIf":[["drafts_at",["Date"],0]],"check":1},"term_prepay":{"kind":"radio","label":"If it is a term LC, please select one","hasRule":1,"requiredIf":[["drafts_at",["Term"],0]],"activeIf":[["drafts_at",["Term"],0]]},"doc_bill_of_lading":{"kind":"check","label":"Full set of Clean on Board marine bills of lading"},"bl_made_out_to":{"kind":"radio","label":"Made out to","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_made_out_to_other":{"kind":"text","label":"Made out to (other)","hasRule":1,"requiredIf":[["bl_made_out_to",["other (specify)"],0]],"activeIf":[["bl_made_out_to",["other (specify)"],0]],"check":1},"bl_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]]},"bl_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_bill_of_lading",["true"],0]],"activeIf":[["doc_bill_of_lading",["true"],0]],"check":1},"doc_air_waybill":{"kind":"check","label":"Original Air Waybill consigned to the Bank"},"awb_freight":{"kind":"radio","label":"Marked Freight","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]]},"awb_notify_party":{"kind":"text","label":"Notify party (if not specified, notify party is considered to be applicant)","hasRule":1,"requiredIf":[["doc_air_waybill",["true"],0]],"activeIf":[["doc_air_waybill",["true"],0]],"check":1},"doc_delivery_order":{"kind":"check","label":"Delivery order signed by beneficiary made out to applicant"},"do_originals":{"kind":"text","label":"Delivery order: originals","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_copies":{"kind":"text","label":"Delivery order: copies","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]],"check":["^\\d+$","should be a whole number"]},"do_countersigned_by":{"kind":"select","label":"Countersigned by how many of our signatories","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"do_signature_verified":{"kind":"select","label":"Whose signature(s) ... to be verified by the Bank","hasRule":1,"requiredIf":[["doc_delivery_order",["true"],0]],"activeIf":[["doc_delivery_order",["true"],0]]},"doc_insurance":{"kind":"check","label":"Marine/Air Insurance Policy or Certificate in duplicate, in Singapore in the currency of the credit, covering Institute Cargo Clauses (A), Institute War Clauses, Institute Strikes Clauses / Strikes, Riots and Civil Commotion"},"insurance_arrangement":{"kind":"select","label":"For FOB/CFR/FCA/CPT","activeIf":[["doc_insurance",["true"],0]]},"insurance_cover_no":{"kind":"text","label":"Open cover no","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"insurance_cover_with":{"kind":"text","label":"With","hasRule":1,"requiredIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"activeIf":[["insurance_arrangement",["Insurance covered by applicant under open Cover No."],0]],"check":1},"doc_beneficiary_certificate":{"kind":"check","label":"Beneficiary's certificate stating 1 set of non-negotiable documents has been sent to applicant"},"bencert_sent_by":{"kind":"checks","label":"Sent by","options":["faxed","mailed","couriered"],"hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]]},"bencert_days":{"kind":"text","label":"Within (days after shipment)","hasRule":1,"requiredIf":[["doc_beneficiary_certificate",["true"],0]],"activeIf":[["doc_beneficiary_certificate",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_commercial_invoice":{"kind":"check","label":"Signed commercial invoice"},"invoice_originals":{"kind":"text","label":"Commercial invoice: originals","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"invoice_copies":{"kind":"text","label":"Commercial invoice: copies","hasRule":1,"requiredIf":[["doc_commercial_invoice",["true"],0]],"activeIf":[["doc_commercial_invoice",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_packing_list":{"kind":"check","label":"Packing list"},"packing_list_originals":{"kind":"text","label":"Packing list: originals","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"packing_list_copies":{"kind":"text","label":"Packing list: copies","hasRule":1,"requiredIf":[["doc_packing_list",["true"],0]],"activeIf":[["doc_packing_list",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_weight_note":{"kind":"check","label":"Weight note"},"weight_note_originals":{"kind":"text","label":"Weight note: originals","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"weight_note_copies":{"kind":"text","label":"Weight note: copies","hasRule":1,"requiredIf":[["doc_weight_note",["true"],0]],"activeIf":[["doc_weight_note",["true"],0]],"check":["^\\d+$","should be a whole number"]},"doc_certificate_of_origin":{"kind":"check","label":"Certificate of origin"},"origin_originals":{"kind":"text","label":"Certificate of origin: originals","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_copies":{"kind":"text","label":"Certificate of origin: copies","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":["^\\d+$","should be a whole number"]},"origin_country":{"kind":"text","label":"Showing country of origin as","hasRule":1,"requiredIf":[["doc_certificate_of_origin",["true"],0]],"activeIf":[["doc_certificate_of_origin",["true"],0]],"check":1},"doc_other":{"kind":"check","label":"Other documents"},"other_documents_1":{"kind":"text","label":"Other documents","hasRule":1,"requiredIf":[["doc_other",["true"],0]],"activeIf":[["doc_other",["true"],0]],"check":1},"other_documents_2":{"kind":"text","label":"Other documents (line 2)","activeIf":[["doc_other",["true"],0]],"check":1},"goods_description":{"kind":"long","label":"Goods description (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","hasRule":1,"always":1,"check":1},"additional_conditions":{"kind":"long","label":"Additional conditions (if space is insufficient, attach additional information with Company's stamp, signed by authorised signors)","check":1},"bank_charges":{"kind":"check","label":"All bank charges are for account of","hasRule":1,"always":1},"bank_charges_for":{"kind":"radio","label":"Charges for account of","hasRule":1,"requiredIf":[["bank_charges",["true"],0]],"activeIf":[["bank_charges",["true"],0]]},"confirmation":{"kind":"check","label":"Confirmation required"},"confirmation_charges":{"kind":"radio","label":"Confirmation charges","hasRule":1,"requiredIf":[["confirmation",["true"],0]],"activeIf":[["confirmation",["true"],0]]},"post_shipment_financing":{"kind":"check","label":"Please provide us with post-shipment financing under Documentary Credit (\"TR/BRP\") financing for 100% value of all documentary presentations made in compliance with this DC, but where there are discrepancies, we hereby agree to waive all such discrepancies"},"financing_type":{"kind":"radio","label":"Financing","hasRule":1,"requiredIf":[["post_shipment_financing",["true"],0]],"activeIf":[["post_shipment_financing",["true"],0]]},"financing_currency":{"kind":"select","label":"Foreign currency financing in (type of currency)","hasRule":1,"requiredIf":[["financing_type",["Foreign Currency Financing"],0]],"activeIf":[["financing_type",["Foreign Currency Financing"],0]]},"forward_contract_no":{"kind":"text","label":"Forward contract no","hasRule":1,"requiredIf":[["financing_type",["Apply Forward Contract"],0]],"activeIf":[["financing_type",["Apply Forward Contract"],0]],"check":1},"advance_payment":{"kind":"check","label":"We authorise you to debit DC amount in full from our account for advance payment"},"advance_payment_account":{"kind":"text","label":"Account no for advance payment","hasRule":1,"requiredIf":[["advance_payment",["true"],0]],"activeIf":[["advance_payment",["true"],0]],"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"issuance_charges_account":{"kind":"text","label":"Account no for DC issuance charges","hasRule":1,"always":1,"check":["^\\d[\\d-]*\\d$|^\\d$","is not an account number (digits and - only)"]},"authorised_person":{"kind":"text","label":"Name and title of authorised person(s)","check":1}};
 var lcDeps = {"application_date":["application_date","latest_shipment_date","expiry_date"],"mode_of_advising":["mode_of_advising"],"applicant_name":["applicant_name"],"applicant_address_1":["applicant_address_1"],"applicant_address_2":["applicant_address_2"],"applicant_address_3":["applicant_address_3"],"applicant_address_4":["applicant_address_4"],"contact_name":["contact_name"],"contact_tel":["contact_tel"],"contact_fax":["contact_fax"],"dc_no":["dc_no"],"bank_code":["bank_code"],"advising_bank_name":["advising_bank_name"],"advising_bank_address_1":["advising_bank_address_1"],"advising_bank_address_2":["advising_bank_address_2"],"advising_bank_address_3":["advising_bank_address_3"],"third_party_name":["third_party_name"],"third_party_address_1":["third_party_address_1"],"third_party_address_2":["third_party_address_2"],"third_party_address_3":["third_party_address_3"],"beneficiary_name":["beneficiary_name"],"beneficiary_address_1":["beneficiary_address_1"],"beneficiary_address_2":["beneficiary_address_2"],"beneficiary_address_3":["beneficiary_address_3"],"beneficiary_address_4":["beneficiary_address_4"],"beneficiary_contact":["beneficiary_contact"],"beneficiary_tel":["beneficiary_tel"],"beneficiary_fax":["beneficiary_fax"],"currency":["currency"],"amount":["amount"],"tolerance":["tolerance","tolerance_plus","tolerance_minus"],"tolerance_plus":["tolerance_plus"],"tolerance_minus":["tolerance_minus"],"price_basis":["price_basis","price_basis_other","insurance_arrangement","insurance_cover_no","insurance_cover_with"],"price_basis_other":["price_basis_other"],"partial_shipment":["partial_shipment"],"transhipment":["transhipment"],"shipment_from":["shipment_from","shipment_from_place"],"shipment_from_place":["shipment_from_place"],"shipment_from_place_2":["shipment_from_place_2"],"shipment_to":["shipment_to","shipment_to_place"],"shipment_to_place":["shipment_to_place"],"shipment_to_place_2":["shipment_to_place_2"],"latest_shipment_date":["latest_shipment_date","expiry_date"],"expiry_date":["expiry_date"],"presentation_days":["presentation_days"],"back_to_back":["back_to_back","master_dc_no","master_dc_issued_by"],"master_dc_no":["master_dc_no"],"master_dc_issued_by":["master_dc_issued_by"],"drafts":["drafts","drafts_percent","drafts_at","term_days","term_after","draft_date","term_prepay"],"drafts_percent":["drafts_percent"],"drafts_at":["drafts_at","term_days","term_after","draft_date","term_prepay"],"term_days":["term_days"],"term_after":["term_after"],"draft_date":["draft_date"],"term_prepay":["term_prepay"],"doc_bill_of_lading":["doc_bill_of_lading","bl_made_out_to","bl_made_out_to_other","bl_freight","bl_notify_party"],"bl_made_out_to":["bl_made_out_to","bl_made_out_to_other"],"bl_made_out_to_other":["bl_made_out_to_other"],"bl_freight":["bl_freight"],"bl_notify_party":["bl_notify_party"],"doc_air_waybill":["doc_air_waybill","awb_freight","awb_notify_party"],"awb_freight":["awb_freight"],"awb_notify_party":["awb_notify_party"],"doc_delivery_order":["doc_delivery_order","do_originals","do_copies","do_countersigned_by","do_signature_verified"],"do_originals":["do_originals"],"do_copies":["do_copies"],"do_countersigned_by":["do_countersigned_by"],"do_signature_verified":["do_signature_verified"],"doc_insurance":["doc_insurance","insurance_arrangement","insurance_cover_no","insurance_cover_with"],"insurance_arrangement":["insurance_arrangement","insurance_cover_no","insurance_cover_with"],"insurance_cover_no":["insurance_cover_no"],"insurance_cover_with":["insurance_cover_with"],"doc_beneficiary_certificate":["doc_beneficiary_certificate","bencert_sent_by","bencert_days"],"bencert_sent_by":["bencert_sent_by"],"bencert_days":["bencert_days"],"doc_commercial_invoice":["doc_commercial_invoice","invoice_originals","invoice_copies"],"invoice_originals":["invoice_originals"],"invoice_copies":["invoice_copies"],"doc_packing_list":["doc_packing_list","packing_list_originals","packing_list_copies"],"packing_list_originals":["packing_list_originals"],"packing_list_copies":["packing_list_copies"],"doc_weight_note":["doc_weight_note","weight_note_originals","weight_note_copies"],"weight_note_originals":["weight_note_originals"],"weight_note_copies":["weight_note_copies"],"doc_certificate_of_origin":["doc_certificate_of_origin","origin_originals","origin_copies","origin_country"],"origin_originals":["origin_originals"],"origin_copies":["origin_copies"],"origin_country":["origin_country"],"doc_other":["doc_other","other_documents_1","other_documents_2"],"other_documents_1":["other_documents_1"],"other_documents_2":["other_documents_2"],"goods_description":["goods_description"],"additional_conditions":["additional_conditions"],"bank_charges":["bank_charges","bank_charges_for"],"bank_charges_for":["bank_charges_for"],"confirmation":["confirmation","confirmation_charges"],"confirmation_charges":["confirmation_charges"],"post_shipment_financing":["post_shipment_financing","financing_type","financing_currency","forward_contract_no"],"financing_type":["financing_type","financing_currency","forward_contract_no"],"financing_currency":["financing_currency"],"forward_contract_no":["forward_contract_no"],"advance_payment":["advance_payment","advance_payment_account"],"advance_payment_account":["advance_payment_account"],"issuance_charges_account":["issuance_charges_account"],"authorised_person":["authorised_person"]};
 var lcState = {v: {}, st: {}};
+
+// ---------------------------------------------------------------------------------------------------------------------
+// lcRules(d, src)
+//   d    the PDF document (Acrobat's "this").
+//   src  optional. The name of the box that just changed (its blur, its click, or what the calculation says triggered
+//        it). Then only the questions that read that box are re-checked, and nothing at all if its value is what the
+//        last run saw. No src (opening, Reset form, Check form, saving ...): every question, and every look is
+//        written again.
+// Returns the array of missing questions' labels, with two extra properties:
+//   .bad    the wrong answers, as "<question>: <what is wrong>"
+//   .first  the name of the box of the first problem (Check form puts the cursor there)
+// ---------------------------------------------------------------------------------------------------------------------
 function lcRules(d, src) {
-var M = lcModel, S = lcState, only = null, calc, pass, cleared = false, nm, g, sig;
-// src = the name of the box that just changed (its blur, its click, or what the calculation says triggered it). Then only the
-// questions that read that box are re-checked (lcDeps), and nothing at all if its value is what the last run saw.
-// No src (opening, Reset form, Check form, saving ...): every question, and every look is written again.
-if (src) {
-  nm = String(src).replace(/^[A-Z]+\./, ""); g = /^(.+)__(\d+|list)$/.exec(nm);
-  g = M[nm] ? nm : g && M[g[1]] ? g[1] : "";
-  if (lcDeps) {
-    g = g && lcDeps[g];
-    sig = d.getField(nm); sig = sig ? String(sig.value) : "";
-    if (!g || S.v[nm] === sig) { g = []; g.bad = []; g.first = ""; return g; }
-    S.v[nm] = sig; only = {}; for (sig = 0; sig < g.length; sig++) only[g[sig]] = 1;
-  }
-}
-if (!only) { S.v = {}; S.st = {}; }
-function has(list, x) { for (var i = 0; i < list.length; i++) if (list[i] == x) return true; return false; }
+  // ---- Fixed values used below, given names -------------------------------------------------------------------------
+  var DISPLAY_HIDDEN = 1;                               // a field's .display is 1 when it is hidden (Acrobat's display.hidden)
+  var OFF = "Off";                                      // the value of a tick box or option that is not ticked
+  var GREY_LINE = ["G", 0.6];                           // outline of a box that does not apply (mid grey)
+  var GREY_FILL = ["G", 0.86];                          // fill of a box that does not apply (light grey)
+  var PINK_FILL = ["RGB", 1, 0.88, 0.88];              // fill of a box that is blank or wrong (the outline is red)
+  var MONTH_NAMES = "JanFebMarAprMayJunJulAugSepOctNovDec";   // 3 letters each, so month number = position / 3 + 1
+  // The characters an answer may contain (letters, digits, space and . , - / ( ) ' : ? + # & @ % and line breaks). This
+  // is written as a string, so the backslashes are doubled: it reads [^A-Za-z0-9 .,\-/()':?+#&@%\r\n] ("anything else").
+  var OTHER_CHARACTERS = "[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]";
 
-// The answer to question id, read from the PDF's fields.
-function val(id) {
-  var m = M[id], f, a = [], i;
-  if (m.kind == "checks") { for (i = 0; i < m.options.length; i++) { f = d.getField(id + "__" + i); if (f && f.value != "Off") a.push(m.options[i]); } return a; }
-  if (m.kind == "date" && shown(id)) return d.getField(id).valueAsString;
-  if (m.kind == "date" && d.getField(id + "__list")) { a = /^(\d\d) (\w{3}) (\d{4})$/.exec(d.getField(id + "__list").valueAsString);
-    return a ? a[1] + "/" + ("0" + ("JanFebMarAprMayJunJulAugSepOctNovDec".indexOf(a[2]) / 3 + 1)).slice(-2) + "/" + a[3] : ""; }
-  f = d.getField(id); if (!f) return "";
-  if (m.kind == "check") return f.value != "Off" ? "true" : "false";
-  return f.value == "Off" ? "" : String(f.value);
-}
-function shown(id) { var f = d.getField(id); return !!f && f.display != 1; } // 1 = display.hidden
-function empty(x) { return typeof x == "object" ? !x.length : x === ""; }
+  var model = lcModel;        // the rules table (see the top of this script)
+  var state = lcState;        // what the last run saw
+  var onlyThese = null;       // null = check every question; otherwise {question id: 1} = check just those
+  var cleared = false;        // did this pass clear a box? (then a second pass is needed: another question may read it)
+  var i;
 
-// Does any of these rules hold?
-function any(rules) {
-  var i, j, x, hit;
-  for (i = 0; i < rules.length; i++) {
-    x = val(rules[i][0]); hit = false;
-    if (typeof x == "object") { for (j = 0; j < x.length; j++) if (has(rules[i][1], x[j])) hit = true; } else hit = has(rules[i][1], x);
-    if (rules[i][2] ? !hit && !empty(x) : hit) return true;
-  }
-  return false;
-}
-function mandatory(id) { var m = M[id]; return m.always ? true : any(m.requiredIf || []); }
+  // ---- Which questions to check? ----------------------------------------------------------------------------------
+  if (src) {
+    // The box's name, without the form's code ("BGA.") that the joined PDF puts in front of every box name.
+    var changedName = String(src).replace(/^[A-Z]+\./, "");
+    // A tick-any option or a date's drop-down list is named "<question>__<number>" or "<question>__list".
+    var partOfGroup = /^(.+)__(\d+|list)$/.exec(changedName);
+    // The question that box belongs to ("" if it belongs to none).
+    var changedQuestion = "";
+    if (model[changedName]) changedQuestion = changedName;
+    else if (partOfGroup && model[partOfGroup[1]]) changedQuestion = partOfGroup[1];
 
-// What is wrong with a typed answer, or "".
-function wrong(id) {
-  var m = M[id], f = d.getField(id), s = m.kind == "date" ? val(id) : f ? f.valueAsString : "", x, k;
-  if (!m.check || !s) return "";
-  x = s.match(new RegExp("[^A-Za-z0-9 .,\\-/()':?+#&@%\\r\\n]", "g"));
-  if (x) { k = []; for (var i = 0; i < x.length; i++) if (!has(k, x[i])) k.push(x[i]); return "remove " + k.join(" ") + " (letters, digits and . , - / ( ) ' : ? + # & @ % only)"; }
-  if (m.kind == "date") { x = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s); k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? "" : "not a real date (DD/MM/YYYY)"; }
-  return m.check.length && !new RegExp(m.check[0]).test(s) ? m.check[1] : "";
-}
-
-// A real DD/MM/YYYY date as a Date, or null.
-function day(s) { var x = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s), k = x && new Date(+x[3], x[2] - 1, +x[1]); return k && k.getDate() == +x[1] && k.getMonth() == x[2] - 1 ? k : null; }
-function v(id) { return M[id] ? val(id) : ""; }
-
-// THE RULES ACROSS ANSWERS. Each rule: what it checks (one sentence), then its code. A rule that is broken puts its
-// message on the question: the box turns red, and Check form lists "<question>: <message>".
-// Rules 1-6 are the LC's own (the same as the cross-checks in pdf-template-studio's form/validate.ts); a form without
-// those questions skips them. Rules 7-9 come from the form file (FORM["checks"]), so any form can add its own.
-function isNumber(s) { return /^[\d,]+(\.\d+)?$/.test(s); }   // "1,250.50" yes, "abc" no
-function toNumber(s) { return Number(s.replace(/,/g, "")); }   // "1,250.50" -> 1250.5
-function across() {
-  var X = {};                                     // what is wrong, by question id
-  var applied  = day(v("application_date"));      // the dates as real dates (null while blank or not a date)
-  var shipment = day(v("latest_shipment_date"));
-  var expiry   = day(v("expiry_date"));
-  var amount   = v("amount");
-  var basis    = v("price_basis");
-
-  // Rule 1: the LC must not expire before the latest shipment date.
-  if (shipment && expiry && expiry < shipment) X.expiry_date = "is before the latest shipment date";
-  // Rule 2: the LC must not expire before the application date (checked only when rule 1 is fine).
-  else if (applied && expiry && expiry < applied) X.expiry_date = "is before the application date";
-
-  // Rule 3: the latest shipment date must not be before the application date.
-  if (applied && shipment && shipment < applied) X.latest_shipment_date = "is before the application date";
-
-  // Rule 4: the application date must not be in the future.
-  if (applied && applied.getTime() > new Date().getTime()) X.application_date = "is in the future";
-
-  // Rule 5: the amount must be more than zero.
-  if (isNumber(amount) && !(toNumber(amount) > 0)) X.amount = "must be more than zero";
-
-  // Rule 6: "insurance for FOB/CFR/FCA/CPT" must be left blank when the price basis is CIF or CIP
-  //         (with CIF and CIP the beneficiary arranges the insurance).
-  if (v("insurance_arrangement") && (basis == "CIF" || basis == "CIP"))
-    X.insurance_arrangement = "is only for FOB/CFR/FCA/CPT, but price basis is " + basis + " (the beneficiary insures)";
-
-  // Rules 7-9: the form file's own checks. Each is {t: kind, a: question, m: message, ...}.
-  var C = [], c, first, second, digits, allowed;
-  for (var j = 0; j < C.length; j++) {
-    c = C[j];
-    // Rule 7 ("order"): date a must not be before date b (with s: true, it must be after b, not the same day).
-    if (c.t == "order") {
-      first = day(v(c.a)); second = day(v(c.b));
-      if (first && second && (c.s ? first <= second : first < second)) X[c.a] = c.m;
-    }
-    // Rule 8 ("range"): number a must be between lo and hi.
-    if (c.t == "range" && isNumber(v(c.a))) {
-      if (toNumber(v(c.a)) < c.lo || toNumber(v(c.a)) > c.hi) X[c.a] = c.m;
-    }
-    // Rule 9 ("lengths"): a's digits must be one of the allowed lengths, which can depend on answer b
-    //         (e.g. an account number's length by currency; "*" = any other answer).
-    if (c.t == "lengths") {
-      digits = v(c.a).replace(/\D/g, "");
-      allowed = c.by.hasOwnProperty(v(c.b)) ? c.by[v(c.b)] : c.by["*"];
-      if (digits && allowed && allowed.length && !has(allowed, digits.length)) X[c.a] = c.m;
+    if (lcDeps) {
+      var toRecheck = changedQuestion && lcDeps[changedQuestion];   // the list of question ids that read this box
+      var changedField = d.getField(changedName);
+      var newValue = changedField ? String(changedField.value) : "";
+      // Nothing reads this box, or its value is the one the last run saw: there is nothing to do.
+      if (!toRecheck || state.v[changedName] === newValue) {
+        var nothing = [];
+        nothing.bad = [];
+        nothing.first = "";
+        return nothing;
+      }
+      state.v[changedName] = newValue;
+      onlyThese = {};
+      for (i = 0; i < toRecheck.length; i++) onlyThese[toRecheck[i]] = 1;
     }
   }
-  return X;
-}
-
-// Clears a question's box, so an answer can't stay behind in a question that doesn't apply.
-function clear(f, kind, nm) {
-  if (kind == "check" || kind == "checks" || kind == "radio") { if (f.value != "Off") { f.value = "Off"; cleared = true; } }
-  else if (f.type == "combobox" && /__list$/.test(f["name"])) { if (f.currentValueIndices != 0) { f.currentValueIndices = 0; cleared = true; } } // a date list: back to "Pick a date"
-  else if (f.value !== "" && f.value != null) { f.value = ""; cleared = true; }
-  delete S.v[nm];   // the next change of this box is new to the next run
-}
-
-// GO THROUGH EVERY QUESTION, in 5 steps, and colour (and lock) its boxes.
-var missing = [], bad = [], first = "", id, m, applies, required, problem, whatsWrong, names, i, f, X;
-calc = d.calculate; d.calculate = false;   // every write below would otherwise run the calculation again
-try {
-for (pass = 0; pass < 3; pass++) {   // a second pass only if a box was cleared (a later question may read it)
-missing = []; bad = []; first = ""; cleared = false;
-X = across();
-for (id in M) {
-  m = M[id]; if (!m.hasRule && !m.check && !m.activeIf) continue;   // no rule, no format: nothing to do
-  if (only && !only[id]) continue;                                    // this change can't affect it
-
-  // Step 1: does the question apply? (activeIf in the form file, e.g. "only when Term is picked")
-  applies = !m.activeIf || any(m.activeIf);
-
-  // Step 2: is it mandatory now, and still blank? (required=True always, or requiredIf in the form file)
-  required = m.hasRule && applies ? mandatory(id) : false;
-  problem = required && (m.kind == "check" ? val(id) != "true" : empty(val(id)));
-  if (problem) missing.push(m.label);
-
-  // Step 3: is the answer wrong? (its format, or one of the rules across answers above)
-  whatsWrong = applies ? wrong(id) || X[id] || "" : "";
-  if (whatsWrong) { bad.push(m.label + ": " + whatsWrong); problem = true; }
-
-  // Step 4: which boxes on the page are this question's (tick-any: one per option; a date: its list or its box)
-  names = [id];
-  if (m.kind == "checks") { names = []; for (i = 0; i < m.options.length; i++) names.push(id + "__" + i); }
-  if (m.kind == "date" && !shown(id) && d.getField(id + "__list")) names = [id + "__list"];
-  if (problem && !first) first = names[0];
-
-  // Step 5: colour each box. Doesn't apply: grey, locked, answer cleared. Problem: red outline, pink fill.
-  //         Fine: black outline (or just its underline), white fill.
-  sig = (required && problem ? "r" : "-") + (applies ? (problem ? "p" : "o") : "g");   // required flag, then the look
-  for (i = 0; i < names.length; i++) {
-    f = d.getField(names[i]); if (!f) continue;
-    if (S.st[names[i]] === sig) continue;   // already looks like this: every write to Acrobat is slow
-    S.st[names[i]] = sig;
-    if (m.hasRule && m.kind != "checks") f.required = !!(required && problem); // only while blank or wrong: Acrobat outlines Required boxes in red even when filled
-    if (m.activeIf) f.readonly = !applies;                                                   // locked until it applies
-    if (!applies) { clear(f, m.kind, names[i]); f.lineWidth = 1; f.strokeColor = ["G", 0.6]; f.fillColor = ["G", 0.86]; continue; } // grey, cleared
-    f.lineWidth = problem || !m.underlined ? 1 : 0;
-    f.strokeColor = problem ? color.red : m.underlined ? color.transparent : color.black;    // red when blank or wrong
-    f.fillColor = problem ? ["RGB", 1, 0.88, 0.88] : m.underlined ? color.transparent : color.white;
+  // A full run starts from scratch: forget what the last run saw, so every box is checked and written again.
+  if (!onlyThese) {
+    state.v = {};
+    state.st = {};
   }
-}
-// Amounts in words (a question with words: [amount id, currency id]), as the old bill of exchange wrote them.
-for (id in M) if (M[id].words && (!only || only[id]) && (f = d.getField(id))) { i = lcWords(v(M[id].words[0]), v(M[id].words[1] || "")); if (f.value != i) { f.value = i; delete S.v[id]; } }
-if (!cleared) break;
-}
-} catch (e) { console.println("lcRules: " + e); }
-d.calculate = calc;
-missing.bad = bad;
-missing.first = first; // the field of the first problem, for "Check form" to go to
-return missing;
+
+  // ===================================================================================================================
+  // HELPERS. They read the document d and the rules table, and are used by the checks further down.
+  // ===================================================================================================================
+
+  // Is value one of the items in list? (Loose == on purpose: a rule may list the number 1 for the text "1".)
+  function has(list, value) {
+    for (var k = 0; k < list.length; k++) {
+      if (list[k] == value) return true;
+    }
+    return false;
+  }
+
+  // A real DD/MM/YYYY date as a Date, or null (blank text, wrong shape, or a day that does not exist such as 31/02/2026).
+  // new Date() rolls 31/02 over to 03/03, so a date is real only if the day and month come back unchanged.
+  function parseDate(text) {
+    var parts = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(text);
+    if (!parts) return null;
+    var dayOfMonth = +parts[1];
+    var monthIndex = parts[2] - 1;   // Date counts months from 0
+    var date = new Date(+parts[3], monthIndex, dayOfMonth);
+    if (date.getDate() == dayOfMonth && date.getMonth() == monthIndex) return date;
+    return null;
+  }
+
+  // Is this box on the page? (A date has two boxes: the calendar box, and a drop-down list for when JavaScript is off;
+  // lcDates hides one of them.)
+  function shown(id) {
+    var field = d.getField(id);
+    return !!field && field.display != DISPLAY_HIDDEN;
+  }
+
+  // Is this answer blank? An answer is text, or a list of ticked options (for tick-any questions).
+  function empty(answer) {
+    if (typeof answer == "object") return !answer.length;
+    return answer === "";
+  }
+
+  // --- Reading an answer -----------------------------------------------------------------------------------------
+
+  // A tick-any question: the list of the options that are ticked, e.g. ["Air", "Sea"].
+  function tickedOptions(id, question) {
+    var ticked = [];
+    for (var k = 0; k < question.options.length; k++) {
+      var option = d.getField(id + "__" + k);   // one tick box per option
+      if (option && option.value != OFF) ticked.push(question.options[k]);
+    }
+    return ticked;
+  }
+
+  // The drop-down list's text "05 Mar 2026" as "05/03/2026" ("" while it still says "Pick a date").
+  function dateFromList(text) {
+    var parts = /^(\d\d) (\w{3}) (\d{4})$/.exec(text);
+    if (!parts) return "";
+    var monthNumber = ("0" + (MONTH_NAMES.indexOf(parts[2]) / 3 + 1)).slice(-2);   // "Mar" -> 6 / 3 + 1 -> "03"
+    return parts[1] + "/" + monthNumber + "/" + parts[3];
+  }
+
+  // The answer to question id, read from the PDF's fields:
+  //   tick-any  -> a list of the ticked options
+  //   date      -> "DD/MM/YYYY" text, from the calendar box (or from the drop-down list when that is the one showing)
+  //   tick box  -> "true" or "false"
+  //   anything else -> its text ("" if blank, or an option group with nothing picked)
+  function val(id) {
+    var question = model[id];
+    if (question.kind == "checks") return tickedOptions(id, question);
+    if (question.kind == "date") {
+      if (shown(id)) return d.getField(id).valueAsString;
+      var listBox = d.getField(id + "__list");
+      if (listBox) return dateFromList(listBox.valueAsString);
+    }
+    var field = d.getField(id);
+    if (!field) return "";
+    if (question.kind == "check") return field.value != OFF ? "true" : "false";
+    return field.value == OFF ? "" : String(field.value);
+  }
+
+  // The answer to question id, or "" when the form has no such question (other forms lack some of the LC's questions).
+  function v(id) {
+    if (model[id]) return val(id);
+    return "";
+  }
+
+  // --- "Applies only if" and "mandatory if" ----------------------------------------------------------------------
+
+  // Does the answer (text, or list of ticked options) include one of the values?
+  function matchesAny(answer, values) {
+    if (typeof answer != "object") return has(values, answer);
+    for (var k = 0; k < answer.length; k++) {
+      if (has(values, answer[k])) return true;
+    }
+    return false;
+  }
+
+  // Does any of these conditions hold? Each condition is [question id, values, not]:
+  //   not = 0: holds when the answer to that question is one of the values.     e.g. ["mode", ["Air"], 0]
+  //   not = 1: holds when it is answered, but not with one of the values.       e.g. ["mode", ["Air"], 1]
+  // Used for activeIf ("this question applies only if ...") and requiredIf ("this question is mandatory if ...").
+  function any(conditions) {
+    for (var k = 0; k < conditions.length; k++) {
+      var questionId = conditions[k][0];
+      var values = conditions[k][1];
+      var negate = conditions[k][2];
+      var answer = val(questionId);
+      var matches = matchesAny(answer, values);
+      if (negate) {
+        if (!matches && !empty(answer)) return true;
+      } else if (matches) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Must this question be answered right now? Always (always: true), or when one of its requiredIf conditions holds.
+  function mandatory(id) {
+    var question = model[id];
+    if (question.always) return true;
+    return any(question.requiredIf || []);
+  }
+
+  // --- Is the typed answer wrong? --------------------------------------------------------------------------------
+
+  // The characters in text that are not allowed, each once, in order of appearance ([] when all are fine).
+  function disallowedCharacters(text) {
+    var found = text.match(new RegExp(OTHER_CHARACTERS, "g")) || [];
+    var each = [];
+    for (var k = 0; k < found.length; k++) {
+      if (!has(each, found[k])) each.push(found[k]);
+    }
+    return each;
+  }
+
+  // What is wrong with the typed answer, as a sentence for the "bad" list; "" when it is fine or blank.
+  // Three checks, in this order, and the first that fails wins:
+  //   1. only the allowed characters             "remove ~ ^ (letters, digits and ...)"
+  //   2. a date is a real date                   "not a real date (DD/MM/YYYY)"
+  //   3. the question's own pattern (a regular expression and its message from the form file)
+  // Only questions with a "check" in the rules table are checked at all.
+  function wrong(id) {
+    var question = model[id];
+    var text = "";
+    if (question.kind == "date") {
+      text = val(id);
+    } else {
+      var field = d.getField(id);
+      if (field) text = field.valueAsString;
+    }
+    if (!question.check || !text) return "";
+
+    var disallowed = disallowedCharacters(text);
+    if (disallowed.length) return "remove " + disallowed.join(" ") + " (letters, digits and . , - / ( ) ' : ? + # & @ % only)";
+
+    if (question.kind == "date") return parseDate(text) ? "" : "not a real date (DD/MM/YYYY)";
+
+    // question.check is [pattern, message], or just the number 1 ("allowed characters only", which was checked above).
+    if (question.check.length && !new RegExp(question.check[0]).test(text)) return question.check[1];
+    return "";
+  }
+
+  // ===================================================================================================================
+  // THE RULES ACROSS ANSWERS. Each rule: what it checks (one sentence and an example), then its code. A rule that is
+  // broken puts its message on the question: the box turns red, and Check form lists "<question>: <message>".
+  // Rules 1-6 are the LC's own (the same as the cross-checks in pdf-template-studio's form/validate.ts); a form without
+  // those questions skips them (v() gives "" for a question the form does not have). Rules 7-9 come from the form file
+  // (FORM["checks"]), so any form can add its own.
+  // ===================================================================================================================
+
+  // Is this text a number such as "1,250.50"? ("abc" and "" are not.)
+  function isNumber(text) {
+    return /^[\d,]+(\.\d+)?$/.test(text);
+  }
+
+  // "1,250.50" -> 1250.5
+  function toNumber(text) {
+    return Number(text.replace(/,/g, ""));
+  }
+
+  // Runs every rule across answers. Returns what is wrong, by question id: {question id: message}.
+  function across() {
+    var problems = {};
+    // The dates as real dates (null while blank or not a date, so a rule that needs both dates is skipped).
+    var applicationDate = parseDate(v("application_date"));
+    var shipmentDate = parseDate(v("latest_shipment_date"));
+    var expiryDate = parseDate(v("expiry_date"));
+    var amount = v("amount");
+    var priceBasis = v("price_basis");
+
+    // Rule 1: the LC must not expire before the latest shipment date.
+    //         e.g. expiry 01/03/2026, latest shipment 15/03/2026 -> expiry_date: is before the latest shipment date
+    if (shipmentDate && expiryDate && expiryDate < shipmentDate) {
+      problems.expiry_date = "is before the latest shipment date";
+    }
+    // Rule 2: the LC must not expire before the application date (checked only when rule 1 is fine, so a question
+    //         never shows two messages).
+    //         e.g. application 10/03/2026, expiry 01/03/2026 (no shipment date yet) -> expiry_date: is before the application date
+    else if (applicationDate && expiryDate && expiryDate < applicationDate) {
+      problems.expiry_date = "is before the application date";
+    }
+
+    // Rule 3: the latest shipment date must not be before the application date.
+    //         e.g. application 10/03/2026, latest shipment 05/03/2026 -> latest_shipment_date: is before the application date
+    if (applicationDate && shipmentDate && shipmentDate < applicationDate) {
+      problems.latest_shipment_date = "is before the application date";
+    }
+
+    // Rule 4: the application date must not be in the future.
+    //         e.g. today is 27/11/2026, application 28/11/2026 -> application_date: is in the future
+    if (applicationDate && applicationDate.getTime() > new Date().getTime()) {
+      problems.application_date = "is in the future";
+    }
+
+    // Rule 5: the amount must be more than zero (only once it is a number).
+    //         e.g. amount 0.00 -> amount: must be more than zero
+    if (isNumber(amount) && !(toNumber(amount) > 0)) {
+      problems.amount = "must be more than zero";
+    }
+
+    // Rule 6: "insurance for FOB/CFR/FCA/CPT" must be left blank when the price basis is CIF or CIP
+    //         (with CIF and CIP the beneficiary arranges the insurance).
+    //         e.g. price basis CIF and an insurance arrangement filled in ->
+    //              insurance_arrangement: is only for FOB/CFR/FCA/CPT, but price basis is CIF (the beneficiary insures)
+    if (v("insurance_arrangement") && (priceBasis == "CIF" || priceBasis == "CIP")) {
+      problems.insurance_arrangement = "is only for FOB/CFR/FCA/CPT, but price basis is " + priceBasis + " (the beneficiary insures)";
+    }
+
+    // Rules 7-9: the form file's own checks. Each is {t: kind, a: question, m: message, ...}, tried in the order the
+    // form file lists them (a later one replaces an earlier message on the same question).
+    var formChecks = [];
+    for (var j = 0; j < formChecks.length; j++) {
+      var check = formChecks[j];
+
+      // Rule 7 ("order"): date a must not be before date b (with s: true it must be after b: the same day is not enough).
+      //         e.g. {t: "order", a: "expiry_date", b: "issue_date", m: "is before the issue date"},
+      //         expiry 01/03/2026, issue 05/03/2026 -> expiry_date: is before the issue date
+      if (check.t == "order") {
+        var dateA = parseDate(v(check.a));
+        var dateB = parseDate(v(check.b));
+        if (dateA && dateB) {
+          var tooEarly = check.s ? dateA <= dateB : dateA < dateB;
+          if (tooEarly) problems[check.a] = check.m;
+        }
+      }
+
+      // Rule 8 ("range"): number a must be between lo and hi.
+      //         e.g. {t: "range", a: "tolerance", lo: 0, hi: 10, m: "must be between 0 and 10"}, tolerance 15 -> that message
+      if (check.t == "range") {
+        var rangeAnswer = v(check.a);
+        if (isNumber(rangeAnswer)) {
+          var rangeNumber = toNumber(rangeAnswer);
+          if (rangeNumber < check.lo || rangeNumber > check.hi) problems[check.a] = check.m;
+        }
+      }
+
+      // Rule 9 ("lengths"): a's digits (ignoring spaces, dashes ...) must be one of the allowed lengths, which can depend
+      //         on the answer to b (e.g. an account number's length by currency; "*" = any other answer).
+      //         e.g. {t: "lengths", a: "account", b: "currency", by: {"USD": [10], "*": [8, 9]}, m: "..."},
+      //         currency USD and an account number of 9 digits -> that message
+      if (check.t == "lengths") {
+        var digits = v(check.a).replace(/\D/g, "");
+        var otherAnswer = v(check.b);
+        var allowedLengths = check.by.hasOwnProperty(otherAnswer) ? check.by[otherAnswer] : check.by["*"];
+        if (digits && allowedLengths && allowedLengths.length && !has(allowedLengths, digits.length)) {
+          problems[check.a] = check.m;
+        }
+      }
+    }
+    return problems;
+  }
+
+  // ===================================================================================================================
+  // WRITING THE LOOK OF A BOX
+  // ===================================================================================================================
+
+  // Empties a box of a question that does not apply, so an answer can't stay behind in a locked question.
+  //   field  the box;  kind  its question's kind;  boxName  the box's name.
+  // Sets "cleared" when it really changed an answer (a second pass then re-checks the questions that read it).
+  function clearAnswer(field, kind, boxName) {
+    if (kind == "check" || kind == "checks" || kind == "radio") {
+      if (field.value != OFF) {
+        field.value = OFF;
+        cleared = true;
+      }
+    } else if (field.type == "combobox" && /__list$/.test(field["name"])) {
+      // A date's drop-down list: back to its first line, "Pick a date".
+      if (field.currentValueIndices != 0) {
+        field.currentValueIndices = 0;
+        cleared = true;
+      }
+    } else if (field.value !== "" && field.value != null) {
+      field.value = "";
+      cleared = true;
+    }
+    delete state.v[boxName];   // the next change of this box is new to the next run
+  }
+
+  // A box of a question that does not apply: grey, locked (the caller does that), answer cleared.
+  function paintGrey(field, kind, boxName) {
+    clearAnswer(field, kind, boxName);
+    field.lineWidth = 1;
+    field.strokeColor = GREY_LINE;
+    field.fillColor = GREY_FILL;
+  }
+
+  // A box of a question that applies. A problem (blank mandatory, or wrong): red outline, pink fill. Fine: black outline
+  // and white fill; or, for an "underlined" question (just a line to write on): no outline, a transparent fill, and
+  // only its underline.
+  function paintActive(field, underlined, problem) {
+    field.lineWidth = problem || !underlined ? 1 : 0;
+    if (problem) {
+      field.strokeColor = color.red;
+      field.fillColor = PINK_FILL;
+    } else if (underlined) {
+      field.strokeColor = color.transparent;
+      field.fillColor = color.transparent;
+    } else {
+      field.strokeColor = color.black;
+      field.fillColor = color.white;
+    }
+  }
+
+  // The names of the boxes on the page that belong to a question:
+  //   tick-any  one box per option ("<id>__0", "<id>__1" ...)
+  //   a date    its calendar box, or its drop-down list ("<id>__list") when the list is the one showing
+  //   otherwise the question's own box
+  function boxesOf(id, question) {
+    var names = [id];
+    if (question.kind == "checks") {
+      names = [];
+      for (var k = 0; k < question.options.length; k++) names.push(id + "__" + k);
+    }
+    if (question.kind == "date" && !shown(id) && d.getField(id + "__list")) names = [id + "__list"];
+    return names;
+  }
+
+  // ===================================================================================================================
+  // GO THROUGH EVERY QUESTION, in 5 steps, and colour (and lock) its boxes.
+  // ===================================================================================================================
+  var missing = [];        // labels of the mandatory questions still blank
+  var bad = [];            // "<label>: <what is wrong>" for each wrong answer
+  var firstProblem = "";   // the box of the first question with a problem
+  var id, question, applies, required, problem, whatsWrong, boxNames, lookKey, field, boxName, wordsField, words;
+  var calculateWas = d.calculate;
+  d.calculate = false;   // every write below would otherwise run the calculation again
+  try {
+    // A second pass only if a box was cleared (a later question may read it). Three passes at most.
+    for (var pass = 0; pass < 3; pass++) {
+      missing = [];
+      bad = [];
+      firstProblem = "";
+      cleared = false;
+      var wrongAcross = across();   // what the rules across answers found, by question id
+
+      for (id in model) {
+        question = model[id];
+        if (!question.hasRule && !question.check && !question.activeIf) continue;   // no rule, no format: nothing to do
+        if (onlyThese && !onlyThese[id]) continue;                                  // this change can't affect it
+
+        // Step 1: does the question apply? (activeIf in the form file, e.g. "only when Term is picked")
+        applies = !question.activeIf || any(question.activeIf);
+
+        // Step 2: is it mandatory now, and still blank? (always: true, or requiredIf in the form file)
+        required = false;
+        if (question.hasRule && applies) required = mandatory(id);
+        if (required) {
+          if (question.kind == "check") problem = val(id) != "true";   // a tick box is "blank" when not ticked
+          else problem = empty(val(id));
+        } else {
+          problem = false;
+        }
+        if (problem) missing.push(question.label);
+
+        // Step 3: is the answer wrong? (its format, or one of the rules across answers above)
+        whatsWrong = "";
+        if (applies) whatsWrong = wrong(id) || wrongAcross[id] || "";
+        if (whatsWrong) {
+          bad.push(question.label + ": " + whatsWrong);
+          problem = true;
+        }
+
+        // Step 4: which boxes on the page are this question's (tick-any: one per option; a date: its list or its box)
+        boxNames = boxesOf(id, question);
+        if (problem && !firstProblem) firstProblem = boxNames[0];
+
+        // Step 5: colour each box. Doesn't apply: grey, locked, answer cleared. Problem: red outline, pink fill.
+        //         Fine: black outline (or just its underline), white fill.
+        // lookKey sums up the look in two letters: "r" if marked Required, then "p" (problem), "o" (fine) or
+        // "g" (greyed). A box that already has this look is skipped: every write to Acrobat is slow.
+        lookKey = (required && problem ? "r" : "-") + (applies ? (problem ? "p" : "o") : "g");
+        for (i = 0; i < boxNames.length; i++) {
+          boxName = boxNames[i];
+          field = d.getField(boxName);
+          if (!field) continue;
+          if (state.st[boxName] === lookKey) continue;
+          state.st[boxName] = lookKey;
+          // Required only while blank or wrong: Acrobat outlines Required boxes in red even when they are filled.
+          if (question.hasRule && question.kind != "checks") field.required = !!(required && problem);
+          if (question.activeIf) field.readonly = !applies;   // locked until it applies
+          if (applies) paintActive(field, question.underlined, problem);
+          else paintGrey(field, question.kind, boxName);
+        }
+      }
+
+      // Amounts in words (a question with words: [amount id, currency id]), as the old bill of exchange wrote them.
+      for (id in model) {
+        question = model[id];
+        if (!question.words) continue;
+        if (onlyThese && !onlyThese[id]) continue;
+        wordsField = d.getField(id);
+        if (!wordsField) continue;
+        words = lcWords(v(question.words[0]), v(question.words[1] || ""));
+        if (wordsField.value != words) {
+          wordsField.value = words;
+          delete state.v[id];
+        }
+      }
+
+      if (!cleared) break;
+    }
+  } catch (e) {
+    console.println("lcRules: " + e);
+  }
+  d.calculate = calculateWas;
+
+  missing.bad = bad;
+  missing.first = firstProblem;   // the field of the first problem, for "Check form" to go to
+  return missing;
 }
 
-// "1,250.50", "USD" -> "USD One Thousand Two Hundred Fifty and Fifty cents only" ("" while the amount is blank).
-function lcWords(a, ccy) {
-  var D = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"],
-      T = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"], G = ["", " Thousand", " Million", " Billion", " Trillion"];
-  var s = String(a).replace(/[, ]/g, ""), m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(s), out = [], n, g, k;
-  if (!m) return "";
-  function three(x) { var h = Math.floor(x / 100), r = x % 100, w = [];
-    if (h) w.push(D[h] + " Hundred"); if (r >= 20) w.push(T[Math.floor(r / 10)] + (r % 10 ? " " + D[r % 10] : "")); else if (r) w.push(D[r]); return w.join(" "); }
-  function words(t) { t = t.replace(/^0+/, ""); if (!t) return "Zero"; var parts = []; for (g = 0; t.length; g++) { n = +t.slice(-3); t = t.slice(0, -3); if (n) parts.unshift(three(n) + G[g]); } return parts.join(" "); }
-  k = words(m[1]);
-  if (m[2] && +m[2]) k += " and " + words(m[2].length == 1 ? m[2] + "0" : m[2]) + " cents";
-  return (ccy ? ccy + " " : "") + k + " only";
+// ---------------------------------------------------------------------------------------------------------------------
+// lcWords(amount, currency): an amount in words.
+//   "1,250.50", "USD" -> "USD One Thousand Two Hundred Fifty and Fifty cents only"
+//   "" or text that is not an amount -> "" (the words stay blank until the amount is filled in)
+// ---------------------------------------------------------------------------------------------------------------------
+function lcWords(amount, currency) {
+  var ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+              "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  var TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  var SCALES = ["", " Thousand", " Million", " Billion", " Trillion"];   // the name of each group of 3 digits
+
+  // Whole part and (up to 2-digit) cents part: "1250.5" -> "1250" and "5". No commas or spaces are allowed to remain.
+  var amountText = String(amount).replace(/[, ]/g, "");
+  var parts = /^(\d+)(?:\.(\d{1,2}))?$/.exec(amountText);
+  if (!parts) return "";
+
+  // 1 to 999 in words: 305 -> "Three Hundred Five", 42 -> "Forty Two".
+  function belowThousand(number) {
+    var hundreds = Math.floor(number / 100);
+    var rest = number % 100;
+    var pieces = [];
+    if (hundreds) pieces.push(ONES[hundreds] + " Hundred");
+    if (rest >= 20) {
+      var tens = TENS[Math.floor(rest / 10)];
+      if (rest % 10) tens = tens + " " + ONES[rest % 10];
+      pieces.push(tens);
+    } else if (rest) {
+      pieces.push(ONES[rest]);
+    }
+    return pieces.join(" ");
+  }
+
+  // A string of digits in words: "1250" -> "One Thousand Two Hundred Fifty"; "" or "000" -> "Zero".
+  // It works from the right in groups of 3 digits (units, thousands, millions ...) and skips an all-zero group.
+  function digitsInWords(digits) {
+    digits = digits.replace(/^0+/, "");
+    if (!digits) return "Zero";
+    var groups = [];
+    for (var scale = 0; digits.length; scale++) {
+      var group = +digits.slice(-3);
+      digits = digits.slice(0, -3);
+      if (group) groups.unshift(belowThousand(group) + SCALES[scale]);
+    }
+    return groups.join(" ");
+  }
+
+  var words = digitsInWords(parts[1]);
+  if (parts[2] && +parts[2]) {
+    // One digit after the point is tenths of a dollar: "0.5" means 50 cents, not 5.
+    var cents = parts[2].length == 1 ? parts[2] + "0" : parts[2];
+    words += " and " + digitsInWords(cents) + " cents";
+  }
+  return (currency ? currency + " " : "") + words + " only";
 }
-// Acrobat only: show each date's calendar box and hide its drop-down list.
+
+// ---------------------------------------------------------------------------------------------------------------------
+// lcDates(d): Acrobat only. Shows each date's calendar box and hides its drop-down list.
+// A date question has two boxes: the calendar box (works with JavaScript) and a plain drop-down list of real dates
+// (the fallback for when JavaScript is off). The list below is filled in when the PDF is built: the ids of the date questions.
+// ---------------------------------------------------------------------------------------------------------------------
 function lcDates(d) {
-  var D = ["application_date","latest_shipment_date","expiry_date","draft_date"], i, t, p;
-  for (i = 0; i < D.length; i++) { t = d.getField(D[i]); if (!t) continue; t.display = display.visible;
-    p = d.getField(D[i] + "__list"); if (p) p.display = display.hidden; }
+  var dateIds = ["application_date","latest_shipment_date","expiry_date","draft_date"];
+  for (var i = 0; i < dateIds.length; i++) {
+    var calendarBox = d.getField(dateIds[i]);
+    if (!calendarBox) continue;
+    calendarBox.display = display.visible;
+    var listBox = d.getField(dateIds[i] + "__list");
+    if (listBox) listBox.display = display.hidden;
+  }
 }
+
 // When the warning before saving / printing was last closed. Some Acrobat versions (seen on Windows) fire the
 // save / print events several times in a row; the warning then shows once, not once per event.
 var lcWarnedAt = 0;
+
 // On opening in Acrobat: show the calendars, and set every box's colour and lock.
-if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) { lcDates(this); lcRules(this); }
-// THE QR CODES' TEXT. lcPayload(doc) returns every answered question as JSON:
-//   {"form": "LC-01", "version": "1.0", "saved": "...", "complete": true, "data": {field id: answer, ...}}
-// Tick boxes become true; "tick any" questions become lists of the ticked options. One QR code holds 2,300 bytes of it
-// (LC_QR_CAP); longer answers take as many codes as they need, at most 16 (LC_QR_MAX, the most that "structured append"
-// allows; lcDrawQr splits the text). The text is padded with spaces to fill the codes it needs: 2,300, 4,600 ... 36,800
-// bytes. Only beyond 16 codes are the long paragraphs shortened (and listed in "truncated"). "bencert_sent_by": ["faxed","mailed","couriered"], ["goods_description","additional_conditions"],
-// "LC-01" and "1.0" are filled in by document_script (step 2).
-var LC_QR_CAP = 2300, LC_QR_MAX = 16;
-// The text as UTF-8 bytes, one character per byte (what goes into the codes).
-function lcBytes(s) { return unescape(encodeURIComponent(s)); }
-// How many codes this text needs (0 for no text).
-function lcCodes(s) { return s ? Math.ceil(lcBytes(s).length / LC_QR_CAP) : 0; }
+if (typeof app != "undefined" && /^(Exchange|Reader)/.test(app.viewerType)) {
+  lcDates(this);
+  lcRules(this);
+}
+
+// =====================================================================================================================
+// THE QR CODES' TEXT
+//
+// What this does: lcPayload(doc) reads every answered question and returns them as one piece of text (JSON), which
+// the QR codes then carry. JSON is plain text that a computer can read back, like this:
+//   {"form": "LC-01", "version": "1.0", "saved": "2026-11-27T10:30", "complete": true, "data": {"amount": "1,250.50", ...}}
+// How answers look in it: a ticked tick box becomes true. A "tick any" question becomes the list of options that are
+// ticked. A blank question is left out.
+//
+// How big it can be: one QR code holds 2,300 bytes (LC_QR_CAP). A longer text needs more codes, at most 16 (LC_QR_MAX):
+// 16 is the most that "structured append" allows (that is the part of the QR standard that lets codes say "I am
+// code 2 of 3"). lcDrawQr cuts the text into slices, one per code.
+// The text is padded with spaces so it fills the codes it needs exactly: 2,300, 4,600 ... 36,800 bytes.
+// Only if the answers are longer than 16 codes can hold, the long paragraphs are shortened (and listed in "truncated").
+//
+// The names FORM, VERSION, GROUPS and LONG in capitals below are filled in when the PDF is built (document_script in
+// pdf_writer.py).
+// =====================================================================================================================
+var LC_QR_CAP = 2300;   // bytes in one QR code
+var LC_QR_MAX = 16;     // most codes for one form
+
+// The text as UTF-8 bytes, one character per byte (what really goes into the codes).
+// Example: "A" is 1 byte, but a letter with an accent is 2 bytes, so the byte count can be bigger than the letter count.
+function lcBytes(text) {
+  return unescape(encodeURIComponent(text));
+}
+
+// How many codes this text needs (0 for no text). Example: 2,301 bytes -> 2 codes.
+function lcCodes(text) {
+  if (!text) return 0;
+  return Math.ceil(lcBytes(text).length / LC_QR_CAP);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// lcPayload(d): every answered question as JSON text (see above).
+//   d  the PDF document.
+// Returns the text, padded with spaces to fill whole codes.
+// ---------------------------------------------------------------------------------------------------------------------
 function lcPayload(d) {
-var G = {"bencert_sent_by": ["faxed","mailed","couriered"]}, LONG = ["goods_description","additional_conditions"], CAP = LC_QR_CAP, BUDGET = LC_QR_MAX * LC_QR_CAP;
-var data = {}, i, n, f, k, v, g, m, out, cut = [], ok = true, t = new Date();
-for (i = 0; i < d.numFields; i++) {
-  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n) || /__qrx_/.test(n)) continue;
-  f = d.getField(n); if (!f || f.type == "button" || f.type == "signature") continue;
-  g = /^(.+)__(\d+)$/.exec(n);
-  if (g && G[g[1]]) { if (f.value != "Off") { if (!data[g[1]]) data[g[1]] = []; data[g[1]].push(G[g[1]][+g[2]]); } continue; }
-  if (f.type == "checkbox") { if (f.value != "Off") data[n] = true; continue; }
-  v = f.type == "radiobutton" ? (f.value == "Off" ? "" : String(f.value)) : String(f.valueAsString).replace(/^\s+|\s+$/g, "");
-  if (v !== "") data[n] = v;
-}
-if (typeof lcRules == "function") { m = lcRules(d); ok = !m.length && !(m.bad || []).length; }
-function pad(x) { return ("0" + x).slice(-2); }
-out = {"form": "LC-01", "version": "1.0", "saved": t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate()) + "T" + pad(t.getHours()) + ":" + pad(t.getMinutes()), "complete": ok, "data": data};
-// 16 codes hold 36,800 bytes: only if the answers are longer still, shorten the long paragraphs (in order) and say so.
-for (i = 0; i < LONG.length && lcBytes(JSON.stringify(out)).length > BUDGET; i++) {
-  k = LONG[i]; if (!data[k]) continue;
-  cut.push(k); out.truncated = cut;
-  v = lcBytes(JSON.stringify(out)).length - BUDGET + 3;
-  data[k] = v < data[k].length ? data[k].slice(0, data[k].length - v) + "..." : "...";
-}
-// Padded with spaces to fill the codes it needs (2,300 bytes each).
-v = JSON.stringify(out); n = lcBytes(v).length; m = Math.max(1, Math.ceil(n / CAP)) * CAP - (n - v.length);
-while (v.length < m) v += " ";
-return v;
-}
-// THE QR CODE ENCODER AND DRAWING (standard QR code, no library needed).
-// lcQrMatrix(bytes, part) returns the 177 x 177 grid of a version 40 QR code (true = dark square). bytes is the
-// text as UTF-8 bytes (one character per byte). part is null for a single code, or [index, total, parity] for
-// one of several codes ("structured append", part of the QR standard: each code says it is code k of n, n at
-// most 16, so a scanner that supports it joins them; any other scanner reads each code's text, and the texts are
-// joined in order). Version 40, error correction M, byte mode, mask 0; at most 2,329 bytes per code.
-function lcQrMatrix(s, part) {
-  var N = 177, i, j, x, y, m = [], f = [], bytes = [];
-  for (i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i) & 255);
-  for (y = 0; y < N; y++) { m.push([]); f.push([]); for (x = 0; x < N; x++) { m[y].push(false); f[y].push(false); } }
-  function set(x, y, dark) { m[y][x] = dark; f[y][x] = true; }
-  function mul(a, b) { var z = 0; for (var k = 7; k >= 0; k--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((b >>> k) & 1) * a; } return z; }
-  // Function patterns: timing, finders, alignment, format area, version, dark module.
-  for (i = 0; i < N; i++) { set(6, i, i % 2 == 0); set(i, 6, i % 2 == 0); }
-  function finder(cx, cy) { for (var dy = -4; dy <= 4; dy++) for (var dx = -4; dx <= 4; dx++) {
-    var d = Math.max(Math.abs(dx), Math.abs(dy)), xx = cx + dx, yy = cy + dy;
-    if (xx >= 0 && xx < N && yy >= 0 && yy < N) set(xx, yy, d != 2 && d != 4); } }
-  finder(3, 3); finder(N - 4, 3); finder(3, N - 4);
-  var A = [6, 30, 58, 86, 114, 142, 170];
-  for (i = 0; i < A.length; i++) for (j = 0; j < A.length; j++) {
-    if ((i == 0 && j == 0) || (i == 0 && j == A.length - 1) || (i == A.length - 1 && j == 0)) continue;
-    for (var dy = -2; dy <= 2; dy++) for (var dx = -2; dx <= 2; dx++) set(A[i] + dx, A[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) != 1);
+  var GROUPS = {"bencert_sent_by": ["faxed","mailed","couriered"]};     // "tick any" questions: question id -> its list of options, in order
+  var LONG_QUESTIONS = ["goods_description","additional_conditions"]; // the long paragraph questions, which may be shortened if the answers are too big
+  var budget = LC_QR_MAX * LC_QR_CAP;   // the most bytes 16 codes can hold
+  var data = {};                 // the answers: question id -> answer
+  var truncated = [];            // ids of the questions that had to be shortened
+  var i, n, field, partOfGroup, answer, check;
+  var now = new Date();
+
+  // 1. Go through every box in the PDF and note the answers.
+  // The box's name is kept in the variable n and the line below is written in exactly this way on purpose: build_all.py
+  // finds that line and adds a filter to it, so that one form of the joined PDF does not read another form's boxes.
+  for (i = 0; i < d.numFields; i++) {
+    n = d.getNthFieldName(i);
+    // Skip the form's own helper boxes (their names start with two underscores), the date drop-down lists, and the
+    // extra QR code pages' rows.
+    if (/^__/.test(n) || /__list$/.test(n) || /__qrx_/.test(n)) continue;
+    field = d.getField(n);
+    if (!field || field.type == "button" || field.type == "signature") continue;
+
+    // One option of a "tick any" question is named "<question>__<number>": add the option to the question's list.
+    partOfGroup = /^(.+)__(\d+)$/.exec(n);
+    if (partOfGroup && GROUPS[partOfGroup[1]]) {
+      if (field.value != "Off") {
+        if (!data[partOfGroup[1]]) data[partOfGroup[1]] = [];
+        data[partOfGroup[1]].push(GROUPS[partOfGroup[1]][+partOfGroup[2]]);
+      }
+      continue;
+    }
+    // A single tick box: true when ticked, left out when not.
+    if (field.type == "checkbox") {
+      if (field.value != "Off") data[n] = true;
+      continue;
+    }
+    // Option buttons give the picked option; text boxes give the text without blanks at the start and end.
+    if (field.type == "radiobutton") {
+      answer = field.value == "Off" ? "" : String(field.value);
+    } else {
+      answer = String(field.valueAsString).replace(/^\s+|\s+$/g, "");
+    }
+    if (answer !== "") data[n] = answer;
   }
-  var rem = 0, fmt; for (i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
-  fmt = ((0 << 10) | rem) ^ 0x5412; // error correction M (00), mask 0
-  function bit(v, k) { return ((v >>> k) & 1) != 0; }
-  for (i = 0; i <= 5; i++) set(8, i, bit(fmt, i));
-  set(8, 7, bit(fmt, 6)); set(8, 8, bit(fmt, 7)); set(7, 8, bit(fmt, 8));
-  for (i = 9; i < 15; i++) set(14 - i, 8, bit(fmt, i));
-  for (i = 0; i < 8; i++) set(N - 1 - i, 8, bit(fmt, i));
-  for (i = 8; i < 15; i++) set(8, N - 15 + i, bit(fmt, i));
-  set(8, N - 8, true);
-  rem = 40; for (i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
-  var ver = (40 << 12) | rem;
-  for (i = 0; i < 18; i++) { var a = N - 11 + i % 3, b = Math.floor(i / 3); set(a, b, bit(ver, i)); set(b, a, bit(ver, i)); }
-  // Data: (for one of several codes: mode 0011, its index, the total - 1, the parity of all the text), then mode
-  // 0100, 16-bit length, the bytes, terminator, padding to 2,334 data codewords.
-  var bits = [], cap = 2334 * 8;
-  function put(v, n) { for (var k = n - 1; k >= 0; k--) bits.push((v >>> k) & 1); }
-  if (part) { put(3, 4); put(part[0], 4); put(part[1] - 1, 4); put(part[2], 8); }
-  put(4, 4); put(bytes.length, 16); for (i = 0; i < bytes.length; i++) put(bytes[i], 8);
-  if (bits.length > cap) throw new Error("too much text for one QR code (" + bytes.length + " bytes)");
-  put(0, Math.min(4, cap - bits.length)); while (bits.length % 8) bits.push(0);
-  var data = []; for (i = 0; i < bits.length; i += 8) { var v = 0; for (j = 0; j < 8; j++) v = (v << 1) | bits[i + j]; data.push(v); }
-  for (i = 0; data.length < 2334; i++) data.push(i % 2 ? 0x11 : 0xEC);
-  // Reed-Solomon: 49 blocks (18 of 47 + 31 of 48 data codewords), 28 error-correction codewords each.
-  var div = [], root = 1; for (i = 0; i < 27; i++) div.push(0); div.push(1);
-  for (i = 0; i < 28; i++) { for (j = 0; j < 28; j++) { div[j] = mul(div[j], root); if (j + 1 < 28) div[j] ^= div[j + 1]; } root = mul(root, 2); }
-  var blocks = [], k = 0;
-  for (i = 0; i < 49; i++) {
-    var len = i < 18 ? 47 : 48, dat = data.slice(k, k + len), ecc = []; k += len;
-    for (j = 0; j < 28; j++) ecc.push(0);
-    for (j = 0; j < dat.length; j++) { var fct = dat[j] ^ ecc.shift(); ecc.push(0); for (var t = 0; t < 28; t++) ecc[t] ^= mul(div[t], fct); }
-    if (i < 18) dat.push(-1);
-    blocks.push(dat.concat(ecc));
+
+  // 2. Is the form complete (nothing missing, nothing wrong)? Ask the rules engine.
+  var complete = true;
+  if (typeof lcRules == "function") {
+    check = lcRules(d);
+    complete = !check.length && !(check.bad || []).length;
   }
-  var all = [];
-  for (i = 0; i < blocks[0].length; i++) for (j = 0; j < 49; j++) if (blocks[j][i] != -1) all.push(blocks[j][i]);
-  // Place the codewords in the zigzag, then mask 0 ((x + y) even flips).
-  var n = 0;
-  for (var right = N - 1; right >= 1; right -= 2) {
-    if (right == 6) right = 5;
-    for (var vert = 0; vert < N; vert++) for (j = 0; j < 2; j++) {
-      x = right - j; var up = ((right + 1) & 2) == 0; y = up ? N - 1 - vert : vert;
-      if (!f[y][x] && n < all.length * 8) { m[y][x] = ((all[n >>> 3] >>> (7 - (n & 7))) & 1) != 0; n++; }
+
+  // 3. Put it together. Two digits for a date part: 5 -> "05".
+  function twoDigits(number) {
+    return ("0" + number).slice(-2);
+  }
+  var saved = now.getFullYear() + "-" + twoDigits(now.getMonth() + 1) + "-" + twoDigits(now.getDate()) +
+              "T" + twoDigits(now.getHours()) + ":" + twoDigits(now.getMinutes());
+  var out = {"form": "LC-01", "version": "1.0", "saved": saved, "complete": complete, "data": data};
+
+  // 4. 16 codes hold 36,800 bytes. Only if the answers are longer still: shorten the long paragraphs, one after the
+  // other, until it fits, and say which ones in "truncated".
+  var tooMany;
+  for (i = 0; i < LONG_QUESTIONS.length && lcBytes(JSON.stringify(out)).length > budget; i++) {
+    var longId = LONG_QUESTIONS[i];
+    if (!data[longId]) continue;
+    truncated.push(longId);
+    out.truncated = truncated;
+    // How many bytes are still too many (plus 3 for the "..." that marks the cut).
+    tooMany = lcBytes(JSON.stringify(out)).length - budget + 3;
+    if (tooMany < data[longId].length) data[longId] = data[longId].slice(0, data[longId].length - tooMany) + "...";
+    else data[longId] = "...";
+  }
+
+  // 5. Pad with spaces up to whole codes (2,300 bytes each). Letters that take 2 or more bytes make the byte count
+  // bigger than the character count, so that difference is taken off the number of spaces.
+  var text = JSON.stringify(out);
+  var byteCount = lcBytes(text).length;
+  var wantedLength = Math.max(1, Math.ceil(byteCount / LC_QR_CAP)) * LC_QR_CAP - (byteCount - text.length);
+  while (text.length < wantedLength) text += " ";
+  return text;
+}
+
+// =====================================================================================================================
+// THE QR CODE ENCODER (standard QR code, no library needed)
+//
+// What this does: lcQrMatrix(bytes, part) works out the picture of ONE QR code: a square grid of 177 x 177 tiny
+// squares, each dark or light. It returns the grid as rows: grid[y][x] is true for a dark square.
+//   bytes  the text as UTF-8 bytes, one character per byte (what lcBytes gives).
+//   part   null for a single code, or [index, total, parity] for one of several codes. This is "structured append":
+//          each code says "I am code <index> of <total>", and "parity" is a check number of the whole text (every byte
+//          XORed together), so a scanner that knows structured append can join the codes in the right order. Any other
+//          scanner just reads each code's text on its own, and the texts are joined in order.
+// What kind of code: version 40 (the biggest, 177 x 177), error correction level M (about 15% of it can be damaged
+// and it still reads), byte mode, mask 0. At most 2,329 bytes per code.
+//
+// How it is built, in order (the same steps as the QR standard):
+//   1. Draw the fixed patterns every QR code has (the three big corner squares, the alignment squares, the dotted
+//      lines, and the little strips that say what kind of code it is).
+//   2. Turn the bytes into a long row of bits, and pad it to the size the code has room for.
+//   3. Add error correction ("Reed-Solomon": extra check bytes worked out from the data, so a scanner can fix a
+//      smudged or torn code).
+//   4. Pour the bits into the free squares in a zigzag order.
+//   5. Flip every second square ("mask 0"), which stops large plain areas that scanners find hard to read.
+// The maths below must not be changed, or the codes will not scan.
+// =====================================================================================================================
+function lcQrMatrix(text, part) {
+  var SIZE = 177;                    // squares across (and down) of a version 40 code
+  var DATA_CODEWORDS = 2334;         // bytes of answers a version 40 / level M code holds (a "codeword" is one byte)
+  var BLOCKS = 49;                   // the data is cut into 49 blocks, each with its own error correction
+  var SHORT_BLOCKS = 18;             // the first 18 blocks have 47 data bytes; the other 31 have 48
+  var ECC_PER_BLOCK = 28;            // error correction bytes added to each block
+  var bytes = [];                    // the text as numbers 0 to 255
+  var grid = [];                     // grid[y][x]: is this square dark?
+  var isFixed = [];                  // isFixed[y][x]: is this square part of a fixed pattern (so data must not go there)?
+  var i, j, x, y;
+
+  for (i = 0; i < text.length; i++) bytes.push(text.charCodeAt(i) & 255);
+  // Start with a grid of light squares, none of them fixed.
+  for (y = 0; y < SIZE; y++) {
+    grid.push([]);
+    isFixed.push([]);
+    for (x = 0; x < SIZE; x++) {
+      grid[y].push(false);
+      isFixed[y].push(false);
     }
   }
-  for (y = 0; y < N; y++) for (x = 0; x < N; x++) if (!f[y][x] && (x + y) % 2 == 0) m[y][x] = !m[y][x];
-  return m;
-}
-// THE PAGES THE CODES GO ON. Codes 1 and 2 sit on the form's QR code page (rows "__qr1_0" ... "__qr1_176", "__qr2_..."),
-// each row a read-only text box holding the letter "n" in the ZapfDingbats font (which prints as a black square) for each
-// dark square. Codes 3 to 16 go two to a page on extra pages, which exist only while needed: lcDrawQr copies the hidden page
-// template "qrx" (rows "__qrx_1_0" ... "__qrx_2_176") after the last page with Template.spawn, and deletes the pages it no
-// longer needs (when the viewer refuses to delete one, the page stays, empty and marked "not used", and is left out of
-// printing: lcLastPage). A spawned page's fields are renamed by the viewer (bRename: true) but still end in the template's
-// name, so lcExtra finds them by that ending. Don't write "getField(" for those fields: build_all.py rewrites it
-// to add the form's code in the joined PDF; d["getField"](name) is left alone, and the names found are already complete.
-// lcExtra(doc) returns the spawned pages' field-name prefixes, in page order: [{p: prefix, page: page number}].
-function lcExtra(d) {
-  var out = [], i, nm, m, f, q = d.getField("__qr"), first = q && typeof q.page == "number" ? q.page : -1;
-  for (i = 0; i < d.numFields; i++) {
-    nm = d.getNthFieldName(i); m = /^(.*)__qrx_1_0$/.exec(nm);
-    if (!m || /^([A-Z]+\.)?$/.test(m[1])) continue;     // not a row, or the template's own row ("" or the form's code)
-    f = d["getField"](nm);
-    if (f && typeof f.page == "number" && f.page > first && f.page < d.numPages) out.push({p: m[1], page: f.page});
+
+  // Paint one square of a fixed pattern.
+  function setFixed(x, y, dark) {
+    grid[y][x] = dark;
+    isFixed[y][x] = true;
   }
-  out.sort(function (a, b) { return a.page - b.page; });
-  return out;
+
+  // Multiply two numbers "in GF(256)": the special arithmetic of Reed-Solomon, where every number is one byte and the
+  // answer is one byte again (0x11D is the rule that keeps it inside a byte). Used only for the error correction.
+  function multiply(a, b) {
+    var product = 0;
+    for (var k = 7; k >= 0; k--) {
+      product = (product << 1) ^ ((product >>> 7) * 0x11D);
+      product ^= ((b >>> k) & 1) * a;
+    }
+    return product;
+  }
+
+  // Bit number k of a number, as true / false.
+  function bit(value, k) {
+    return ((value >>> k) & 1) != 0;
+  }
+
+  // ---- 1. The fixed patterns ------------------------------------------------------------------------------------
+
+  // The two dotted "timing" lines (row 6 and column 6): dark, light, dark, light ...
+  for (i = 0; i < SIZE; i++) {
+    setFixed(6, i, i % 2 == 0);
+    setFixed(i, 6, i % 2 == 0);
+  }
+
+  // A "finder": the big square-in-a-square a scanner looks for, centred on (cx, cy), with its light border.
+  // Measured from the middle in squares: distance 0 and 1 dark (the solid middle), 2 light, 3 dark, 4 light (the border).
+  function drawFinder(cx, cy) {
+    for (var dy = -4; dy <= 4; dy++) {
+      for (var dx = -4; dx <= 4; dx++) {
+        var distance = Math.max(Math.abs(dx), Math.abs(dy));
+        var fx = cx + dx;
+        var fy = cy + dy;
+        if (fx >= 0 && fx < SIZE && fy >= 0 && fy < SIZE) setFixed(fx, fy, distance != 2 && distance != 4);
+      }
+    }
+  }
+  drawFinder(3, 3);               // top left
+  drawFinder(SIZE - 4, 3);        // top right
+  drawFinder(3, SIZE - 4);        // bottom left
+
+  // "Alignment" patterns: small squares that help a scanner straighten a big code. Their centres are at every
+  // combination of these positions, except the three that would land on a finder.
+  var ALIGNMENT_AT = [6, 30, 58, 86, 114, 142, 170];
+  var last = ALIGNMENT_AT.length - 1;
+  for (i = 0; i < ALIGNMENT_AT.length; i++) {
+    for (j = 0; j < ALIGNMENT_AT.length; j++) {
+      if ((i == 0 && j == 0) || (i == 0 && j == last) || (i == last && j == 0)) continue;
+      for (var ay = -2; ay <= 2; ay++) {
+        for (var ax = -2; ax <= 2; ax++) {
+          setFixed(ALIGNMENT_AT[i] + ax, ALIGNMENT_AT[j] + ay, Math.max(Math.abs(ax), Math.abs(ay)) != 1);
+        }
+      }
+    }
+  }
+
+  // The "format" strip: 15 bits that say "error correction M, mask 0", written twice (next to two of the finders).
+  // The 5 bits of information are all zero here (M is 00, mask 0 is 000), so the 10 check bits are zero too; the
+  // standard then XORs the 15 bits with 0x5412 so the strip is never all light.
+  var formatCheck = 0;
+  for (i = 0; i < 10; i++) formatCheck = (formatCheck << 1) ^ ((formatCheck >>> 9) * 0x537);
+  var formatBits = ((0 << 10) | formatCheck) ^ 0x5412;
+  for (i = 0; i <= 5; i++) setFixed(8, i, bit(formatBits, i));
+  setFixed(8, 7, bit(formatBits, 6));
+  setFixed(8, 8, bit(formatBits, 7));
+  setFixed(7, 8, bit(formatBits, 8));
+  for (i = 9; i < 15; i++) setFixed(14 - i, 8, bit(formatBits, i));
+  for (i = 0; i < 8; i++) setFixed(SIZE - 1 - i, 8, bit(formatBits, i));
+  for (i = 8; i < 15; i++) setFixed(8, SIZE - 15 + i, bit(formatBits, i));
+  setFixed(8, SIZE - 8, true);   // the one square that is always dark
+
+  // The "version" strip: 18 bits that say "version 40" (12 check bits worked out from the number 40), written twice.
+  var versionCheck = 40;
+  for (i = 0; i < 12; i++) versionCheck = (versionCheck << 1) ^ ((versionCheck >>> 11) * 0x1F25);
+  var versionBits = (40 << 12) | versionCheck;
+  for (i = 0; i < 18; i++) {
+    var vx = SIZE - 11 + i % 3;
+    var vy = Math.floor(i / 3);
+    setFixed(vx, vy, bit(versionBits, i));
+    setFixed(vy, vx, bit(versionBits, i));
+  }
+
+  // ---- 2. The data bits ------------------------------------------------------------------------------------------
+  // In order: (for one of several codes: mode 0011 = "structured append", this code's index, the total - 1, the
+  // parity), then mode 0100 = "bytes follow", the length in 16 bits, the bytes, a terminator of up to 4 zero bits,
+  // then padding to 2,334 bytes.
+  var bits = [];
+  var capacityBits = DATA_CODEWORDS * 8;
+  // Add a number as n bits, biggest bit first.
+  function putBits(value, count) {
+    for (var k = count - 1; k >= 0; k--) bits.push((value >>> k) & 1);
+  }
+  if (part) {
+    putBits(3, 4);
+    putBits(part[0], 4);
+    putBits(part[1] - 1, 4);
+    putBits(part[2], 8);
+  }
+  putBits(4, 4);
+  putBits(bytes.length, 16);
+  for (i = 0; i < bytes.length; i++) putBits(bytes[i], 8);
+  if (bits.length > capacityBits) throw new Error("too much text for one QR code (" + bytes.length + " bytes)");
+  putBits(0, Math.min(4, capacityBits - bits.length));   // terminator
+  while (bits.length % 8) bits.push(0);                   // finish the last byte
+  // Eight bits at a time -> bytes ("data codewords").
+  var data = [];
+  for (i = 0; i < bits.length; i += 8) {
+    var byteValue = 0;
+    for (j = 0; j < 8; j++) byteValue = (byteValue << 1) | bits[i + j];
+    data.push(byteValue);
+  }
+  // Fill what is left with the two padding bytes the standard asks for, 0xEC and 0x11 in turn.
+  for (i = 0; data.length < DATA_CODEWORDS; i++) data.push(i % 2 ? 0x11 : 0xEC);
+
+  // ---- 3. Error correction (Reed-Solomon) ---------------------------------------------------------------------
+  // 49 blocks (18 of 47 data bytes and 31 of 48), each given 28 error correction bytes.
+  // First the "generator": a list of 28 numbers that every block is divided by (worked out once).
+  var generator = [];
+  var root = 1;
+  for (i = 0; i < ECC_PER_BLOCK - 1; i++) generator.push(0);
+  generator.push(1);
+  for (i = 0; i < ECC_PER_BLOCK; i++) {
+    for (j = 0; j < ECC_PER_BLOCK; j++) {
+      generator[j] = multiply(generator[j], root);
+      if (j + 1 < ECC_PER_BLOCK) generator[j] ^= generator[j + 1];
+    }
+    root = multiply(root, 2);
+  }
+  // Then each block: its data bytes followed by its error correction bytes (the remainder of the division).
+  var blocks = [];
+  var position = 0;   // where this block starts in data
+  for (i = 0; i < BLOCKS; i++) {
+    var blockLength = i < SHORT_BLOCKS ? 47 : 48;
+    var blockData = data.slice(position, position + blockLength);
+    var ecc = [];
+    position += blockLength;
+    for (j = 0; j < ECC_PER_BLOCK; j++) ecc.push(0);
+    for (j = 0; j < blockData.length; j++) {
+      var factor = blockData[j] ^ ecc.shift();
+      ecc.push(0);
+      for (var eccIndex = 0; eccIndex < ECC_PER_BLOCK; eccIndex++) ecc[eccIndex] ^= multiply(generator[eccIndex], factor);
+    }
+    // A short block gets a -1 "no byte here" marker so that all blocks are equally long when interleaved below.
+    if (i < SHORT_BLOCKS) blockData.push(-1);
+    blocks.push(blockData.concat(ecc));
+  }
+  // Interleave: first byte of block 1, first byte of block 2 ... then the second byte of each block, and so on
+  // (skipping the "no byte here" markers). This spreads a smudge over many blocks, so each can still be repaired.
+  var codewords = [];
+  for (i = 0; i < blocks[0].length; i++) {
+    for (j = 0; j < BLOCKS; j++) {
+      if (blocks[j][i] != -1) codewords.push(blocks[j][i]);
+    }
+  }
+
+  // ---- 4. Place the bits, and 5. mask 0 -----------------------------------------------------------------------
+  // The standard fills the grid two columns at a time, from the bottom right, going up and then down in turn (a
+  // zigzag), and skips squares that belong to a fixed pattern. Column 6 is skipped (the timing line).
+  var bitNumber = 0;
+  for (var rightColumn = SIZE - 1; rightColumn >= 1; rightColumn -= 2) {
+    if (rightColumn == 6) rightColumn = 5;
+    for (var step = 0; step < SIZE; step++) {
+      for (j = 0; j < 2; j++) {
+        x = rightColumn - j;
+        var goingUp = ((rightColumn + 1) & 2) == 0;
+        y = goingUp ? SIZE - 1 - step : step;
+        if (!isFixed[y][x] && bitNumber < codewords.length * 8) {
+          grid[y][x] = ((codewords[bitNumber >>> 3] >>> (7 - (bitNumber & 7))) & 1) != 0;
+          bitNumber++;
+        }
+      }
+    }
+  }
+  // Mask 0: flip every square where x + y is even (only squares that are not fixed patterns).
+  for (y = 0; y < SIZE; y++) {
+    for (x = 0; x < SIZE; x++) {
+      if (!isFixed[y][x] && (x + y) % 2 == 0) grid[y][x] = !grid[y][x];
+    }
+  }
+  return grid;
 }
-// Code j (0 = first) as a function: x -> the field "<row>" or "label" or "frame" of its slot.
-function lcSlot(d, pg, j) {
-  var t = j < 2 ? "__qr" + (j + 1) : "__qrx_" + ((j - 2) % 2 + 1), p = j < 2 ? null : pg[(j - 2) >> 1] && pg[(j - 2) >> 1].p;
-  return function (x) { return p === null ? d.getField(t + "_" + x) : p === undefined ? null : d["getField"](p + t + "_" + x); };
+
+// =====================================================================================================================
+// THE PAGES THE CODES GO ON
+//
+// A code is drawn with text boxes, one box per row of the code. Each row box is read-only and holds the letter "n" in
+// the ZapfDingbats font (which prints as a black square) for each dark square, and a space for each light square.
+//   Codes 1 and 2 sit on the form's QR code page: rows "__qr1_0" ... "__qr1_176" and "__qr2_0" ... "__qr2_176".
+//   Codes 3 to 16 go two to a page on extra pages, which exist only while they are needed. lcDrawQr copies the hidden
+//   page template "qrx" (its rows are "__qrx_1_0" ... "__qrx_2_176") after the last page, with Template.spawn, and
+//   deletes the extra pages it no longer needs. If the viewer refuses to delete a page, the page stays, empty and
+//   marked "not used", and is left out of printing (see lcLastPage).
+// The viewer renames a copied page's boxes (bRename: true), but each name still ends with the template's name, so
+// lcExtra finds them by that ending.
+// Do not write the call to get a field with the usual dot-and-name spelling for those boxes: build_all.py rewrites the
+// usual spelling, to add the form's code in the joined PDF. The square-bracket spelling d["getField"](name) is left alone,
+// and the names found are already complete.
+// =====================================================================================================================
+
+// lcExtra(d): finds the extra QR pages that exist now.
+// Returns a list in page order: [{p: the start of that page's box names, page: its page number}].
+function lcExtra(d) {
+  var pages = [];
+  var i, fieldName, nameParts, field;
+  var qrBox = d.getField("__qr");
+  var qrPage = qrBox && typeof qrBox.page == "number" ? qrBox.page : -1;   // the extras come after this page
+  for (i = 0; i < d.numFields; i++) {
+    fieldName = d.getNthFieldName(i);
+    nameParts = /^(.*)__qrx_1_0$/.exec(fieldName);
+    // Not the first row of a QR page, or the template's own row (its start is "" or just the form's code): skip.
+    if (!nameParts || /^([A-Z]+\.)?$/.test(nameParts[1])) continue;
+    field = d["getField"](fieldName);
+    if (field && typeof field.page == "number" && field.page > qrPage && field.page < d.numPages) {
+      pages.push({p: nameParts[1], page: field.page});
+    }
+  }
+  pages.sort(function (first, second) { return first.page - second.page; });
+  return pages;
 }
-// Extra pages that n codes need.
-function lcPagesFor(n) { return n > 2 ? Math.ceil((n - 2) / 2) : 0; }
-// The last page of the form as printed: the QR code page, plus the extra pages the codes of this text use.
-function lcLastPage(d, text) { return d.getField("__qr").page + lcPagesFor(lcCodes(text)); }
-// "" when the codes on the pages are exactly those of this text (every code in use has its first row drawn, every other
-// slot is empty); otherwise what is wrong. Used before printing.
+
+// lcSlot(d, extraPages, j): the place for code number j (0 = the first code).
+// Returns a function: what -> that slot's box, where what is a row number 0-176, or "label", or "frame".
+// Example: for code 1 (j = 0), lcSlot(d, pages, 0)("label") is the box "__qr1_label".
+function lcSlot(d, extraPages, j) {
+  var prefix = null;       // null = a code on the form's own QR page; otherwise the start of an extra page's box names
+  var rowName;             // the part of the box name that says which code of the page this is
+  if (j < 2) {
+    rowName = "__qr" + (j + 1);
+  } else {
+    rowName = "__qrx_" + ((j - 2) % 2 + 1);                       // two codes to an extra page: 1st and 2nd
+    var page = extraPages[(j - 2) >> 1];                          // which extra page (undefined if it does not exist)
+    prefix = page && page.p;
+  }
+  return function (what) {
+    if (prefix === null) return d.getField(rowName + "_" + what);
+    if (prefix === undefined) return null;
+    return d["getField"](prefix + rowName + "_" + what);
+  };
+}
+
+// How many extra pages n codes need. Example: 2 codes -> 0 extra pages; 3 or 4 codes -> 1; 5 or 6 -> 2.
+function lcPagesFor(codeCount) {
+  return codeCount > 2 ? Math.ceil((codeCount - 2) / 2) : 0;
+}
+
+// The last page of the form as printed: the QR code page, plus the extra pages that the codes of this text use.
+function lcLastPage(d, text) {
+  return d.getField("__qr").page + lcPagesFor(lcCodes(text));
+}
+
+// lcQrCheck(d, text): are the codes on the pages exactly the codes this text needs?
+// Used before printing. Returns "" when all is well (every code in use has its first row drawn, and every other
+// slot is empty); otherwise a sentence that says what is wrong, e.g. "QR code 2 is blank".
 function lcQrCheck(d, text) {
-  var n = lcCodes(text), pg = lcExtra(d), j, f;
-  if (pg.length < lcPagesFor(n)) return "the extra QR code pages are missing";
-  for (j = 0; j < 2 + 2 * pg.length || j < n; j++) {
-    f = lcSlot(d, pg, j)("0");
-    if (!f) return "QR code " + (j + 1) + " is missing";
-    if ((f.value !== "") != (j < n)) return j < n ? "QR code " + (j + 1) + " is blank" : "QR code " + (j + 1) + " is left over";
+  var needed = lcCodes(text);
+  var extraPages = lcExtra(d);
+  var j, firstRow;
+  if (extraPages.length < lcPagesFor(needed)) return "the extra QR code pages are missing";
+  for (j = 0; j < 2 + 2 * extraPages.length || j < needed; j++) {
+    firstRow = lcSlot(d, extraPages, j)("0");
+    if (!firstRow) return "QR code " + (j + 1) + " is missing";
+    if ((firstRow.value !== "") != (j < needed)) {
+      if (j < needed) return "QR code " + (j + 1) + " is blank";
+      return "QR code " + (j + 1) + " is left over";
+    }
   }
   return "";
 }
-// lcDrawQr(doc, text) draws text as one QR code, or as many as it needs (at most 16, one per 2,300 bytes), and returns how
-// many (0 for ""; lcDrawQr(doc, "") clears everything and removes the extra pages). The text is cut into consecutive
-// equal slices; each code carries the structured-append header (its index, the total, the parity of the whole text), so a
-// scanner that supports it joins them, and any other scanner reads each slice and the slices are joined in order. The
-// frames, and the labels "QR code 1 of 3 (scan all 3 codes)", show only for codes in use.
+
+// ---------------------------------------------------------------------------------------------------------------------
+// lcDrawQr(d, text): draws the text as one QR code, or as many as it needs (at most 16, one per 2,300 bytes).
+//   d     the PDF document.
+//   text  what the codes should carry. "" clears every code and removes the extra pages.
+// Returns how many codes it drew (0 for "").
+// How: the text is cut into slices of equal size, one per code. Each code carries the structured-append header (its
+// number, the total, the parity of the whole text), so a scanner that supports it joins them; any other scanner reads
+// each slice and the slices are joined in order. Frames, and labels such as "QR code 1 of 3 (scan all 3 codes)",
+// show only for codes in use.
+// ---------------------------------------------------------------------------------------------------------------------
 function lcDrawQr(d, text) {
-  var s = lcBytes(text), n = lcCodes(text), size = n ? Math.ceil(s.length / n) : 0, codes = [], parity = 0, i, k, j, y, x, row, pg, f, g, put, calc = d.calculate, more;
-  if (n > LC_QR_MAX) throw new Error("the answers are too long for " + LC_QR_MAX + " QR codes (" + s.length + " bytes, at most " + LC_QR_MAX * LC_QR_CAP + ")");
-  for (i = 0; i < s.length; i++) parity ^= s.charCodeAt(i) & 255;
-  for (k = 0; k < n; k++) codes.push(lcQrMatrix(s.slice(k * size, (k + 1) * size), n > 1 ? [k, n, parity] : null));   // all made before anything is touched
-  d.calculate = false; // thousands of rows: don't re-run the checks after each one
+  var byteString = lcBytes(text);
+  var count = lcCodes(text);
+  var sliceSize = count ? Math.ceil(byteString.length / count) : 0;
+  var codes = [];          // one grid for each code
+  var parity = 0;          // all the bytes XORed together
+  var i, k, j, y, x, row, pages, newPages, slotBox, box;
+  var calculateWas = d.calculate;
+  var extraNeeded;         // how many extra pages these codes need
+  if (count > LC_QR_MAX) throw new Error("the answers are too long for " + LC_QR_MAX + " QR codes (" + byteString.length + " bytes, at most " + LC_QR_MAX * LC_QR_CAP + ")");
+  for (i = 0; i < byteString.length; i++) parity ^= byteString.charCodeAt(i) & 255;
+  // Work out every code first, before anything on the form is touched: if the maths fails, the form is left as it was.
+  for (k = 0; k < count; k++) {
+    codes.push(lcQrMatrix(byteString.slice(k * sliceSize, (k + 1) * sliceSize), count > 1 ? [k, count, parity] : null));
+  }
+
+  // The label under a code. A code in use says which one it is; a slot not in use is blank, except the first slot of an
+  // extra page that is left over, which says so.
+  function labelFor(j) {
+    if (!codes[j]) {
+      if (j % 2 == 0 && j >= 2 + 2 * extraNeeded) return "(this page is not used)";
+      return "";
+    }
+    if (count < 2) return "";
+    var label = "QR code " + (j + 1) + " of " + count;
+    if (j == 0) label += count == 2 ? " (scan both codes)" : " (scan all " + count + " codes)";
+    return label;
+  }
+
+  d.calculate = false;   // thousands of rows are written: do not re-run the checks after each one
   try {
-    pg = lcExtra(d);
-    for (more = lcPagesFor(n); pg.length < more; ) {                // add the pages that are needed
+    pages = lcExtra(d);
+    extraNeeded = lcPagesFor(count);
+    // Add the extra pages that are needed.
+    while (pages.length < extraNeeded) {
       d.getTemplate("qrx").spawn({nPage: d.numPages, bRename: true, bOverlay: false});
-      g = lcExtra(d); if (g.length <= pg.length) throw new Error("the viewer did not add the page for QR code " + (2 * pg.length + 3));
-      pg = g;
+      newPages = lcExtra(d);
+      if (newPages.length <= pages.length) throw new Error("the viewer did not add the page for QR code " + (2 * pages.length + 3));
+      pages = newPages;
     }
-    while (pg.length > more) {                                      // take away the pages that are not
-      try { d.deletePages(pg[pg.length - 1].page); } catch (e) { break; }
-      g = lcExtra(d); if (g.length >= pg.length) break;
-      pg = g;
+    // Take away the extra pages that are not needed (if the viewer refuses, they stay, marked "not used").
+    while (pages.length > extraNeeded) {
+      try {
+        d.deletePages(pages[pages.length - 1].page);
+      } catch (e) {
+        break;
+      }
+      newPages = lcExtra(d);
+      if (newPages.length >= pages.length) break;
+      pages = newPages;
     }
-    for (j = 0; j < 2 + 2 * pg.length; j++) {                       // every slot: its code, or empty
-      put = lcSlot(d, pg, j);
-      for (y = 0; y < 177; y++) { row = ""; if (codes[j]) for (x = 0; x < 177; x++) row += codes[j][y][x] ? "n" : " ";
-        put(y).value = row; }
-      if (f = put("label")) f.value = !codes[j] ? (j % 2 == 0 && j >= 2 + 2 * more ? "(this page is not used)" : "") : n < 2 ? "" : "QR code " + (j + 1) + " of " + n + (j == 0 ? (n == 2 ? " (scan both codes)" : " (scan all " + n + " codes)") : "");
-      if (f = put("frame")) f.display = codes[j] ? display.visible : display.hidden;
+    // Every slot gets its code, or is emptied.
+    for (j = 0; j < 2 + 2 * pages.length; j++) {
+      slotBox = lcSlot(d, pages, j);
+      for (y = 0; y < 177; y++) {
+        row = "";
+        // "n" (a black square in ZapfDingbats) for a dark square, a space for a light one.
+        if (codes[j]) {
+          for (x = 0; x < 177; x++) row += codes[j][y][x] ? "n" : " ";
+        }
+        slotBox(y).value = row;
+      }
+      box = slotBox("label");
+      if (box) box.value = labelFor(j);
+      box = slotBox("frame");
+      if (box) box.display = codes[j] ? display.visible : display.hidden;
     }
-  } finally { d.calculate = calc; }
-  return n;
+  } finally {
+    d.calculate = calculateWas;
+  }
+  return count;
 }
+// =====================================================================================================================
 // THE PIPE-DELIMITED RECORDS (the old smart form's barcode text), built from the form file's position table.
-// lcPipe = [record 1 entries, record 2 entries, ...]. Each entry describes one position (the old "1_01" ... "4_03"):
-//   {"c": text}                         a fixed text
-//   {"id": q}                           the answer as typed; also "max": cut to this many characters, "as": "amount" or "date",
-//                                       "codes": {answer: code} (an answer not listed gives nothing)
-//   {"lines": [q, ...]}                 each non-blank answer in [ ]
-//   {"join": [q, ...]}                  the non-blank answers, one space between
-//   {"tpl": {"when": tick box, "parts": [...]}}   a sentence: text with {q} answers, ["map", q, {answer: text}],
-//                                       ["list", q, separator, [[option, text], ...]], ["if", q, text if answered, else text]
+//
+// What this does: instead of the JSON text, the QR codes of this form carry 4 "records". A record is one long line of
+// positions, and every position ends with the "|" sign (a "pipe"), like this:
+//   LC01|2026-03-05|USD|1250.50|...|
+// What goes in each position is decided by the form file (FORM["pipe"]), which is pasted in below as lcPipe.
+//
+// lcPipe = [record 1's entries, record 2's entries, ...]. Each entry describes one position (the old "1_01" ... "4_03").
+// An entry can be any ONE of these:
+//   {"c": text}                         a fixed text, the same every time
+//   {"id": q}                           the answer to question q, as typed. It can also have:
+//                                         "max": cut the answer to this many characters
+//                                         "as": "amount" (1250 -> 1250.00) or "date" (05/03/2026 -> 2026-03-05)
+//                                         "codes": {answer: code}  (an answer that is not listed gives nothing)
+//   {"lines": [q, ...]}                 each answer that is not blank, inside [ ]       e.g. [Line one][Line two]
+//   {"join": [q, ...]}                  the answers that are not blank, with one space between
+//   {"tpl": {"when": tick box, "parts": [...]}}   a sentence. Its parts are text with {q} marks (each is replaced by
+//                                       the answer to q), or ["map", q, {answer: text}], or
+//                                       ["list", q, separator, [[option, text], ...]], or ["if", q, text if answered, else text]
 //   {"qty": {"on", "o", "c", "head", "tail"}}      "head IN n ORIGINALS AND m COPIES<tail>."
-// Any entry may also have "if": [q, [answers]] (blank unless the answer is one of these), "d" (used when the result is
-// blank), "chop": true (wrap in lines, see lcPipeChop). Every position ends with "|".
+// Any entry may also have:
+//   "if": [q, [answers]]    the position is blank unless the answer to q is one of these
+//   "d"                     a text to use when the result is blank
+//   "chop": true            wrap the result into lines (see lcPipeChop)
+// =====================================================================================================================
 var lcPipe = [[{"p":"1_01","c":"1"},{"p":"1_02","c":"0000000"},{"p":"1_03","id":"applicant_name"},{"p":"1_04","id":"beneficiary_name"},{"p":"1_05","lines":["beneficiary_address_1","beneficiary_address_2","beneficiary_address_3"]},{"p":"1_06","id":"partial_shipment","codes":{"allowed":"L5Y","not allowed":"L5N"}},{"p":"1_07","id":"transhipment","codes":{"allowed":"L6Y","not allowed":"L6N"}},{"p":"1_08","id":"currency"},{"p":"1_09","id":"amount","as":"amount","d":"0"},{"p":"1_10","id":"gst","codes":{"inclusive of GST":"GSY"}},{"p":"1_11","id":"tolerance_plus","if":["tolerance",["true"]],"d":"0"},{"p":"1_12","id":"tolerance_minus","if":["tolerance",["true"]],"d":"0"},{"p":"1_13","id":"price_basis","codes":{"FOB":"C","CFR":"B","CIF":"A","Local Delivery":"O","FCA":"D","CIP":"G","CPT":"F","Others":"O"}},{"p":"1_14","id":"price_basis_other","if":["price_basis",["Others"]]},{"p":"1_15","id":"shipment_from","codes":{"Port of Loading / Airport of Departure":"44E","Dispatch from":"44A","Place of Taking in charge":"44A","Place of Receipt":"44A"}},{"p":"1_16","join":["shipment_from_place","shipment_from_place_2"],"if":["shipment_from",["Port of Loading / Airport of Departure"]]},{"p":"1_17","join":["shipment_from_place","shipment_from_place_2"],"if":["shipment_from",["Dispatch from","Place of Taking in charge","Place of Receipt"]]},{"p":"1_18","c":""},{"p":"1_19","c":""},{"p":"1_20","id":"shipment_to","codes":{"Port of Discharge / Airport of Destination":"44F","For Transportation to":"44B","Place of Final Destination":"44B","Place of Delivery":"44B"}},{"p":"1_21","join":["shipment_to_place","shipment_to_place_2"],"if":["shipment_to",["Port of Discharge / Airport of Destination"]]},{"p":"1_22","join":["shipment_to_place","shipment_to_place_2"],"if":["shipment_to",["For Transportation to","Place of Final Destination","Place of Delivery"]]},{"p":"1_23","c":""},{"p":"1_24","c":""},{"p":"1_25","id":"latest_shipment_date","as":"date"},{"p":"1_26","id":"expiry_date","as":"date"},{"p":"1_27","id":"presentation_days","d":"0"},{"p":"1_28","c":""},{"p":"1_29","c":""},{"p":"1_30","c":""},{"p":"1_31","id":"drafts_at","codes":{"Sight":"Y","Term":"N","Date":"N"}},{"p":"1_32","id":"term_days","if":["drafts_at",["Term"]],"d":"0"},{"p":"1_33","id":"term_after","if":["drafts_at",["Term"]]},{"p":"1_34","id":"mode_of_advising","codes":{"Full Swift":"S","Registered Airmail":"A","Airmail with Brief Swift":"S","Courier Service":"U","Courier Service with Brief Swift":"S"}},{"p":"1_35","c":""},{"p":"1_36","id":"draft_date","as":"date","if":["drafts_at",["Date"]]}],[{"p":"2_01","c":"2"},{"p":"2_02","lines":["applicant_address_1","applicant_address_2","applicant_address_3"]},{"p":"2_03","id":"third_party_name"},{"p":"2_04","lines":["third_party_address_1","third_party_address_2","third_party_address_3"]},{"p":"2_05","id":"advising_bank_name"},{"p":"2_06","lines":["advising_bank_address_1","advising_bank_address_2","advising_bank_address_3"]},{"p":"2_07","chop":true,"tpl":{"when":"doc_bill_of_lading","parts":["+ FULL SET OF CLEAN ON BOARD MARINE BILLS OF LADING MADE OUT TO ORDER",["map","bl_made_out_to",{"order of the Bank":" OF THE BANK LIMITED, NOTIFYING ","order blank endorsed":", BLANK ENDORSED, NOTIFYING ","other (specify)":" OF {bl_made_out_to_other}, NOTIFYING "}],"{bl_notify_party} MARKED 'FREIGHT ",["map","bl_freight",{"Prepaid":"PREPAID'.","Collect":"COLLECT'."}]]}},{"p":"2_08","chop":true,"tpl":{"when":"doc_air_waybill","parts":["+ ORIGINAL CLEAN AIR WAYBILL CONSIGNED TO THE BANK LIMITED, MARKED 'FREIGHT ",["map","awb_freight",{"Prepaid":"PREPAID' NOTIFYING ","Collect":"COLLECT' NOTIFYING "}],"{awb_notify_party}."]}},{"p":"2_09","c":""},{"p":"2_10","c":""},{"p":"2_11","c":""},{"p":"2_12","id":"confirmation","codes":{"true":"L9Y"},"d":"L9N"},{"p":"2_13","id":"bank_charges_for","codes":{"Beneficiary, except charges at DC Issuing Bank's counter":"LAB","Applicant (including all charges incurred inside and outside of DC Issuing Bank's country)":"LAA"}},{"p":"2_14","id":"confirmation_charges","codes":{"Applicant":"LID","Beneficiary":"LIC"}}],[{"p":"3_01","c":"3"},{"p":"3_02","chop":true,"tpl":{"when":"doc_delivery_order","parts":["+ DELIVERY ORDER IN {do_originals} ORIGINALS {do_copies} COPIES SIGNED BY BENEFICIARY MADE OUT TO APPLICANT AND COUNTERSIGNED BY {do_countersigned_by} OF OUR SIGNATORIES, WHOSE SIGNATURE(S) {do_signature_verified} BE VERIFIED BY THE BANK LIMITED."]}},{"p":"3_03","chop":true,"tpl":{"when":"doc_insurance","parts":["+ INSURANCE POLICY/CERTIFICATE IN DUPLICATE SHOWING BENEFICIARY AS ASSURED, BLANK ENDORSED FOR 110 PERCENT OF INVOICE VALUE WITH CLAIMS PAYABLE IN SINGAPORE IN THE CURRENCY OF THE CREDIT COVERING INSTITUTE CARGO CLAUSE (A), INSTITUTE WAR CLAUSES, INSTITUTE STRIKES CLAUSES/SRCC."]}},{"p":"3_04","chop":true,"tpl":{"when":"doc_beneficiary_certificate","parts":["+ BENEFICIARY'S CERTIFICATE CERTIFYING THAT ONE SET OF NON-NEGOTIABLE DOCUMENTS HAS BEEN ",["list","bencert_sent_by",", ",[["faxed","FAXED"],["mailed","MAILED"],["couriered","COURIERED"]]]," TO THE APPLICANT ",["if","bencert_days","WITHIN {bencert_days} DAY(S) AFTER SHIPMENT.","AFTER SHIPMENT."]]}},{"p":"3_05","qty":{"on":"doc_commercial_invoice","o":"invoice_originals","c":"invoice_copies","head":"+ SIGNED COMMERCIAL INVOICES"}},{"p":"3_06","qty":{"on":"doc_packing_list","o":"packing_list_originals","c":"packing_list_copies","head":"+ PACKING LIST"}},{"p":"3_07","qty":{"on":"doc_weight_note","o":"weight_note_originals","c":"weight_note_copies","head":"+ WEIGHT NOTE"}},{"p":"3_08","chop":true,"qty":{"on":"doc_certificate_of_origin","o":"origin_originals","c":"origin_copies","head":"+ CERTIFICATE OF ORIGIN","tail":["origin_country",", SHOWING COUNTRY OF ORIGIN AS {origin_country}"]}},{"p":"3_09","chop":true,"join":["other_documents_1","other_documents_2"],"if":["doc_other",["true"]]}],[{"p":"4_01","c":"4"},{"p":"4_02","chop":true,"id":"goods_description","max":400},{"p":"4_03","chop":true,"id":"additional_conditions","max":600}]];
-// The answers by question id: text as typed (not trimmed), a tick box "true" (absent when not ticked), "tick any" a list.
-// The records' own characters | [ ] { } and line breaks must never come from an answer (the keystroke filter refuses them, but a
-// value set by FDF import, autofill or a pasted newline skips it): they become a space. Only the paragraph boxes (the entries
-// with "chop" on one answer) keep Enter, which the records write as {}: any line break there is one Enter (CR).
+
+// The ids of the paragraph questions (the entries with "chop"): the only ones whose Enter key is kept. Worked out the
+// first time it is needed (null until then).
 var lcPipeLong = null;
+
+// ---------------------------------------------------------------------------------------------------------------------
+// lcPipeAnswers(d): every answer, by question id.
+//   d  the PDF document.
+// Returns {question id: answer}: text as typed (not trimmed); a ticked tick box is "true" (not there when not ticked);
+// a "tick any" question is the list of ticked options.
+//
+// The records' own signs | [ ] { } and line breaks must never come from an answer. The keystroke filter refuses to type
+// them, but a value put in by other means (an import, autofill, a pasted new line) skips that filter. So each one is
+// turned into a space. Only the paragraph questions keep Enter: the records write it as {}, and any kind of line
+// break there counts as one Enter (a carriage return, "\r").
+// ---------------------------------------------------------------------------------------------------------------------
 function lcPipeAnswers(d) {
-var G = {"bencert_sent_by": ["faxed","mailed","couriered"]}, A = {}, i, j, n, f, g, v, e;
-if (!lcPipeLong) {
-  lcPipeLong = {};
-  for (i = 0; i < lcPipe.length; i++) for (j = 0; j < lcPipe[i].length; j++) {
-    e = lcPipe[i][j]; if (!e.chop) continue;
-    if (e.id) lcPipeLong[e.id] = 1;
-    for (g = 0; e.join && g < e.join.length; g++) lcPipeLong[e.join[g]] = 1;
-  }
-}
-for (i = 0; i < d.numFields; i++) {
-  n = d.getNthFieldName(i); if (/^__/.test(n) || /__list$/.test(n)) continue;
-  f = d.getField(n); if (!f || f.type == "button" || f.type == "signature") continue;
-  g = /^(.+)__(\d+)$/.exec(n);
-  if (g && G[g[1]]) { if (f.value != "Off") { if (!A[g[1]]) A[g[1]] = []; A[g[1]].push(G[g[1]][+g[2]]); } continue; }
-  if (f.type == "checkbox") { if (f.value != "Off") A[n] = "true"; continue; }
-  v = f.type == "radiobutton" ? (f.value == "Off" ? "" : String(f.value)) : String(f.valueAsString);
-  v = lcPipeLong[n] ? v.replace(/\r\n|\n/g, "\r").replace(/[|\[\]{}]/g, " ") : v.replace(/[|\[\]{}\r\n]/g, " ");
-  if (v !== "") A[n] = v;
-}
-return A;
-}
-// Long text in lines, as the old form wrote it: leading and trailing blanks and Enter dropped; up to 65 characters as is
-// (Enter becomes {}); longer: cut at spaces into lines padded with spaces to 65 characters, each followed by {} (a word longer
-// than 65 is cut at 65; with Enter, each paragraph is cut on its own). Returns "" for nothing.
-function lcPipeChop(s) {
-var MAX = 65;
-function trim(x) { return x.replace(/^\s+/, "").replace(/\s+$/, ""); }
-function lr(x) { return x.replace(/^\r+/, "").replace(/\r+$/, ""); }
-function cut(x) { var r = ""; while (x.length > 0) { if (x.length > MAX) { r += x.slice(0, MAX) + "{}"; x = x.slice(MAX); } else { r += x; x = ""; } } return r; }
-function words(x) {   // no Enter inside: fill lines word by word
-  var w = x.split(" "), fin = [], res = "", i, r = "";
-  for (i = 0; i < w.length; i++) if (w[i].length > MAX) w[i] = cut(w[i]);
-  for (i = 0; i < w.length; i++) {
-    if ((res + w[i]).length > MAX) {
-      if (w[i].length <= MAX) { i--; while (res.length < MAX) res += " "; fin.push(res + "{}"); res = ""; }
-      else { if (res !== "") { while (res.length < MAX) res += " "; res += "{}"; } fin.push(res + w[i] + " "); res = ""; }
-    } else res += w[i] + " ";
-  }
-  if (res !== "") fin.push(res);
-  for (i = 0; i < fin.length; i++) r += (i == fin.length - 1 && fin[i].slice(-1) == " ") ? fin[i].slice(0, fin[i].length - 1) : fin[i];
-  return r;
-}
-function paragraphs(x, byWords) {   // Enter inside: each paragraph on its own (byWords: the text has spaces; no trimming then)
-  var a = x.split("\r"), r = "", i;
-  for (i = 0; i < a.length; i++) {
-    if (byWords) { if (a[i].length > MAX) a[i] = words(a[i]); }
-    else a[i] = cut(trim(a[i]));
-    r += a[i] + (i < a.length - 1 ? "{}" : "");
-  }
-  return r;
-}
-if (s == null || s.length <= 0) return "";
-s = trim(lr(s)); if (s.length <= 0) return "";
-if (s.length <= MAX) return trim(s.replace(/\r/g, "{}"));
-if (s.indexOf(" ") <= 0) return s.indexOf("\r") <= 0 ? cut(s) : paragraphs(s, false);
-return s.indexOf("\r") <= 0 ? words(s) : paragraphs(s, true);
-}
-// One position's text.
-function lcPipeValue(e, A) {
-function a(id) { var x = A[id]; return typeof x == "string" ? x : ""; }
-function has(list, x) { for (var i = 0; i < list.length; i++) if (list[i] == x) return true; return false; }
-function fill(t) { return t.replace(/\{(\w+)\}/g, function (m, id) { return a(id); }); }
-var v = "", i, x, p, o, c, ph, tail, out, picks, q, m;
-if (!e["if"] || has(e["if"][1], a(e["if"][0]))) {
-  if (e.c != null) v = e.c;
-  else if (e.lines) { for (i = 0; i < e.lines.length; i++) if (a(e.lines[i]) !== "") v += "[" + a(e.lines[i]) + "]"; }
-  else if (e.join) { x = []; for (i = 0; i < e.join.length; i++) if (a(e.join[i]) !== "") x.push(a(e.join[i])); v = x.join(" "); }
-  else if (e.tpl) {
-    q = e.tpl; out = ""; if (a(q.when) == "true") for (i = 0; i < q.parts.length; i++) {
-      p = q.parts[i];
-      if (typeof p == "string") out += fill(p);
-      else if (p[0] == "map") out += fill(p[2].hasOwnProperty(a(p[1])) ? p[2][a(p[1])] : "");
-      else if (p[0] == "if") out += fill(a(p[1]) !== "" ? p[2] : p[3]);
-      else if (p[0] == "list") {   // ticked options in the table's order; none ticked: no sentence at all
-        picks = []; x = A[p[1]] || [];
-        for (m = 0; m < p[3].length; m++) if (has(x, p[3][m][0])) picks.push(p[3][m][1]);
-        if (!picks.length) { out = ""; break; }
-        out += picks.join(p[2]);
+  var GROUPS = {"bencert_sent_by": ["faxed","mailed","couriered"]};   // "tick any" questions: question id -> its list of options
+  var answers = {};
+  var i, j, n, field, partOfGroup, text, entry, k;
+
+  // First time only: which questions are paragraph questions?
+  if (!lcPipeLong) {
+    lcPipeLong = {};
+    for (i = 0; i < lcPipe.length; i++) {
+      for (j = 0; j < lcPipe[i].length; j++) {
+        entry = lcPipe[i][j];
+        if (!entry.chop) continue;
+        if (entry.id) lcPipeLong[entry.id] = 1;
+        for (k = 0; entry.join && k < entry.join.length; k++) lcPipeLong[entry.join[k]] = 1;
       }
     }
-    v = out;
   }
-  else if (e.qty) {
-    q = e.qty; o = a(q.o); c = a(q.c);
-    if (a(q.on) == "true" && (o !== "" || c !== "")) {
-      tail = q.tail && a(q.tail[0]) !== "" ? fill(q.tail[1]) : "";
-      if (o == "0" && c == "0") ph = "";
-      else if (o === "" || o == "0") ph = " IN " + c + " " + (c == "1" ? "COPY" : "COPIES");
-      else if (c === "" || c == "0") ph = " IN " + o + " " + (o == "1" ? "ORIGINAL" : "ORIGINALS");
-      else ph = " IN " + o + " " + (o == "1" ? "ORIGINAL" : "ORIGINALS") + " AND " + c + " " + (c == "1" ? "COPY" : "COPIES");
-      if (ph !== "" || tail !== "") v = q.head + ph + tail + ".";
+
+  // The box's name is kept in the variable n and the line below is written in exactly this way on purpose: build_all.py
+  // finds that line and adds a filter to it, so that one form of the joined PDF does not read another form's boxes.
+  for (i = 0; i < d.numFields; i++) {
+    n = d.getNthFieldName(i);
+    if (/^__/.test(n) || /__list$/.test(n)) continue;   // the form's own helper boxes and the date drop-down lists
+    field = d.getField(n);
+    if (!field || field.type == "button" || field.type == "signature") continue;
+
+    // One option of a "tick any" question is named "<question>__<number>".
+    partOfGroup = /^(.+)__(\d+)$/.exec(n);
+    if (partOfGroup && GROUPS[partOfGroup[1]]) {
+      if (field.value != "Off") {
+        if (!answers[partOfGroup[1]]) answers[partOfGroup[1]] = [];
+        answers[partOfGroup[1]].push(GROUPS[partOfGroup[1]][+partOfGroup[2]]);
+      }
+      continue;
     }
+    if (field.type == "checkbox") {
+      if (field.value != "Off") answers[n] = "true";
+      continue;
+    }
+    if (field.type == "radiobutton") {
+      text = field.value == "Off" ? "" : String(field.value);
+    } else {
+      text = String(field.valueAsString);
+    }
+    if (lcPipeLong[n]) {
+      // A paragraph: every kind of line break becomes one carriage return (Enter); the other special signs become spaces.
+      text = text.replace(/\r\n|\n/g, "\r").replace(/[|\[\]{}]/g, " ");
+    } else {
+      // An ordinary answer: the special signs and all line breaks become spaces.
+      text = text.replace(/[|\[\]{}\r\n]/g, " ");
+    }
+    if (text !== "") answers[n] = text;
   }
-  else if (e.id) {
-    v = a(e.id);
-    if (e.max != null) v = v.slice(0, e.max);
-    if (e.as == "amount") { v = v.replace(/,/g, ""); if (/^\d+$/.test(v)) v += ".00"; else if (/^\d+\.\d$/.test(v)) v += "0"; }
-    if (e.as == "date") { x = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(v); v = x ? x[3] + "-" + x[2] + "-" + x[1] : ""; }
-    if (e.codes) v = e.codes.hasOwnProperty(v) ? e.codes[v] : "";
+  return answers;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// lcPipeChop(text): long text in lines, as the old form wrote it.
+//   Leading and trailing blanks and Enters are dropped.
+//   Up to 65 characters: kept as one line (an Enter inside becomes {}).
+//   Longer: cut at spaces into lines. Each line is padded with spaces to 65 characters and followed by {}.
+//   A single word longer than 65 characters is cut at 65. With Enters inside, each paragraph is cut on its own.
+// Returns "" for nothing.
+// Example (with a line length of 10 instead of 65): "aaa bbb ccc ddd" -> "aaa bbb   {}ccc ddd"
+// ---------------------------------------------------------------------------------------------------------------------
+function lcPipeChop(text) {
+  var MAX = 65;   // characters in a line
+
+  // Without blanks at the start and the end.
+  function trim(text) {
+    return text.replace(/^\s+/, "").replace(/\s+$/, "");
   }
-  if (e.chop) v = lcPipeChop(v);
+  // Without Enters (carriage returns) at the start and the end.
+  function trimEnters(text) {
+    return text.replace(/^\r+/, "").replace(/\r+$/, "");
+  }
+  // Adds spaces to the end until the line is MAX characters long.
+  function padLine(line) {
+    while (line.length < MAX) line += " ";
+    return line;
+  }
+  // Text without spaces, cut into lines of MAX characters, each followed by {} (the last piece has none).
+  function cutIntoLines(piece) {
+    var result = "";
+    while (piece.length > 0) {
+      if (piece.length > MAX) {
+        result += piece.slice(0, MAX) + "{}";
+        piece = piece.slice(MAX);
+      } else {
+        result += piece;
+        piece = "";
+      }
+    }
+    return result;
+  }
+  // Text with spaces but no Enter inside: fills the lines word by word.
+  function fillByWords(paragraph) {
+    var words = paragraph.split(" ");
+    var lines = [];        // the finished lines
+    var line = "";         // the line being filled (each word is followed by a space)
+    var result = "";
+    var i;
+    for (i = 0; i < words.length; i++) {
+      if (words[i].length > MAX) words[i] = cutIntoLines(words[i]);   // a word too long for a line is cut first
+    }
+    for (i = 0; i < words.length; i++) {
+      if ((line + words[i]).length > MAX) {
+        // The word does not fit on this line.
+        if (words[i].length <= MAX) {
+          // Finish this line and try the same word again on a fresh one.
+          i--;
+          lines.push(padLine(line) + "{}");
+          line = "";
+        } else {
+          // A cut-up long word: finish this line if it has something, then the word has its own line(s).
+          if (line !== "") line = padLine(line) + "{}";
+          lines.push(line + words[i] + " ");
+          line = "";
+        }
+      } else {
+        line += words[i] + " ";
+      }
+    }
+    if (line !== "") lines.push(line);
+    // Join the lines; the very last space (after the last word) is not wanted.
+    for (i = 0; i < lines.length; i++) {
+      if (i == lines.length - 1 && lines[i].slice(-1) == " ") result += lines[i].slice(0, lines[i].length - 1);
+      else result += lines[i];
+    }
+    return result;
+  }
+  // Text with Enters inside: each paragraph on its own, with {} between paragraphs.
+  // hasSpaces: the text has spaces, so fill by words (and do not trim); otherwise trim each paragraph and cut it.
+  function paragraphs(whole, hasSpaces) {
+    var parts = whole.split("\r");
+    var result = "";
+    var i;
+    for (i = 0; i < parts.length; i++) {
+      if (hasSpaces) {
+        if (parts[i].length > MAX) parts[i] = fillByWords(parts[i]);
+      } else {
+        parts[i] = cutIntoLines(trim(parts[i]));
+      }
+      result += parts[i] + (i < parts.length - 1 ? "{}" : "");
+    }
+    return result;
+  }
+
+  if (text == null || text.length <= 0) return "";
+  text = trim(trimEnters(text));
+  if (text.length <= 0) return "";
+  // Short enough for one line: as it is (each Enter inside becomes {}).
+  if (text.length <= MAX) return trim(text.replace(/\r/g, "{}"));
+  var hasSpace = text.indexOf(" ") > 0;
+  var hasEnter = text.indexOf("\r") > 0;
+  if (!hasSpace) return hasEnter ? paragraphs(text, false) : cutIntoLines(text);
+  return hasEnter ? paragraphs(text, true) : fillByWords(text);
 }
-if (v === "" && e.d != null) v = e.d;
-return v;
+
+// ---------------------------------------------------------------------------------------------------------------------
+// lcPipeValue(entry, answers): the text of ONE position (see the list of entry kinds at the top).
+//   entry    one entry of lcPipe.
+//   answers  the answers by question id (from lcPipeAnswers).
+// Returns the text, without the "|" that follows it.
+// ---------------------------------------------------------------------------------------------------------------------
+function lcPipeValue(entry, answers) {
+  var value = "";
+
+  // The answer to question id as text ("" if there is none, or if it is a list).
+  function answerOf(id) {
+    var answer = answers[id];
+    return typeof answer == "string" ? answer : "";
+  }
+  // Is item one of the items of list?
+  function has(list, item) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] == item) return true;
+    }
+    return false;
+  }
+  // Replaces every {question id} in the text by that question's answer.
+  function fill(template) {
+    return template.replace(/\{(\w+)\}/g, function (mark, id) { return answerOf(id); });
+  }
+
+  // {"lines": [q, ...]}: each answer that is not blank, inside [ ].
+  function linesValue() {
+    var result = "";
+    for (var i = 0; i < entry.lines.length; i++) {
+      if (answerOf(entry.lines[i]) !== "") result += "[" + answerOf(entry.lines[i]) + "]";
+    }
+    return result;
+  }
+
+  // {"join": [q, ...]}: the answers that are not blank, one space between.
+  function joinValue() {
+    var filled = [];
+    for (var i = 0; i < entry.join.length; i++) {
+      if (answerOf(entry.join[i]) !== "") filled.push(answerOf(entry.join[i]));
+    }
+    return filled.join(" ");
+  }
+
+  // {"tpl": ...}: a sentence made of parts. It is blank unless its tick box ("when") is ticked.
+  function templateValue() {
+    var template = entry.tpl;
+    var result = "";
+    var part, picks, ticked, m;
+    if (answerOf(template.when) != "true") return "";
+    for (var i = 0; i < template.parts.length; i++) {
+      part = template.parts[i];
+      if (typeof part == "string") {
+        result += fill(part);                                    // plain text, with {question} marks
+      } else if (part[0] == "map") {
+        // ["map", q, {answer: text}]: the text that goes with the answer to q (nothing if the answer is not listed)
+        result += fill(part[2].hasOwnProperty(answerOf(part[1])) ? part[2][answerOf(part[1])] : "");
+      } else if (part[0] == "if") {
+        // ["if", q, text if answered, text if not]
+        result += fill(answerOf(part[1]) !== "" ? part[2] : part[3]);
+      } else if (part[0] == "list") {
+        // ["list", q, separator, [[option, text], ...]]: the texts of the ticked options, in the table's order.
+        // No option ticked: no sentence at all.
+        picks = [];
+        ticked = answers[part[1]] || [];
+        for (m = 0; m < part[3].length; m++) {
+          if (has(ticked, part[3][m][0])) picks.push(part[3][m][1]);
+        }
+        if (!picks.length) return "";
+        result += picks.join(part[2]);
+      }
+    }
+    return result;
+  }
+
+  // {"qty": ...}: "<head> IN 2 ORIGINALS AND 1 COPY<tail>." from the number of originals (o) and copies (c).
+  // Example: 2 originals, 1 copy -> " IN 2 ORIGINALS AND 1 COPY"; 1 original, no copies -> " IN 1 ORIGINAL".
+  function quantityValue() {
+    var qty = entry.qty;
+    var originals = answerOf(qty.o);
+    var copies = answerOf(qty.c);
+    var tail, phrase;
+    if (answerOf(qty.on) != "true" || (originals === "" && copies === "")) return "";
+    tail = qty.tail && answerOf(qty.tail[0]) !== "" ? fill(qty.tail[1]) : "";
+    if (originals == "0" && copies == "0") {
+      phrase = "";
+    } else if (originals === "" || originals == "0") {
+      phrase = " IN " + copies + " " + (copies == "1" ? "COPY" : "COPIES");
+    } else if (copies === "" || copies == "0") {
+      phrase = " IN " + originals + " " + (originals == "1" ? "ORIGINAL" : "ORIGINALS");
+    } else {
+      phrase = " IN " + originals + " " + (originals == "1" ? "ORIGINAL" : "ORIGINALS") + " AND " + copies + " " + (copies == "1" ? "COPY" : "COPIES");
+    }
+    if (phrase !== "" || tail !== "") return qty.head + phrase + tail + ".";
+    return "";
+  }
+
+  // {"id": q, ...}: the answer as typed, then shaped by "max", "as" and "codes".
+  function answerValue() {
+    var result = answerOf(entry.id);
+    var dateParts;
+    if (entry.max != null) result = result.slice(0, entry.max);
+    if (entry.as == "amount") {
+      // No commas. Always two decimals: 1250 -> 1250.00, 1250.5 -> 1250.50 (text that is not a number stays as it is).
+      result = result.replace(/,/g, "");
+      if (/^\d+$/.test(result)) result += ".00";
+      else if (/^\d+\.\d$/.test(result)) result += "0";
+    }
+    if (entry.as == "date") {
+      // DD/MM/YYYY -> YYYY-MM-DD (blank if it is not a date in that shape).
+      dateParts = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(result);
+      result = dateParts ? dateParts[3] + "-" + dateParts[2] + "-" + dateParts[1] : "";
+    }
+    if (entry.codes) result = entry.codes.hasOwnProperty(result) ? entry.codes[result] : "";
+    return result;
+  }
+
+  // Only if the entry's "if" condition holds (or it has none).
+  if (!entry["if"] || has(entry["if"][1], answerOf(entry["if"][0]))) {
+    if (entry.c != null) value = entry.c;
+    else if (entry.lines) value = linesValue();
+    else if (entry.join) value = joinValue();
+    else if (entry.tpl) value = templateValue();
+    else if (entry.qty) value = quantityValue();
+    else if (entry.id) value = answerValue();
+    if (entry.chop) value = lcPipeChop(value);
+  }
+  // A blank result uses the entry's own "d" text, if it has one.
+  if (value === "" && entry.d != null) value = entry.d;
+  return value;
 }
-// The records, as an array of text. A = the answers (default: read from the PDF).
-function lcPipeRecords(d, A) {
-var R = [], i, j, r;
-A = A || lcPipeAnswers(d);
-for (i = 0; i < lcPipe.length; i++) { r = ""; for (j = 0; j < lcPipe[i].length; j++) r += lcPipeValue(lcPipe[i][j], A) + "|"; R.push(r); }
-return R;
+
+// ---------------------------------------------------------------------------------------------------------------------
+// lcPipeRecords(d, answers): the records, as a list of text (one text per record, each position followed by "|").
+//   d        the PDF document.
+//   answers  optional. The answers to use; by default they are read from the PDF.
+// ---------------------------------------------------------------------------------------------------------------------
+function lcPipeRecords(d, answers) {
+  var records = [];
+  var i, j, record;
+  answers = answers || lcPipeAnswers(d);
+  for (i = 0; i < lcPipe.length; i++) {
+    record = "";
+    for (j = 0; j < lcPipe[i].length; j++) record += lcPipeValue(lcPipe[i][j], answers) + "|";
+    records.push(record);
+  }
+  return records;
 }
-// What goes into the QR code: the records, a newline between them.
-function lcPipeText(d) { return lcPipeRecords(d).join("\n"); }
-return { lcRules: lcRules, lcPayload: lcPayload, lcDrawQr: lcDrawQr, lcDates: lcDates, lcQrMatrix: lcQrMatrix, lcWords: lcWords, lcLastPage: typeof lcLastPage == "function" ? lcLastPage : undefined, lcPagesFor: typeof lcPagesFor == "function" ? lcPagesFor : undefined, lcPipeText: typeof lcPipeText == "function" ? lcPipeText : undefined, lcQrCheck: typeof lcQrCheck == "function" ? lcQrCheck : undefined };
+
+// What goes into the QR code: the records, a new line between them.
+function lcPipeText(d) {
+  return lcPipeRecords(d).join("\n");
+}
+
+// Is the text kept in the hidden box the current records? The box is single-line, so a viewer may have changed the new lines
+// between records: Acrobat Pro turns each into one space, others keep them, write CR or CRLF, or drop them. The records hold
+// no line break themselves, so only those separators are allowed; any other difference (even one extra space) is a change.
+// Example: for the records "A|" and "B|", the stored text "A| B|" (Acrobat) matches; "A|  B|" or "A| B |" does not.
+function lcPipeStoredMatches(stored, d) {
+  var records = lcPipeRecords(d);
+  var separators = ["\n", "\r\n", "\r", " ", ""];
+  var i;
+  stored = String(stored);
+  for (i = 0; i < separators.length; i++) {
+    if (stored == records.join(separators[i])) return true;
+  }
+  return false;
+}
+return { lcRules: lcRules, lcPayload: lcPayload, lcDrawQr: lcDrawQr, lcDates: lcDates, lcQrMatrix: lcQrMatrix, lcWords: lcWords, lcLastPage: typeof lcLastPage == "function" ? lcLastPage : undefined, lcPagesFor: typeof lcPagesFor == "function" ? lcPagesFor : undefined, lcPipeStoredMatches: typeof lcPipeStoredMatches == "function" ? lcPipeStoredMatches : undefined, lcPipeText: typeof lcPipeText == "function" ? lcPipeText : undefined, lcQrCheck: typeof lcQrCheck == "function" ? lcQrCheck : undefined };
 };
 export const keys = {
 "applicant_name": { K: function (event, app) {
