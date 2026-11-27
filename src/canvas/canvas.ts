@@ -22,7 +22,7 @@ import { formFile, formFileName } from "./form-file";
 import { readFormFile } from "./read-form-file";
 import { allFields, dependents, locate, minHeightFor, moveField, removeField, renameField, rulesOf, uniqueId } from "./edit";
 import { LISTS } from "./forms";
-import { BAND, COLUMN_GAP, H, M, PAD, PAGE_ROOM, SECTION_GAP, W, layout, type Laid } from "./layout";
+import { BAND, COLUMN_GAP, H, M, PAD, SECTION_GAP, W, layout, type Laid } from "./layout";
 import { pagesSvg } from "./render";
 import { review, type Issue } from "./review";
 
@@ -421,6 +421,13 @@ function drawHandles() {
   }
 }
 
+/** A section's height with its min_height taken away (what its questions need), or undefined if it is not on the page. */
+function contentHeight(si: number) {
+  const { min_height: _, ...bare } = t().sections[si];
+  const copy = { ...t(), sections: t().sections.map((x, i) => (i === si ? bare : x)) };
+  return layout(copy).sections.find(x => x.si === si)?.h;
+}
+
 /** Dragging a handle: a question's width in grid columns, a paragraph box's height, a section's half / full width. */
 function resize(e: PointerEvent, el: HTMLElement, edge: "e" | "s") {
   e.preventDefault();
@@ -443,12 +450,7 @@ function resize(e: PointerEvent, el: HTMLElement, edge: "e" | "s") {
   const of = row?.of ?? 12, colW = (sec.x + sec.w - PAD - rowLeft - (of - 1) * COLUMN_GAP) / of;
   if (f && edge === "e") ov.append(...Array.from({ length: of }, (_, i) => hit("cv-col", rowLeft + i * (colW + COLUMN_GAP), sec.y, colW, sec.h, {})));
   const halfW = (W - 2 * M - SECTION_GAP) / 2;
-  // the section's height with its min_height taken away (what its questions need)
-  const contentH = () => {
-    const { min_height: _, ...bare } = s;
-    const copy = { ...t(), sections: t().sections.map((x, i) => (i === sel!.si ? bare : x)) };
-    return layout(copy).sections.find(x => x.si === sel!.si)?.h ?? box.h;
-  };
+  const contentH = () => contentHeight(sel!.si) ?? box.h;
 
   let result: () => void = () => {};
   const x0 = e.clientX, y0 = e.clientY;
@@ -671,12 +673,12 @@ function drawPanel(issues: Issue[]) {
 }
 
 /** A labelled box that edits a value as it is typed (one undo step per edit). */
-function textBox(label: string, value: string, set: (v: string) => void, opts: { long?: boolean; hint?: string; id?: string; mono?: boolean } = {}) {
+function textBox(label: string, value: string, set: (v: string) => void, opts: { long?: boolean; hint?: string; id?: string; mono?: boolean; settle?: () => string } = {}) {
   const input = h(opts.long ? "textarea" : "input", {
     value, id: opts.id ?? "", className: opts.mono ? "mono" : "", spellcheck: !opts.mono, ...(opts.long ? { rows: 3 } : {}),
     onfocus: () => { typing = false; },
     oninput: (e: Event) => { if (!typing) { snapshot(); typing = true; } set((e.target as HTMLInputElement).value); host.changed(); render(true); },
-    onblur: () => { typing = false; },
+    onblur: () => { typing = false; if (opts.settle) input.value = opts.settle(); },
   });
   return h("label", { className: "cv-field" }, h("span", {}, label), input, opts.hint ? h("small", {}, opts.hint) : "");
 }
@@ -752,9 +754,9 @@ function sectionPanel(s: Section, si: number): Node[] {
         "Auto: two short sections of similar height sit side by side. Half: always half the page (two halves in a row pair up)."),
       tickBox("Start on a new page", !!s.new_page, v => edit(() => { if (v) s.new_page = true; else delete s.new_page; })),
       textBox("Minimum height (points)", s.min_height ? String(s.min_height) : "", v => {
-        const n = Math.min(Number(v), PAGE_ROOM);
-        if (n > 0) s.min_height = n; else delete s.min_height;
-      }, { hint: "Blank = fit the questions. A taller box leaves blank space at its bottom; the questions win if they need more. You can also drag the bottom edge of the selected section." }),
+        const n = minHeightFor(Number(v), contentHeight(si) ?? 0); // the same rule as the drag
+        if (n) s.min_height = n; else delete s.min_height;
+      }, { settle: () => (s.min_height ? String(s.min_height) : ""), hint: "Blank = fit the questions. A taller box leaves blank space at its bottom; the questions win if they need more, and a value at or below their height is removed. Up to a page, in steps of 5. An auto-width section 300 pt tall or more goes full width instead of pairing. You can also drag the bottom edge of the selected section." }),
     ),
     h("section", { className: "cv-group", id: "cvButtons" }, h("h3", {}, "Buttons"),
       h("p", { className: "cv-lead" }, "A row at the bottom right of the section, on screen only. Each does what the form's own button of that name does."),

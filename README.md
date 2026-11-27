@@ -149,7 +149,9 @@ so they never look like part of the form.
   section's right-edge handle to make it half or full width; drag the selected section's bottom-edge handle to make
   it taller (snaps to 5 points; the extra is blank space at the bottom of its box, and dragging back up to the
   questions' height removes the setting). The same is *Minimum height* in the section's Properties (blank = fit the
-  questions); it is `min_height=` in the form file and in the built PDF.
+  questions); it is `min_height=` in the form file and in the built PDF. Typed values follow the same rule as the drag (steps of
+  5, at most a page, removed at or below the questions' height). An auto-width section 300 points tall or more no longer pairs side
+  by side and goes full width.
 - **Add a condition on the page**: press *Add condition* (on the toolbar or in Properties), then click the question
   it waits on. A small pop-up beside it asks only what that question allows (ticked or not, which options, or any
   answer) and whether the condition makes the question mandatory or only unlocks it. Conditions are listed in

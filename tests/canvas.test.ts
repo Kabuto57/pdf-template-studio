@@ -102,5 +102,9 @@ describe("section min_height", () => {
     expect(minHeightFor(100, 100)).toBeUndefined();
     expect(minHeightFor(60, 100)).toBeUndefined();
     expect(minHeightFor(5000, 100)).toBe(765);
+    expect(minHeightFor(Number("5000"), 100)).toBe(765); // typed in the Properties box
+    expect(minHeightFor(Number("3"), 100)).toBeUndefined();
+    expect(minHeightFor(Number(""), 100)).toBeUndefined();
+    expect(minHeightFor(Number("abc"), 100)).toBeUndefined();
   });
 });
