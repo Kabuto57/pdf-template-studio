@@ -250,6 +250,6 @@ export function mountForm(host: HTMLElement, eng: Engine, onMenu: () => void) {
   eng.onAlert = say;
   for (const f of doc.list) sync(f);
   doc.dirty.clear();
-  drawQr(); // a form opened again from the menu shows the codes it already had
+  if (eng.codes().length) updateNote(); // opened again from the menu: its codes show if still valid, else the notice (a fresh form has neither)
   return { pages, bound, destroy: () => window.removeEventListener("beforeprint", beforePrint) };
 }

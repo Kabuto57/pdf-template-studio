@@ -117,6 +117,57 @@ describe.skipIf(!browser)("the fill page in Chromium", () => {
     await page.waitForSelector(".menu");
   }, 60000);
 
+  // Main menu keeps every form's answers and codes; reopening a form must show exactly what the form shows when it never left.
+  async function reopen(page: any, file = "Irrevocable Documentary Credit Application") {
+    await page.click(".toolbar button:text('Main menu')");
+    await page.waitForSelector(".menu");
+    await page.click(`text=${file}`);
+    await page.waitForSelector(".pg");
+  }
+  const shownCodes = (page: any) => page.locator(".qr:not([hidden]) svg").count();
+
+  it("reopen: unchanged answers show their codes again, no notice", async () => {
+    const { page } = await open();
+    await fillLc(page);
+    await page.click("button:text('Generate QR Code')");
+    await ok(page);
+    await reopen(page);
+    expect(await shownCodes(page)).toBe(2);
+    expect(await page.locator(".nocode").isVisible()).toBe(false);
+  }, 90000);
+
+  it("reopen: another form is isolated, and Reset form on the reopened one clears only it", async () => {
+    const { page } = await open();
+    await fillLc(page);
+    await page.click("button:text('Generate QR Code')");
+    await ok(page);
+    await reopen(page, "Banker's Guarantee Application");
+    expect(await page.inputValue('[name="applicant_name"]')).toBe("");
+    expect(await shownCodes(page)).toBe(0);
+    await page.fill('[name="applicant_name"]', "OTHER");
+    await reopen(page);
+    expect(await page.inputValue('[name="applicant_name"]')).not.toBe("");
+    await page.click(".toolbar button:text('Reset form')");
+    await ok(page);
+    await page.waitForTimeout(300);
+    expect(await page.inputValue('[name="applicant_name"]')).toBe("");
+    expect(await shownCodes(page)).toBe(0);
+    await reopen(page, "Banker's Guarantee Application");
+    expect(await page.inputValue('[name="applicant_name"]')).toBe("OTHER");
+  }, 90000);
+
+  it("reopen: answers changed after Generate, the old codes stay hidden and the notice shows", async () => {
+    const { page } = await open();
+    await fillLc(page);
+    await page.click("button:text('Generate QR Code')");
+    await ok(page);
+    await page.fill('[name="applicant_name"]', "SOMEONE ELSE");
+    await page.keyboard.press("Tab");
+    await reopen(page);
+    expect(await shownCodes(page)).toBe(0);
+    expect(await page.locator(".nocode").isVisible()).toBe(true);
+  }, 90000);
+
   it("the most characters of a box hold when the keystroke script makes capitals: typed and inserted (pasted)", async () => {
     const { page } = await open();
     const box = page.locator('[name="applicant_name"]');
