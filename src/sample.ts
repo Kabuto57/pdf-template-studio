@@ -160,7 +160,14 @@ const STORY = "Steel fittings for Pier 3 refurbishment, contract HDA/2026/114";
 
 /** Plausible answers for any form, so every bank form can be tried end to end. The simple guarantee keeps its own. */
 export function sampleFor(t: Template): Values {
-  if (t.title === LC.template.title) return { ...LC_SAMPLE };
+  if (t.title === LC.template.title) {
+    const out: Values = { ...LC_SAMPLE };
+    // lc-form's LC has a Port box for the "Port of ..." choices the sample uses (src/lc.ts has one place box): the place goes there
+    const ids = new Set(t.sections.flatMap(s => s.fields.map(f => f.id)));
+    for (const side of ["shipment_from", "shipment_to"])
+      if (ids.has(`${side}_port`)) { out[`${side}_port`] = out[`${side}_place`]; delete out[`${side}_place`]; }
+    return out;
+  }
   const out: Values = {};
   for (const f of t.sections.flatMap(s => s.fields)) {
     const own = SAMPLE[f.id],

@@ -346,6 +346,17 @@ describe("Shipment from / to on the fill page: the boxes follow the choice, as i
       });
 });
 
+describe("Fill with sample on the LC forms", () => {
+  for (const file of ["lc_form.py", "lc_pipe_form.py"])
+    it(`${file}: sampleFor's answers leave nothing missing or wrong, with the shipment places in the Port boxes`, async () => {
+      const eng = await engineOf(file), form = SMART_FORMS.find(f => f.file === file)!, sample = sampleFor(form.form);
+      for (const q of form.form.sections.flatMap(s => s.fields)) if (q.id in sample) { const f = eng.doc.getField(q.id); if (f && q.kind !== "check" && q.kind !== "checks" && q.kind !== "radio" && q.kind !== "date") f.value = String(sample[q.id]); }
+      expect(sample.shipment_from_port).toBeTruthy();
+      expect(sample.shipment_from_place).toBeUndefined();
+      expect(eng.check().missing.filter(m => /Port of|Dispatch|Place of|Transportation/.test(m))).toEqual([]);
+    });
+});
+
 /** The code as a picture: 4 pixels a square, 4 white squares around it (rows of "n" and " ", as lcDrawQr wrote them). */
 function picture(rows: string[], px = 4) {
   const n = rows.length + 8, w = n * px, data = new Uint8ClampedArray(w * w * 4).fill(255);
