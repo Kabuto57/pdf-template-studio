@@ -84,7 +84,7 @@ describe.skipIf(!browser)("the fill page in Chromium", () => {
     expect(external).toEqual([]);
   }, 60000);
 
-  it("Cancel keeps the answers; two questions in a row both work (Reset form, then Main menu)", async () => {
+  it("Cancel keeps the answers; two questions in a row both work (Reset form twice); Main menu keeps the answers", async () => {
     const { page } = await open();
     await page.fill('[name="applicant_name"]', "ACME");
     await page.click(".toolbar button:text('Reset form')");
@@ -95,22 +95,25 @@ describe.skipIf(!browser)("the fill page in Chromium", () => {
     await ok(page);
     await page.waitForTimeout(300);
     expect(await page.inputValue('[name="applicant_name"]')).toBe("");
-    await page.click(".toolbar button:text('Main menu')");
-    expect(await dialogText(page)).toBe("Go back to the main menu? The answers in Irrevocable Documentary Credit Application will be cleared.");
-    expect(await hasCancel(page)).toBe(true);
-    await ok(page);
+    await page.fill('[name="applicant_name"]', "ACME");
+    await page.click(".toolbar button:text('Main menu')"); // no question, nothing cleared
     await page.waitForSelector(".menu");
+    expect(await page.locator("dialog.msg[open]").count()).toBe(0);
     expect(await page.locator(".pg").count()).toBe(0);
     expect(await page.isChecked("#accept")).toBe(true);
+    await page.locator(".entry").first().click(); // the same form again: its answers are still there
+    await page.waitForSelector(".pg");
+    expect(await page.inputValue('[name="applicant_name"]')).toBe("ACME");
   }, 60000);
 
   it("a message, then a question straight after it, still asks", async () => {
     const { page } = await open();
     await page.click(".toolbar button:text('Check form')");
     await ok(page);
-    await page.click(".toolbar button:text('Main menu')");
+    await page.click(".toolbar button:text('Reset form')");
     expect(await hasCancel(page)).toBe(true);
     await ok(page);
+    await page.click(".toolbar button:text('Main menu')");
     await page.waitForSelector(".menu");
   }, 60000);
 

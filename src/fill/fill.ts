@@ -10,6 +10,7 @@ import { mountForm } from "./view";
 
 const app = document.getElementById("app")!;
 let accepted = false;
+const engines = new Map<string, Awaited<ReturnType<typeof openForm>>>();
 let shown: ReturnType<typeof mountForm> | undefined;
 
 function menu() {
@@ -30,10 +31,11 @@ function menu() {
 async function open(file: string, title: string) {
   const pick = choose(accepted, file);
   if ("message" in pick) { say(pick.message); return; }
-  const eng = await openForm(pick.open);
+  let eng = engines.get(file); // like lc-form's one PDF, every form keeps its answers while you are on the menu
+  if (!eng) engines.set(file, eng = await openForm(pick.open));
   document.title = `${title} | Demo Bank`;
   shown?.destroy();
-  shown = mountForm(app, eng, MENU.back as [string, string], () => { shown?.destroy(); shown = undefined; menu(); scrollTo(0, 0); });
+  shown = mountForm(app, eng, () => { shown?.destroy(); shown = undefined; menu(); scrollTo(0, 0); });
   scrollTo(0, 0);
 }
 

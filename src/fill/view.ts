@@ -23,14 +23,14 @@ const iso = (d: string) => (/^\d\d\/\d\d\/\d{4}$/.test(d) ? d.split("/").reverse
 
 interface Bound { wrap: HTMLElement; el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement; widget: Widget }
 
-export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string, string], onMenu: () => void) {
+export function mountForm(host: HTMLElement, eng: Engine, onMenu: () => void) {
   const { laid, doc } = eng;
   const svgs = pagesSvg(laid, false), pages: HTMLElement[] = [];
   const bound = new Map<string, Bound[]>();
   const committed = new Map<string, string>(); // each box's last answer that was accepted (a refused answer goes back to it)
 
   host.replaceChildren(h("div", { className: "toolbar screen" },
-    h("button", { type: "button", onclick: () => ask("main") }, "Main menu"),
+    h("button", { type: "button", onclick: onMenu }, "Main menu"),
     h("strong", {}, eng.form.form.title),
     h("span", { className: "grow" }),
     h("button", { type: "button", onclick: () => act("check-form") }, "Check form"),
@@ -171,11 +171,9 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
   // ---- buttons
   type Script = Parameters<Engine["press"]>[0];
   function act(script: Script) { eng.press(script); flush(); }
-  async function ask(what: Script | "main") {
+  async function ask(what: Script) {
     if (what === "reset-form") {
       if (await confirm(eng.resetQuestion())) { eng.reset(); flush(); }
-    } else if (what === "main") {
-      if (await confirm(back[0] + eng.form.form.title + back[1])) onMenu();
     } else act(what);
   }
 
@@ -252,5 +250,6 @@ export function mountForm(host: HTMLElement, eng: Engine, back: readonly [string
   eng.onAlert = say;
   for (const f of doc.list) sync(f);
   doc.dirty.clear();
+  drawQr(); // a form opened again from the menu shows the codes it already had
   return { pages, bound, destroy: () => window.removeEventListener("beforeprint", beforePrint) };
 }

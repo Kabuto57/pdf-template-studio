@@ -374,7 +374,7 @@ describe("(d) the main menu", () => {
     expect(MENU_TEXT.terms).toBe("I have read and agree to the Bank's terms and conditions for trade applications.");
   });
   it("picking a form without the tick box gives build_all.py's message and opens nothing", () => {
-    expect(choose(false, "lc_form.py")).toEqual({ message: "Please tick the box to agree to the Bank's terms and conditions before opening a form." });
+    expect(choose(false, "lc_form.py")).toEqual({ message: "Please tick the box to agree to the Bank's terms and conditions." });
   });
   it("with the tick box, opens exactly the form picked: its pages and fields only", async () => {
     expect(choose(true, "bg_form.py")).toEqual({ open: "bg_form.py" });
@@ -383,7 +383,7 @@ describe("(d) the main menu", () => {
     expect(eng.doc.getField("applicant_name")).not.toBeNull();
     expect(eng.doc.list.length).not.toBe(other.doc.list.length);
     expect(eng.doc.getField("amount")?.name).toBe("amount");
-    expect(MENU_TEXT.back).toEqual(["Go back to the main menu? The answers in ", " will be cleared."]);
+    expect("back" in MENU_TEXT).toBe(false); // Main menu is a plain jump: no question, nothing cleared (lc-form's one PDF)
   });
   it("Reset form asks first, in the PDF's words, and clears only when answered yes", async () => {
     const eng = await engineOf("lc_form.py"), name = eng.doc.getField("applicant_name")!;

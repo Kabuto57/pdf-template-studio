@@ -300,10 +300,10 @@ validate scripts) against a stand-in for Acrobat's document, so the checks and m
 | `src/fill/doc.ts` | The stand-in for Acrobat's `Doc` / `Field` (`getField`, `value`, `required`, `readonly`, `display`, `fillColor` ..., `calculate`, `resetForm`, `numFields`) |
 | `src/fill/engine.ts` | When to call which script (change, keystroke, validate, buttons), and what `app.alert` and `print` do |
 | `src/fill/view.ts`, `fill.css` | The pages as `src/canvas/layout.ts` lays them out, with a live box over every PDF box; message boxes; QR page; print CSS |
-| `src/fill/menu.ts`, `fill.ts` | The main menu (terms tick box; no tick: "Please tick the box to agree to the Bank's terms and conditions before opening a form."; Main menu asks first, then clears the form) |
+| `src/fill/menu.ts`, `fill.ts` | The main menu (terms tick box; no tick: "Please tick the box to agree to the Bank's terms and conditions."; Main menu is a plain jump back that clears nothing, every form keeps its answers while you are on the menu, like lc-form's one PDF; Reset form clears one form) |
 
 Answers stay in the page: nothing is sent, nothing is stored. Differences from the PDF: a drop-down also offers a blank line, a date box has a
-small calendar button (the browser's date picker) instead of Acrobat's, Reset form / Main menu confirm in a page message box, and the
+small calendar button (the browser's date picker) instead of Acrobat's, Reset form confirms in a page message box, and the
 PDF's "Before printing" warning runs when the browser prints (Ctrl+P, menu), and Print Form still refuses until the QR code matches the answers.
 A printout made without a valid QR code carries a boxed "NO VALID QR CODE" notice where the code goes, so it can never look complete. A date that does not
 exist is refused on leaving its box with Acrobat's date message.

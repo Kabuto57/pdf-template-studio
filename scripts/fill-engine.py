@@ -10,7 +10,7 @@ and writes what step 3 would have stored in the PDF:
                                  filled in exactly as pdf_writer.document_script does) as a function, the K / V scripts of its
                                  boxes (keys refused while typing, a whole answer checked) and which event re-runs the rules
     src/fill/gen/buttons.ts      the button scripts (check-form, reset-form, generate-qr, print-form) and the two rule events
-    src/fill/gen/menu.json       build_all.py's main menu: groups, form codes, the terms wording and the two messages
+    src/fill/gen/menu.json       build_all.py's main menu: groups, form codes, the terms wording and the not-ticked message
     tests/fixtures/fill-fields.json    the fields the PDF has (name, kind, options) and which event re-runs the rules on which
                                  box, for the tests to check that the browser form builds the same fields
 The scripts are copied word for word, only wrapped in a function (no eval, so the site's content security policy holds).
@@ -131,10 +131,9 @@ def buttons_module(buttons, on_event, on_calc, names):
 
 
 def menu(build_all, lc_form):
-    """The main menu as build_all.py makes it: its groups, form codes, terms wording and messages (read from its showForm / showMenu)."""
+    """The main menu as build_all.py makes it: its groups, form codes, terms wording and the not-ticked message (read from its openForm)."""
     js = build_all.MENU_JS
     ticked = re.search(r'app\.alert\("(Please tick the box[^"]*)"', js).group(1)
-    back = re.search(r'app\.alert\("(Go back to the main menu\? The answers in )" \+ TITLES\[was\] \+ "([^"]*)"', js)
     groups = []
     for group, forms in build_all.MENU:
         entries = []
@@ -144,7 +143,7 @@ def menu(build_all, lc_form):
             module.loader.exec_module(m)
             entries.append({"file": file, "code": code, "formCode": re.search(r"[A-Z]+-\d+", m.FORM["formCode"]).group(0), "title": m.FORM["title"]})
         groups.append({"group": group, "forms": entries})
-    return {"terms": build_all.TERMS_TEXT, "notTicked": ticked, "back": [back.group(1), back.group(2)], "groups": groups}
+    return {"terms": build_all.TERMS_TEXT, "notTicked": ticked, "groups": groups}
 
 
 if __name__ == "__main__":

@@ -984,7 +984,11 @@ function lcExtra(d) {
     }
   }
   pages.sort(function (first, second) { return first.page - second.page; });
-  return pages;
+  // Only the pages right after the QR code page are this form's: in the one-PDF build the next form's pages (with extra
+  // pages of their own) follow, and must not be taken for ours.
+  var own = [];
+  for (i = 0; i < pages.length && pages[i].page == qrPage + 1 + i; i++) own.push(pages[i]);
+  return own;
 }
 
 // lcSlot(d, extraPages, j): the place for code number j (0 = the first code).
