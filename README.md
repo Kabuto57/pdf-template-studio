@@ -146,7 +146,10 @@ so they never look like part of the form.
 - **Toolbar on the selected question**: Add condition, Mandatory, Duplicate, Delete.
 - **Resize with the mouse**: drag the selected question's right-edge handle to set its width (the grid's columns
   show while dragging; it snaps to them); drag a paragraph box's bottom handle to make it taller or shorter; drag a
-  section's right-edge handle to make it half or full width.
+  section's right-edge handle to make it half or full width; drag the selected section's bottom-edge handle to make
+  it taller (snaps to 5 points; the extra is blank space at the bottom of its box, and dragging back up to the
+  questions' height removes the setting). The same is *Minimum height* in the section's Properties (blank = fit the
+  questions); it is `min_height=` in the form file and in the built PDF.
 - **Add a condition on the page**: press *Add condition* (on the toolbar or in Properties), then click the question
   it waits on. A small pop-up beside it asks only what that question allows (ticked or not, which options, or any
   answer) and whether the condition makes the question mandatory or only unlocks it. Conditions are listed in
@@ -161,7 +164,7 @@ so they never look like part of the form.
   draws every one), and a small blue dot marks every question with a condition.
 - **Checks across answers** (nothing selected): a date after (or not before) another, a number in a range.
 - **Layout, within the house style**: a question's width is a share of the 12-column grid (Auto, 1/4, 1/3, 1/2,
-  2/3, 3/4, Full); a section is Auto, Full or Half width and can start a new page. Auto lets the layout decide, as
+  2/3, 3/4, Full); a section is Auto, Full or Half width, can start a new page and can have a minimum height. Auto lets the layout decide, as
   lc-form does. Nothing can be placed off the grid, so every form keeps the same look.
 - **Review** (right): *problems* lc-form would refuse to build (two questions with one key, a condition on an
   option that doesn't exist ...) and *tips*: a follow-up placed before the question that switches it on, a drop-down

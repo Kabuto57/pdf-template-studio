@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { SMART_FORMS } from "../src/canvas/forms";
 import { layout } from "../src/canvas/layout";
 import { review } from "../src/canvas/review";
-import { moveField, removeField, renameField } from "../src/canvas/edit";
+import { minHeightFor, moveField, removeField, renameField } from "../src/canvas/edit";
+import { formFile } from "../src/canvas/form-file";
+import { readFormFile } from "../src/canvas/read-form-file";
 import { writePdf } from "../src/canvas/write-pdf";
 import { extractPdf, type Template } from "../src/pdf";
 import { sampleFor } from "../src/sample";
@@ -76,5 +78,29 @@ describe("edits", () => {
     expect(t.sections[0].fields[0].requiredIf).toBeUndefined();
     moveField(t, "currency", 0, 0);
     expect(t.sections[0].fields.map(f => f.id)).toEqual(["currency", "notes"]);
+  });
+});
+
+describe("section min_height", () => {
+  it("is written to the form file and read back", () => {
+    const f = form();
+    f.sections[0].min_height = 150;
+    expect(formFile(f)).toContain("min_height=150");
+    expect(readFormFile(formFile(f)).template.sections[0].min_height).toBe(150);
+    delete f.sections[0].min_height;
+    expect(formFile(f)).not.toContain("min_height");
+  });
+  it("makes the section box taller, and the content wins when it needs more", () => {
+    const f = form(), plain = layout(f).sections[0].h;
+    f.sections[0].min_height = 200;
+    expect(layout(f).sections[0].h).toBeCloseTo(200, 3);
+    f.sections[0].min_height = 5;
+    expect(layout(f).sections[0].h).toBeCloseTo(plain, 3);
+  });
+  it("drag value: snaps to 5 pt, at most a page, none at or below the content", () => {
+    expect(minHeightFor(203, 100)).toBe(205);
+    expect(minHeightFor(100, 100)).toBeUndefined();
+    expect(minHeightFor(60, 100)).toBeUndefined();
+    expect(minHeightFor(5000, 100)).toBe(765);
   });
 });

@@ -11,6 +11,7 @@ import { BUTTONS, activeRules, hasOptions, isRequired, type Field, type Section,
 // ---- 1. Settings (layout.py section 1)
 export const W = 595.28, H = 841.89, M = 42;
 export const BOTTOM = 39;
+export const PAGE_ROOM = H - 34 - BOTTOM; // room for content on a page after its header (lc-form's PAGE_ROOM)
 export type RGB = readonly [number, number, number];
 export const RED: RGB = [0.8, 0, 0], INK: RGB = [0, 0, 0], GREY: RGB = [0.35, 0.35, 0.35], RULE: RGB = [0.75, 0.75, 0.75];
 export const WHITE: RGB = [1, 1, 1], ACCENT: RGB = [0, 0, 0], TINT: RGB = [0.88, 0.88, 0.88], BANK_SHADE: RGB = [0.95, 0.95, 0.95];
@@ -310,16 +311,18 @@ function layOnce(form: Template, answers: Values, extra: Record<string, number>)
   const sectionHeight = (s: Section, area: Area) => {
     const note = noteLines(s, area);
     const rows = rowsOf(s, area.cols).reduce((a, r) => a + rowHeight(r, area) + 4, 0);
-    return BAND + 4 + note.length * 9 + (note.length ? 4 : 0) + rows + (s.buttons?.length ? BUTTON_ROW : 0) + (s.signoff ? SIGN_OFF : 0) + 1;
+    const content = BAND + 4 + note.length * 9 + (note.length ? 4 : 0) + rows + (s.buttons?.length ? BUTTON_ROW : 0) + (s.signoff ? SIGN_OFF : 0) + 1;
+    return Math.max(content, s.min_height ?? 0); // min_height: at least this tall; the content wins if it needs more
   };
 
   // ---- one section
   function drawSection(s: Section, index: number, area: Area, mayBreak: boolean, bottom?: number) {
     const rows = rowsOf(s, area.cols), note = noteLines(s, area), whole = sectionHeight(s, area);
     const inner = inside(area);
-    const firstPart = s.signoff || s.bankOnly ? whole : BAND + 12 + (rows.length ? rowHeight(rows[0], area) : 0);
+    const firstPart = s.signoff || s.bankOnly || s.min_height ? whole : BAND + 12 + (rows.length ? rowHeight(rows[0], area) : 0);
     if (mayBreak && top - firstPart < BOTTOM) newPage();
     let boxTop = top;
+    const firstPage = page;
     const outline = () => {
       rect(area.x, top, area.w, boxTop - top, { border: INK, bw: 0.6 });
       out.sections.push({ si: index, page, x: area.x, y: top, w: area.w, h: boxTop - top });
@@ -382,6 +385,7 @@ function layOnce(form: Template, answers: Values, extra: Record<string, number>)
       top -= SIGN_OFF;
     }
     top -= s.fields.some(q => q.beside) ? -2 : 1;
+    if (s.min_height && page === firstPage) top = Math.min(top, boxTop - s.min_height); // blank space at the bottom of the box
     if (bottom !== undefined) top = Math.min(top, bottom);
     outline();
     top -= SECTION_GAP;

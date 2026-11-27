@@ -59,6 +59,7 @@ export interface Section {
   cols?: number;       // questions in an even grid of this many columns, labels lined up (otherwise each takes the width it needs)
   width?: "full" | "half"; // smart forms: always the whole width / half the page (otherwise the layout decides)
   new_page?: boolean;  // smart forms: starts on a new page (spelt as in lc-form's form files)
+  min_height?: number; // smart forms: the section's box is at least this many points tall (blank space at the bottom)
   buttons?: ButtonName[]; // smart forms: a row of buttons at its bottom right
 }
 

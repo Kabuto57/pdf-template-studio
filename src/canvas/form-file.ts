@@ -49,6 +49,7 @@ function section(s: Section) {
   if (s.new_page) opts.push("new_page=True");
   if (s.bankOnly) opts.push("bankOnly=True");
   if (s.signoff) opts.push("signoff=True");
+  if (s.min_height) opts.push(`min_height=${py(s.min_height)}`);
   if (s.buttons?.length) opts.push(`buttons=${py(s.buttons)}`);
   return [`        section(${[py(s.title), ...opts, "fields=["].join(", ")}`, ...s.fields.map(f => `            ${question(f)},`), "        ]),"];
 }

@@ -12,7 +12,8 @@ import type { Template, Values } from "../src/pdf";
 
 // the smart forms, plus the example form with the options none of them uses yet (section buttons, paragraph height)
 const OPTIONS = (PARITY as unknown as { options: { form: Template; defaults: Values } }).options;
-const FORMS = [...SMART_FORMS, { file: "options_form.py", form: OPTIONS.form, defaults: OPTIONS.defaults, pdfName: null }];
+const MIN_HEIGHT = ["min-height-tall", "min-height-pair", "min-height-break"].map(name => ({ file: `${name.replace(/-/g, "_")}_form.py`, ...(PARITY as unknown as Record<string, { form: Template; defaults: Values }>)[name], pdfName: null }));
+const FORMS = [...SMART_FORMS, { file: "options_form.py", form: OPTIONS.form, defaults: OPTIONS.defaults, pdfName: null }, ...MIN_HEIGHT];
 
 const LC_FORM = process.env.LC_FORM ?? join(homedir(), "Documents/lc-form");
 const PY = join(LC_FORM, ".venv/bin/python");

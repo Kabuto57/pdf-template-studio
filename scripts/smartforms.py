@@ -10,6 +10,7 @@ Writes
                                     the studio's copy of the layout (src/canvas/layout.ts) puts them in the same place
 Only lc-form's step 1 (layout.py) runs: no pikepdf needed.
 """
+import copy
 import importlib.util
 import json
 import os
@@ -44,6 +45,16 @@ def main(lc_form):
     ex.FORM["sections"][-1]["buttons"] = ["check-form", "generate-qr", "print-form"]
     ex.FORM["sections"][1]["fields"][-1]["height"] = 110
     parity["options"] = {**lay_out(layout, ex.FORM, ex.DEFAULTS), "form": ex.FORM, "defaults": ex.DEFAULTS}
+
+    # section min_height on the example form: taller than its questions, in a half-width pair, forcing a page break
+    def with_min_height(changes):
+        form = copy.deepcopy(ex.FORM)
+        for si, (key, value) in changes:
+            form["sections"][si][key] = value
+        return {**lay_out(layout, form, ex.DEFAULTS), "form": form, "defaults": ex.DEFAULTS}
+    parity["min-height-tall"] = with_min_height([(0, ("min_height", 150))])
+    parity["min-height-pair"] = with_min_height([(0, ("width", "half")), (1, ("width", "half")), (0, ("min_height", 500))])
+    parity["min-height-break"] = with_min_height([(1, ("min_height", 700))])
 
     lists = {}
     lc = importlib.import_module("lc_form")

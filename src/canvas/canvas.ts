@@ -20,9 +20,9 @@ import { codePane, markLine, showCode } from "./code-pane";
 import { conditionPopup, sayRule, type Effect } from "./conditions";
 import { formFile, formFileName } from "./form-file";
 import { readFormFile } from "./read-form-file";
-import { allFields, dependents, locate, moveField, removeField, renameField, rulesOf, uniqueId } from "./edit";
+import { allFields, dependents, locate, minHeightFor, moveField, removeField, renameField, rulesOf, uniqueId } from "./edit";
 import { LISTS } from "./forms";
-import { BAND, COLUMN_GAP, H, M, PAD, SECTION_GAP, W, layout, type Laid } from "./layout";
+import { BAND, COLUMN_GAP, H, M, PAD, PAGE_ROOM, SECTION_GAP, W, layout, type Laid } from "./layout";
 import { pagesSvg } from "./render";
 import { review, type Issue } from "./review";
 
@@ -415,7 +415,10 @@ function drawHandles() {
     Object.assign(bar.style, { left: pct(box.x, W), bottom: pct(box.y + box.h + 3, H) });
     bar.onpointerdown = e => e.stopPropagation();
     ov.append(bar);
-  } else if (!t().sections[sel!.si]?.signoff) handle("e", "Drag to make the section half or full width"); // signature blocks stay full width
+  } else {
+    if (!t().sections[sel!.si]?.signoff) handle("e", "Drag to make the section half or full width"); // signature blocks stay full width
+    if (laid!.sections.filter(x => x.si === sel!.si).length === 1) handle("s", "Drag to make the section taller (blank space at the bottom)"); // a section split over pages has no one bottom edge
+  }
 }
 
 /** Dragging a handle: a question's width in grid columns, a paragraph box's height, a section's half / full width. */
@@ -440,6 +443,12 @@ function resize(e: PointerEvent, el: HTMLElement, edge: "e" | "s") {
   const of = row?.of ?? 12, colW = (sec.x + sec.w - PAD - rowLeft - (of - 1) * COLUMN_GAP) / of;
   if (f && edge === "e") ov.append(...Array.from({ length: of }, (_, i) => hit("cv-col", rowLeft + i * (colW + COLUMN_GAP), sec.y, colW, sec.h, {})));
   const halfW = (W - 2 * M - SECTION_GAP) / 2;
+  // the section's height with its min_height taken away (what its questions need)
+  const contentH = () => {
+    const { min_height: _, ...bare } = s;
+    const copy = { ...t(), sections: t().sections.map((x, i) => (i === sel!.si ? bare : x)) };
+    return layout(copy).sections.find(x => x.si === sel!.si)?.h ?? box.h;
+  };
 
   let result: () => void = () => {};
   const x0 = e.clientX, y0 = e.clientY;
@@ -450,6 +459,10 @@ function resize(e: PointerEvent, el: HTMLElement, edge: "e" | "s") {
       const n = Math.max(1, Math.min(of, Math.round((box.w + dx + COLUMN_GAP) / (colW + COLUMN_GAP))));
       place(box.x, box.y, n * colW + (n - 1) * COLUMN_GAP, box.h, `${n} of ${of} columns`);
       result = () => edit(() => { f.cols = n; });
+    } else if (!f && edge === "s") {
+      const wanted = Math.max(box.h + dy, BAND + 5), min = minHeightFor(wanted, contentH());
+      place(box.x, box.y + box.h - (min ?? contentH()), box.w, min ?? contentH(), min ? `${min} pt tall` : "Fits its questions");
+      result = () => edit(() => { if (min) s.min_height = min; else delete s.min_height; });
     } else if (f && edge === "s") {
       const base = f.height || 50, hh = Math.round(Math.max(20, Math.min(600, base + dy)));
       const tall = box.h - base + hh; // the top stays; the box (and any extra room the layout gave it) grows from it
@@ -738,6 +751,10 @@ function sectionPanel(s: Section, si: number): Node[] {
       segmented("Width", [["Auto", undefined], ["Full", "full"], ["Half", "half"]] as [string, Section["width"]][], s.width, v => edit(() => { if (v) s.width = v; else delete s.width; }),
         "Auto: two short sections of similar height sit side by side. Half: always half the page (two halves in a row pair up)."),
       tickBox("Start on a new page", !!s.new_page, v => edit(() => { if (v) s.new_page = true; else delete s.new_page; })),
+      textBox("Minimum height (points)", s.min_height ? String(s.min_height) : "", v => {
+        const n = Math.min(Number(v), PAGE_ROOM);
+        if (n > 0) s.min_height = n; else delete s.min_height;
+      }, { hint: "Blank = fit the questions. A taller box leaves blank space at its bottom; the questions win if they need more. You can also drag the bottom edge of the selected section." }),
     ),
     h("section", { className: "cv-group", id: "cvButtons" }, h("h3", {}, "Buttons"),
       h("p", { className: "cv-lead" }, "A row at the bottom right of the section, on screen only. Each does what the form's own button of that name does."),

@@ -12,7 +12,7 @@ const expected = PARITY as unknown as Record<string, Want>;
 describe("smart-form layout matches lc-form's layout.py", () => {
   // every smart form, plus the example form with the options none of them uses yet (section buttons, paragraph height)
   const cases = [...SMART_FORMS.map(f => ({ name: f.file, form: f.form, defaults: f.defaults })),
-    { name: "options", form: expected.options.form!, defaults: expected.options.defaults! }];
+    ...["options", "min-height-tall", "min-height-pair", "min-height-break"].map(name => ({ name, form: expected[name].form!, defaults: expected[name].defaults! }))];
   for (const f of cases) {
     it(f.name, () => {
       const laid = layout(f.form, f.defaults), want = expected[f.name];

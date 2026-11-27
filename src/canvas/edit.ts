@@ -1,4 +1,5 @@
 // CHANGING A FORM: the few edits the canvas and the design review make (they change the form in place).
+import { PAGE_ROOM } from "./layout";
 import { slug, type Field, type Rule, type Template } from "../pdf";
 
 /** Where a question is: section index si, position qi. */
@@ -57,4 +58,11 @@ export function removeField(t: Template, id: string) {
     if (f.words) f.words = f.words.filter(w => w !== id);
   }
   if (t.checks) t.checks = t.checks.filter(c => c.a !== id && !("b" in c && c.b === id));
+}
+
+/** A section's min_height after dragging its bottom edge to `wanted` points tall: snapped to 5 pt, at most a page, and
+ *  undefined (no setting, fit the content) when that is no taller than the content. */
+export function minHeightFor(wanted: number, content: number): number | undefined {
+  const snapped = Math.min(Math.round(wanted / 5) * 5, Math.floor(PAGE_ROOM / 5) * 5);
+  return snapped > content ? snapped : undefined;
 }
