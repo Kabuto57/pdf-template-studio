@@ -105,7 +105,7 @@ The app has three steps along the top: **1 Design**, **2 Fill**, **3 Extract**.
 2. Under **Guarantees**, pick one, e.g. *Banker's Guarantee Application*. The studio opens on the LC.
 3. The form appears on the canvas, page by page, exactly as the lc-form project builds it.
 
-The thirteen smart forms in the studio are the form files of the [lc-form](https://github.com/Kabuto57/lc-form) project
+The fourteen smart forms in the studio (the 13 trade forms plus the pipe-format LC form) are the form files of the [lc-form](https://github.com/Kabuto57/lc-form) project
 (`forms/*_form.py`: the old smart form's questions, wording and rules, in the new design). They are copied in by
 `scripts/smartforms.py` (see "Keeping in step with lc-form" below):
 
